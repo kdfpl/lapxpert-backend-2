@@ -1,5 +1,6 @@
 package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 
+import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.DanhMuc;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.ThuongHieu;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,7 +13,9 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -57,5 +60,11 @@ public class SanPham {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
     private OffsetDateTime ngayCapNhat;
+
+    @ManyToMany
+    @JoinTable(name = "san_pham_danh_muc",
+            joinColumns = @JoinColumn(name = "san_pham_id"),
+            inverseJoinColumns = @JoinColumn(name = "danh_muc_id"))
+    private Set<DanhMuc> danhMucs = new LinkedHashSet<>();
 
 }

@@ -1,5 +1,6 @@
 package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 
+import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.*;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,7 +13,9 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -131,5 +134,11 @@ public class SanPhamChiTiet {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "thiet_ke_id")
     private ThietKe thietKe;
+
+    @ManyToMany
+    @JoinTable(name = "san_pham_chi_tiet_dot_giam_gia",
+            joinColumns = @JoinColumn(name = "san_pham_chi_tiet_id"),
+            inverseJoinColumns = @JoinColumn(name = "dot_giam_gia_id"))
+    private Set<DotGiamGia> dotGiamGias = new LinkedHashSet<>();
 
 }

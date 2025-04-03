@@ -1,5 +1,6 @@
 package com.lapxpert.backend.dotgiamgia.domain.entity;
 
+import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +12,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -56,5 +59,9 @@ public class DotGiamGia {
     @Enumerated
     @JdbcType(PostgreSQLEnumJdbcType.class)
     private TrangThai trangThai;
+
+
+    @ManyToMany(mappedBy = "dotGiamGias")
+    private Set<SanPhamChiTiet> sanPhamChiTiets = new LinkedHashSet<>();
 
 }

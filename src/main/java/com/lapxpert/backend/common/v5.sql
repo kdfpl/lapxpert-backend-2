@@ -197,6 +197,7 @@ CREATE TABLE phieu_giam_gia (
     ngay_bat_dau TIMESTAMPTZ NOT NULL,
     ngay_ket_thuc TIMESTAMPTZ NOT NULL,
     mo_ta TEXT,
+    phieu_rieng_tu boolean DEFAULT FALSE,
     so_luong_ban_dau INT DEFAULT 0 NOT NULL,
     so_luong_da_dung INT DEFAULT 0 NOT NULL,
     trang_thai trang_thai_phieu_giam_gia DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum

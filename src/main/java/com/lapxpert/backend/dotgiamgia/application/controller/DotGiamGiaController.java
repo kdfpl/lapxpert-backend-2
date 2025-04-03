@@ -2,10 +2,12 @@ package com.lapxpert.backend.dotgiamgia.application.controller;
 
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDTO;
 import com.lapxpert.backend.dotgiamgia.domain.service.DotGiamGiaService;
+import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/discounts")
@@ -36,5 +38,10 @@ public class DotGiamGiaController {
     @PostMapping("toggles")
     public ResponseEntity<List<DotGiamGiaDTO>> toggleMultiple(@RequestBody List<Long> ids) {
         return service.toggleMultiple(ids);
+    }
+
+    @GetMapping("spct/{id}")
+    public ResponseEntity<Set<SanPhamChiTietDTO>> findAllSanPhamChiTietsByDotGiamGiaId(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findAllSanPhamChiTietsByDotGiamGiaId(id));
     }
 }

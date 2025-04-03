@@ -4,6 +4,9 @@ import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDTO;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaMapper;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.dotgiamgia.domain.repository.DotGiamGiaRepository;
+import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDTO;
+import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietMapper;
+import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,15 +14,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class DotGiamGiaService {
     private final DotGiamGiaRepository repository;
     private final DotGiamGiaMapper mapper;
+    private final SanPhamChiTietMapper sanPhamChiTietMapper;
 
-    public DotGiamGiaService(DotGiamGiaRepository repository, @Qualifier("dotGiamGiaMapperImpl") DotGiamGiaMapper mapper) {
+    public DotGiamGiaService(DotGiamGiaRepository repository, @Qualifier("dotGiamGiaMapperImpl") DotGiamGiaMapper mapper, SanPhamChiTietMapper sanPhamChiTietMapper) {
         this.repository = repository;
         this.mapper = mapper;
+        this.sanPhamChiTietMapper = sanPhamChiTietMapper;
     }
 
     public List<DotGiamGiaDTO> findAll() {
@@ -67,5 +73,13 @@ public class DotGiamGiaService {
 
     public DotGiamGia findById(Long id) {
         return repository.findById(id).orElse(null);
+    }
+
+    @Transactional
+    public Set<SanPhamChiTietDTO> findAllSanPhamChiTietsByDotGiamGiaId(Long id) {
+        DotGiamGia dgg = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("DotGiamGia not found with id: " + id));
+        Set<SanPhamChiTiet> sanPhamChiTiets = dgg.getSanPhamChiTiets();
+        return sanPhamChiTietMapper.toDtoSet(sanPhamChiTiets);
     }
 }

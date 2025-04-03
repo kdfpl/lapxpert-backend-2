@@ -3,18 +3,16 @@ package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.*;
 import jakarta.persistence.*;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -49,9 +47,9 @@ public class SanPhamChiTiet {
     @Column(name = "gia_khuyen_mai", precision = 15, scale = 2)
     private BigDecimal giaKhuyenMai;
 
-    @Column(name = "hinh_anh")
+    @Column(name = "hinh_anh", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> hinhAnh;
+    private List<String> hinhAnh;
 
     @ColumnDefault("true")
     @Column(name = "trang_thai", nullable = false)

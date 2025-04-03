@@ -44,13 +44,14 @@ DROP TABLE IF EXISTS he_dieu_hanh CASCADE;
 DROP TABLE IF EXISTS pin CASCADE;
 DROP TABLE IF EXISTS thiet_ke CASCADE;
 -- Drop enums
-DROP TYPE IF EXISTS trang_thai_phieu_giam_gia; -- Added
+DROP TYPE IF EXISTS trang_thai_phieu_giam_gia_enum;
 DROP TYPE IF EXISTS phuong_thuc_thanh_toan_enum;
 DROP TYPE IF EXISTS trang_thai_giao_dich_enum;
 DROP TYPE IF EXISTS trang_thai_giao_hang_enum;
 DROP TYPE IF EXISTS loai_phieu_giam_gia_enum;
 DROP TYPE IF EXISTS vai_tro_enum;
 DROP TYPE IF EXISTS gioi_tinh_enum;
+DROP TYPE IF EXISTS trang_thai_dot_giam_gia_enum;
 COMMIT;
 
 
@@ -63,8 +64,8 @@ CREATE TYPE loai_phieu_giam_gia_enum AS ENUM ('PHAN_TRAM', 'GIA_TRI');
 CREATE TYPE trang_thai_giao_hang_enum AS ENUM ('DANG_XU_LY', 'CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_DONG_GOI', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'HOAN_THANH', 'DA_HUY', 'YEU_CAU_TRA_HANG', 'DA_TRA_HANG');
 CREATE TYPE trang_thai_giao_dich_enum AS ENUM ('DA_THANH_TOAN', 'CHUA_THANH_TOAN', 'DA_HUY', 'THAT_BAI', 'CHO_XU_LY', 'DANG_XU_LY', 'HOAN_TIEN');
 CREATE TYPE phuong_thuc_thanh_toan_enum AS ENUM ('TIEN_MAT', 'CHUYEN_KHOAN', 'THE_TIN_DUNG', 'THE_GHI_NO', 'VISA', 'MASTERCARD', 'PAYPAL', 'MOMO', 'ZALO_PAY', 'VNPAY_QR', 'COD');
-CREATE TYPE trang_thai_phieu_giam_gia AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 'KET_THUC'); -- New Enum
-
+CREATE TYPE trang_thai_phieu_giam_gia_enum AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 'KET_THUC');
+CREATE TYPE trang_thai_dot_giam_gia_enum AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 'KET_THUC');
 -- =============================================================================
 -- 2. TẠO BẢNG THUỘC TÍNH VÀ THƯƠNG HIỆU
 -- =============================================================================
@@ -179,7 +180,8 @@ CREATE TABLE dot_giam_gia (
     phan_tram_giam NUMERIC(5, 2) NOT NULL CHECK (phan_tram_giam >= 0 AND phan_tram_giam <= 100),
     ngay_bat_dau TIMESTAMPTZ NOT NULL,
     ngay_ket_thuc TIMESTAMPTZ NOT NULL,
-    trang_thai BOOLEAN DEFAULT TRUE NOT NULL, -- Represents admin activation, not time-based status
+    trang_thai trang_thai_dot_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL,
+    da_an BOOLEAN DEFAULT TRUE NOT NULL,
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_ngay_dot_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
@@ -200,7 +202,7 @@ CREATE TABLE phieu_giam_gia (
     phieu_rieng_tu boolean DEFAULT FALSE,
     so_luong_ban_dau INT DEFAULT 0 NOT NULL,
     so_luong_da_dung INT DEFAULT 0 NOT NULL,
-    trang_thai trang_thai_phieu_giam_gia DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum
+    trang_thai trang_thai_phieu_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau),
@@ -399,6 +401,7 @@ CREATE INDEX idx_san_pham_thuong_hieu_id ON san_pham(thuong_hieu_id); -- Index F
 CREATE INDEX idx_san_pham_trang_thai ON san_pham(trang_thai);
 CREATE INDEX idx_dot_giam_gia_ngay ON dot_giam_gia(ngay_bat_dau, ngay_ket_thuc);
 CREATE INDEX idx_dot_giam_gia_trang_thai ON dot_giam_gia(trang_thai);
+CREATE INDEX idx_dot_giam_gia_da_an ON dot_giam_gia(da_an);
 CREATE INDEX idx_phieu_giam_gia_ngay ON phieu_giam_gia(ngay_bat_dau, ngay_ket_thuc);
 CREATE INDEX idx_phieu_giam_gia_trang_thai ON phieu_giam_gia(trang_thai);
 CREATE INDEX idx_spct_san_pham_id ON san_pham_chi_tiet(san_pham_id);
@@ -634,8 +637,9 @@ INSERT INTO san_pham_danh_muc (san_pham_id, danh_muc_id)
 VALUES (1, 1);
 
 -- Insert sample discount campaign
-INSERT INTO dot_giam_gia (ma_dot_giam_gia, ten_dot_giam_gia, phan_tram_giam, ngay_bat_dau, ngay_ket_thuc, trang_thai)
-VALUES ('DG001', 'Mua sắm mùa hè', 15.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z', TRUE);
+INSERT INTO dot_giam_gia (ma_dot_giam_gia, ten_dot_giam_gia, phan_tram_giam, ngay_bat_dau, ngay_ket_thuc)
+VALUES ('DG001', 'Mua sắm mùa hè', 15.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z'),
+('DG002', 'Mùa hè bố đời deal trên trời', 35.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z');
 
 -- Insert sample voucher
 INSERT INTO phieu_giam_gia (ma_phieu_giam_gia, loai_phieu_giam_gia, gia_tri_giam, gia_tri_don_hang_toi_thieu, ngay_bat_dau, ngay_ket_thuc, mo_ta, so_luong_ban_dau)

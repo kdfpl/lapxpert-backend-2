@@ -23,7 +23,7 @@ public class DotGiamGiaService {
     }
 
     public List<DotGiamGiaDTO> findAll() {
-        return mapper.toDtos(repository.findAll());
+        return mapper.toDtos(repository.findAllByDaAn(false));
     }
 
     @Transactional
@@ -41,10 +41,11 @@ public class DotGiamGiaService {
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDto(repository.save(entity)));
     }
 
+    @Transactional
     public ResponseEntity<DotGiamGiaDTO> toggle(Long id) {
         DotGiamGia entity = repository.findById(id).orElse(null);
         if (entity != null) {
-            entity.setTrangThai(!entity.getTrangThai());
+            entity.setDaAn(!entity.getDaAn());
             return ResponseEntity.ok(mapper.toDto(repository.save(entity)));
         } else {
             return ResponseEntity.notFound().build();

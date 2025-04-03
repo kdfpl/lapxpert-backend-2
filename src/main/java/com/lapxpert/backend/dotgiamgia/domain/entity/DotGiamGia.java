@@ -4,9 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,7 +16,6 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "dot_giam_gia")
-@EntityListeners(AuditingEntityListener.class)
 public class DotGiamGia {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "dot_giam_gia_id_gen")
@@ -39,17 +39,22 @@ public class DotGiamGia {
     private Instant ngayKetThuc;
 
     @ColumnDefault("true")
-    @Column(name = "trang_thai", nullable = false)
-    private Boolean trangThai = false;
+    @Column(name = "da_an", nullable = false)
+    private Boolean daAn = false;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_tao")
     @CreatedDate
     private Instant ngayTao;
-
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
     @LastModifiedDate
     private Instant ngayCapNhat;
+
+    @ColumnDefault("'CHUA_DIEN_RA'")
+    @Column(name = "trang_thai")
+    @Enumerated
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    private TrangThai trangThai;
 
 }

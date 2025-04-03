@@ -37,6 +37,7 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.mapstruct:mapstruct:+'
 	annotationProcessor 'org.mapstruct:mapstruct-processor:+'
+	implementation 'io.hypersistence:hypersistence-utils-hibernate-60:3.9.4'
 }
 
 tasks.named('test') {

@@ -1,6 +1,7 @@
 package com.lapxpert.backend.dotgiamgia.application.dto;
 
-import lombok.Value;
+import com.lapxpert.backend.dotgiamgia.domain.entity.TrangThai;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -9,7 +10,7 @@ import java.time.Instant;
 /**
  * DTO for {@link com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia}
  */
-@Value
+@Data
 public class DotGiamGiaDTO implements Serializable {
     Long id;
     String maDotGiamGia;
@@ -17,7 +18,7 @@ public class DotGiamGiaDTO implements Serializable {
     BigDecimal phanTramGiam;
     Instant ngayBatDau;
     Instant ngayKetThuc;
-    Boolean trangThai;
+    TrangThai trangThai;
     Instant ngayTao;
     Instant ngayCapNhat;
 }

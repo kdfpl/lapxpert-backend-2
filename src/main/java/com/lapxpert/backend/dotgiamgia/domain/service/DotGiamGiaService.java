@@ -52,6 +52,18 @@ public class DotGiamGiaService {
         }
     }
 
+    @Transactional
+    public ResponseEntity<List<DotGiamGiaDTO>> toggleMultiple(List<Long> ids) {
+        List<DotGiamGia> entities = repository.findAllById(ids);
+        if (!entities.isEmpty()) {
+            for (DotGiamGia entity : entities) {
+                entity.setDaAn(!entity.getDaAn());
+            }
+            return ResponseEntity.ok(mapper.toDtos(repository.saveAll(entities)));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     public DotGiamGia findById(Long id) {
         return repository.findById(id).orElse(null);

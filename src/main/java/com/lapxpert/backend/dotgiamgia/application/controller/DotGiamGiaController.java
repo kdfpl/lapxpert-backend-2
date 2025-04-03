@@ -28,8 +28,13 @@ public class DotGiamGiaController {
         return service.save(dto);
     }
 
-    @GetMapping("toggle/{id}")
+    @PostMapping("toggle/{id}")
     public ResponseEntity<DotGiamGiaDTO> toggle(@PathVariable Long id) {
         return service.toggle(id);
+    }
+
+    @PostMapping("toggles")
+    public ResponseEntity<List<DotGiamGiaDTO>> toggleMultiple(@RequestBody List<Long> ids) {
+        return service.toggleMultiple(ids);
     }
 }

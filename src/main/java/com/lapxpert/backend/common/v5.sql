@@ -4,54 +4,54 @@
 -- =============================================================================
 
 -- (Tùy chọn) Xóa các đối tượng cũ nếu tồn tại (Cẩn thận!)
--- BEGIN;
--- DROP FUNCTION IF EXISTS trigger_set_timestamp() CASCADE;
--- DROP TABLE IF EXISTS phieu_giam_gia_nguoi_dung CASCADE;
--- DROP TABLE IF EXISTS phieu_giam_gia_thanh_toan CASCADE;
--- DROP TABLE IF EXISTS hoa_don_thanh_toan CASCADE;
--- DROP TABLE IF EXISTS wishlist_item CASCADE;
--- DROP TABLE IF EXISTS wishlist CASCADE;
--- DROP TABLE IF EXISTS danh_gia CASCADE;
--- DROP TABLE IF EXISTS thanh_toan CASCADE;
--- DROP TABLE IF EXISTS hoa_don_phieu_giam_gia CASCADE;
--- DROP TABLE IF EXISTS hoa_don_chi_tiet CASCADE;
--- DROP TABLE IF EXISTS hoa_don CASCADE;
--- DROP TABLE IF EXISTS gio_hang_chi_tiet CASCADE;
--- DROP TABLE IF EXISTS gio_hang CASCADE;
--- DROP TABLE IF EXISTS san_pham_chi_tiet_dot_giam_gia CASCADE;
--- DROP TABLE IF EXISTS san_pham_chi_tiet CASCADE;
--- DROP TABLE IF EXISTS san_pham_danh_muc CASCADE;
--- DROP TABLE IF EXISTS san_pham CASCADE;
--- DROP TABLE IF EXISTS thuong_hieu CASCADE; -- Added
--- DROP TABLE IF EXISTS phieu_giam_gia CASCADE;
--- DROP TABLE IF EXISTS dot_giam_gia CASCADE;
--- DROP TABLE IF EXISTS dia_chi CASCADE;
--- DROP TABLE IF EXISTS nguoi_dung CASCADE;
--- DROP TABLE IF EXISTS danh_muc CASCADE;
--- -- Drop attribute tables
--- DROP TABLE IF EXISTS cpu CASCADE;
--- DROP TABLE IF EXISTS ram CASCADE;
--- DROP TABLE IF EXISTS o_cung CASCADE;
--- DROP TABLE IF EXISTS gpu CASCADE;
--- DROP TABLE IF EXISTS man_hinh CASCADE;
--- DROP TABLE IF EXISTS cong_giao_tiep CASCADE;
--- DROP TABLE IF EXISTS ban_phim CASCADE;
--- DROP TABLE IF EXISTS ket_noi_mang CASCADE;
--- DROP TABLE IF EXISTS am_thanh CASCADE;
--- DROP TABLE IF EXISTS webcam CASCADE;
--- DROP TABLE IF EXISTS bao_mat CASCADE;
--- DROP TABLE IF EXISTS he_dieu_hanh CASCADE;
--- DROP TABLE IF EXISTS pin CASCADE;
--- DROP TABLE IF EXISTS thiet_ke CASCADE;
--- -- Drop enums
--- DROP TYPE IF EXISTS trang_thai_phieu_giam_gia; -- Added
--- DROP TYPE IF EXISTS phuong_thuc_thanh_toan_enum;
--- DROP TYPE IF EXISTS trang_thai_giao_dich_enum;
--- DROP TYPE IF EXISTS trang_thai_giao_hang_enum;
--- DROP TYPE IF EXISTS loai_phieu_giam_gia_enum;
--- DROP TYPE IF EXISTS vai_tro_enum;
--- DROP TYPE IF EXISTS gioi_tinh_enum;
--- COMMIT;
+BEGIN;
+DROP FUNCTION IF EXISTS trigger_set_timestamp() CASCADE;
+DROP TABLE IF EXISTS phieu_giam_gia_nguoi_dung CASCADE;
+DROP TABLE IF EXISTS phieu_giam_gia_thanh_toan CASCADE;
+DROP TABLE IF EXISTS hoa_don_thanh_toan CASCADE;
+DROP TABLE IF EXISTS wishlist_item CASCADE;
+DROP TABLE IF EXISTS wishlist CASCADE;
+DROP TABLE IF EXISTS danh_gia CASCADE;
+DROP TABLE IF EXISTS thanh_toan CASCADE;
+DROP TABLE IF EXISTS hoa_don_phieu_giam_gia CASCADE;
+DROP TABLE IF EXISTS hoa_don_chi_tiet CASCADE;
+DROP TABLE IF EXISTS hoa_don CASCADE;
+DROP TABLE IF EXISTS gio_hang_chi_tiet CASCADE;
+DROP TABLE IF EXISTS gio_hang CASCADE;
+DROP TABLE IF EXISTS san_pham_chi_tiet_dot_giam_gia CASCADE;
+DROP TABLE IF EXISTS san_pham_chi_tiet CASCADE;
+DROP TABLE IF EXISTS san_pham_danh_muc CASCADE;
+DROP TABLE IF EXISTS san_pham CASCADE;
+DROP TABLE IF EXISTS thuong_hieu CASCADE; -- Added
+DROP TABLE IF EXISTS phieu_giam_gia CASCADE;
+DROP TABLE IF EXISTS dot_giam_gia CASCADE;
+DROP TABLE IF EXISTS dia_chi CASCADE;
+DROP TABLE IF EXISTS nguoi_dung CASCADE;
+DROP TABLE IF EXISTS danh_muc CASCADE;
+-- Drop attribute tables
+DROP TABLE IF EXISTS cpu CASCADE;
+DROP TABLE IF EXISTS ram CASCADE;
+DROP TABLE IF EXISTS o_cung CASCADE;
+DROP TABLE IF EXISTS gpu CASCADE;
+DROP TABLE IF EXISTS man_hinh CASCADE;
+DROP TABLE IF EXISTS cong_giao_tiep CASCADE;
+DROP TABLE IF EXISTS ban_phim CASCADE;
+DROP TABLE IF EXISTS ket_noi_mang CASCADE;
+DROP TABLE IF EXISTS am_thanh CASCADE;
+DROP TABLE IF EXISTS webcam CASCADE;
+DROP TABLE IF EXISTS bao_mat CASCADE;
+DROP TABLE IF EXISTS he_dieu_hanh CASCADE;
+DROP TABLE IF EXISTS pin CASCADE;
+DROP TABLE IF EXISTS thiet_ke CASCADE;
+-- Drop enums
+DROP TYPE IF EXISTS trang_thai_phieu_giam_gia; -- Added
+DROP TYPE IF EXISTS phuong_thuc_thanh_toan_enum;
+DROP TYPE IF EXISTS trang_thai_giao_dich_enum;
+DROP TYPE IF EXISTS trang_thai_giao_hang_enum;
+DROP TYPE IF EXISTS loai_phieu_giam_gia_enum;
+DROP TYPE IF EXISTS vai_tro_enum;
+DROP TYPE IF EXISTS gioi_tinh_enum;
+COMMIT;
 
 
 -- =============================================================================
@@ -59,7 +59,7 @@
 -- =============================================================================
 CREATE TYPE gioi_tinh_enum AS ENUM ('NAM', 'NU');
 CREATE TYPE vai_tro_enum AS ENUM ('ADMIN', 'STAFF', 'CUSTOMER', 'GUEST');
-CREATE TYPE loai_phieu_giam_gia_enum AS ENUM ('PERCENTAGE', 'FIXED_AMOUNT');
+CREATE TYPE loai_phieu_giam_gia_enum AS ENUM ('PHAN_TRAM', 'GIA_TRI');
 CREATE TYPE trang_thai_giao_hang_enum AS ENUM ('DANG_XU_LY', 'CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_DONG_GOI', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'HOAN_THANH', 'DA_HUY', 'YEU_CAU_TRA_HANG', 'DA_TRA_HANG');
 CREATE TYPE trang_thai_giao_dich_enum AS ENUM ('DA_THANH_TOAN', 'CHUA_THANH_TOAN', 'DA_HUY', 'THAT_BAI', 'CHO_XU_LY', 'DANG_XU_LY', 'HOAN_TIEN');
 CREATE TYPE phuong_thuc_thanh_toan_enum AS ENUM ('TIEN_MAT', 'CHUYEN_KHOAN', 'THE_TIN_DUNG', 'THE_GHI_NO', 'VISA', 'MASTERCARD', 'PAYPAL', 'MOMO', 'ZALO_PAY', 'VNPAY_QR', 'COD');
@@ -68,13 +68,13 @@ CREATE TYPE trang_thai_phieu_giam_gia AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 'KE
 -- =============================================================================
 -- 2. TẠO BẢNG THUỘC TÍNH VÀ THƯƠNG HIỆU
 -- =============================================================================
-CREATE TABLE cpu ( id BIGSERIAL PRIMARY KEY, ten_cpu VARCHAR(255) UNIQUE NOT NULL );
+CREATE TABLE cpu ( id BIGSERIAL PRIMARY KEY, mo_ta_cpu VARCHAR(255) UNIQUE NOT NULL );
 COMMENT ON TABLE cpu IS 'CPU types (e.g., Intel Core i5-1340P)';
 CREATE TABLE ram ( id BIGSERIAL PRIMARY KEY, mo_ta_ram VARCHAR(100) UNIQUE NOT NULL );
 COMMENT ON TABLE ram IS 'RAM configurations (e.g., 16GB DDR5 5600MHz)';
 CREATE TABLE o_cung ( id BIGSERIAL PRIMARY KEY, mo_ta_o_cung VARCHAR(150) UNIQUE NOT NULL );
 COMMENT ON TABLE o_cung IS 'Storage configurations (e.g., 512GB NVMe Gen4 SSD)';
-CREATE TABLE gpu ( id BIGSERIAL PRIMARY KEY, ten_gpu VARCHAR(255) UNIQUE NOT NULL );
+CREATE TABLE gpu ( id BIGSERIAL PRIMARY KEY, mo_ta_gpu VARCHAR(255) UNIQUE NOT NULL );
 COMMENT ON TABLE gpu IS 'GPU types (e.g., NVIDIA GeForce RTX 4060)';
 CREATE TABLE man_hinh ( id BIGSERIAL PRIMARY KEY, mo_ta_man_hinh VARCHAR(300) UNIQUE NOT NULL );
 COMMENT ON TABLE man_hinh IS 'Screen configurations (e.g., 15.6 inch FHD IPS 144Hz)';
@@ -90,7 +90,7 @@ CREATE TABLE webcam ( id BIGSERIAL PRIMARY KEY, mo_ta_wc VARCHAR(200) UNIQUE NOT
 COMMENT ON TABLE webcam IS 'Webcam descriptions (e.g., FHD Webcam)';
 CREATE TABLE bao_mat ( id BIGSERIAL PRIMARY KEY, mo_ta_bao_mat VARCHAR(200) UNIQUE NOT NULL );
 COMMENT ON TABLE bao_mat IS 'Security features (e.g., Fingerprint Reader)';
-CREATE TABLE he_dieu_hanh ( id BIGSERIAL PRIMARY KEY, ten_he_dieu_hanh VARCHAR(100) UNIQUE NOT NULL );
+CREATE TABLE he_dieu_hanh ( id BIGSERIAL PRIMARY KEY, mo_ta_he_dieu_hanh VARCHAR(100) UNIQUE NOT NULL );
 COMMENT ON TABLE he_dieu_hanh IS 'Operating Systems (e.g., Windows 11 Home)';
 CREATE TABLE pin ( id BIGSERIAL PRIMARY KEY, mo_ta_pin VARCHAR(150) UNIQUE NOT NULL );
 COMMENT ON TABLE pin IS 'Battery configurations (e.g., 4-cell 75Wh)';
@@ -197,13 +197,13 @@ CREATE TABLE phieu_giam_gia (
     ngay_bat_dau TIMESTAMPTZ NOT NULL,
     ngay_ket_thuc TIMESTAMPTZ NOT NULL,
     mo_ta TEXT,
-    so_luong_ban_dau INT,
+    so_luong_ban_dau INT DEFAULT 0 NOT NULL,
     so_luong_da_dung INT DEFAULT 0 NOT NULL,
     trang_thai trang_thai_phieu_giam_gia DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
-    -- CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
+    CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau),
+    CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
 );
 COMMENT ON TABLE phieu_giam_gia IS 'Vouchers / Coupon Codes';
 COMMENT ON COLUMN phieu_giam_gia.trang_thai IS 'Time-based status (CHUA_DIEN_RA, DA_DIEN_RA, KET_THUC) - consider auto-updating mechanism';
@@ -334,7 +334,7 @@ CREATE TABLE danh_gia (
     so_sao INT NOT NULL CHECK (so_sao >= 1 AND so_sao <= 5),
     noi_dung TEXT,
     hinh_anh JSONB,
-    trang_thai VARCHAR(20) DEFAULT 'PENDING' NOT NULL CHECK (trang_thai IN ('PENDING', 'APPROVED', 'REJECTED')), -- Added CHECK constraint
+    trang_thai VARCHAR(20) DEFAULT 'DANG_CHO' NOT NULL CHECK (trang_thai IN ('DANG_CHO', 'DUYET', 'TU_CHOI')), -- Added CHECK constraint
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (san_pham_chi_tiet_id, nguoi_dung_id)
@@ -372,14 +372,6 @@ CREATE TABLE hoa_don_thanh_toan (
 );
 COMMENT ON TABLE hoa_don_thanh_toan IS 'Many-to-Many mapping between Orders and Payments.';
 COMMENT ON COLUMN hoa_don_thanh_toan.so_tien_ap_dung IS 'Amount of this payment applied to this specific order.';
-
--- Bảng này RẤT KHÔNG ĐIỂN HÌNH, cân nhắc kỹ trước khi sử dụng
-CREATE TABLE phieu_giam_gia_thanh_toan (
-    phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE CASCADE,
-    thanh_toan_id BIGINT NOT NULL REFERENCES thanh_toan(id) ON DELETE CASCADE,
-    PRIMARY KEY (phieu_giam_gia_id, thanh_toan_id)
-);
-COMMENT ON TABLE phieu_giam_gia_thanh_toan IS '**Warning: Unconventional N-N mapping between Vouchers and Payments. Verify business logic.**';
 
 CREATE TABLE phieu_giam_gia_nguoi_dung (
     phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE CASCADE,
@@ -440,8 +432,6 @@ CREATE INDEX idx_spct_dgg_dot_giam_gia_id ON san_pham_chi_tiet_dot_giam_gia(dot_
 CREATE INDEX idx_hdpg_phieu_giam_gia_id ON hoa_don_phieu_giam_gia(phieu_giam_gia_id);
 CREATE INDEX idx_hdtt_thanh_toan_id ON hoa_don_thanh_toan(thanh_toan_id);
 CREATE INDEX idx_hdtt_hoa_don_id ON hoa_don_thanh_toan(hoa_don_id);
-CREATE INDEX idx_pggtt_thanh_toan_id ON phieu_giam_gia_thanh_toan(thanh_toan_id);
-CREATE INDEX idx_pggtt_phieu_giam_gia_id ON phieu_giam_gia_thanh_toan(phieu_giam_gia_id);
 CREATE INDEX idx_pggnd_nguoi_dung_id ON phieu_giam_gia_nguoi_dung(nguoi_dung_id);
 CREATE INDEX idx_pggnd_phieu_giam_gia_id ON phieu_giam_gia_nguoi_dung(phieu_giam_gia_id);
 
@@ -449,84 +439,256 @@ CREATE INDEX idx_pggnd_phieu_giam_gia_id ON phieu_giam_gia_nguoi_dung(phieu_giam
 -- 6. FUNCTION VÀ TRIGGERS TỰ ĐỘNG CẬP NHẬT ngay_cap_nhat
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION trigger_set_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'UPDATE' THEN
-     -- Check if 'ngay_cap_nhat' column exists in the triggering table
-     IF EXISTS (SELECT 1 FROM information_schema.columns
-                WHERE table_schema = TG_TABLE_SCHEMA
-                  AND table_name = TG_TABLE_NAME
-                  AND column_name = 'ngay_cap_nhat')
-     THEN
-        -- Use qualified name for the column to avoid ambiguity
-        EXECUTE format('UPDATE %I.%I SET ngay_cap_nhat = NOW() WHERE ctid = $1', TG_TABLE_SCHEMA, TG_TABLE_NAME) USING NEW.ctid;
-        -- Directly modifying NEW here might not work as expected in all cases,
-        -- but for this simple assignment it's often sufficient.
-        -- A more robust way might involve re-fetching or ensuring the calling code handles it.
-        -- For simplicity, we'll try direct assignment first.
-        NEW.ngay_cap_nhat = NOW();
-     END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Drop existing triggers before creating new ones to avoid errors on re-run
-DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_danh_muc') THEN
-        DROP TRIGGER set_timestamp_danh_muc ON danh_muc;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_nguoi_dung') THEN
-        DROP TRIGGER set_timestamp_nguoi_dung ON nguoi_dung;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_dia_chi') THEN
-        DROP TRIGGER set_timestamp_dia_chi ON dia_chi;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_san_pham') THEN
-        DROP TRIGGER set_timestamp_san_pham ON san_pham;
-    END IF;
-     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_thuong_hieu') THEN
-        DROP TRIGGER set_timestamp_thuong_hieu ON thuong_hieu; -- Trigger for Brand if it had ngay_cap_nhat
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_dot_giam_gia') THEN
-        DROP TRIGGER set_timestamp_dot_giam_gia ON dot_giam_gia;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_phieu_giam_gia') THEN
-        DROP TRIGGER set_timestamp_phieu_giam_gia ON phieu_giam_gia;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_san_pham_chi_tiet') THEN
-        DROP TRIGGER set_timestamp_san_pham_chi_tiet ON san_pham_chi_tiet;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_gio_hang') THEN
-        DROP TRIGGER set_timestamp_gio_hang ON gio_hang;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_hoa_don') THEN
-        DROP TRIGGER set_timestamp_hoa_don ON hoa_don;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_danh_gia') THEN
-        DROP TRIGGER set_timestamp_danh_gia ON danh_gia;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_wishlist') THEN
-        DROP TRIGGER set_timestamp_wishlist ON wishlist;
-    END IF;
-END $$;
-
-
--- Áp dụng trigger cho các bảng có cột ngay_cap_nhat
-CREATE TRIGGER set_timestamp_danh_muc BEFORE UPDATE ON danh_muc FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_nguoi_dung BEFORE UPDATE ON nguoi_dung FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_dia_chi BEFORE UPDATE ON dia_chi FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_san_pham BEFORE UPDATE ON san_pham FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
--- CREATE TRIGGER set_timestamp_thuong_hieu BEFORE UPDATE ON thuong_hieu FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp(); -- Add if thuong_hieu has ngay_cap_nhat
-CREATE TRIGGER set_timestamp_dot_giam_gia BEFORE UPDATE ON dot_giam_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_phieu_giam_gia BEFORE UPDATE ON phieu_giam_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_san_pham_chi_tiet BEFORE UPDATE ON san_pham_chi_tiet FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_gio_hang BEFORE UPDATE ON gio_hang FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_hoa_don BEFORE UPDATE ON hoa_don FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_danh_gia BEFORE UPDATE ON danh_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-CREATE TRIGGER set_timestamp_wishlist BEFORE UPDATE ON wishlist FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--   IF TG_OP = 'UPDATE' THEN
+--      -- Check if 'ngay_cap_nhat' column exists in the triggering table
+--      IF EXISTS (SELECT 1 FROM information_schema.columns
+--                 WHERE table_schema = TG_TABLE_SCHEMA
+--                   AND table_name = TG_TABLE_NAME
+--                   AND column_name = 'ngay_cap_nhat')
+--      THEN
+--         -- Use qualified name for the column to avoid ambiguity
+--         EXECUTE format('UPDATE %I.%I SET ngay_cap_nhat = NOW() WHERE ctid = $1', TG_TABLE_SCHEMA, TG_TABLE_NAME) USING NEW.ctid;
+--         -- Directly modifying NEW here might not work as expected in all cases,
+--         -- but for this simple assignment it's often sufficient.
+--         -- A more robust way might involve re-fetching or ensuring the calling code handles it.
+--         -- For simplicity, we'll try direct assignment first.
+--         NEW.ngay_cap_nhat = NOW();
+--      END IF;
+--   END IF;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+--
+-- -- Drop existing triggers before creating new ones to avoid errors on re-run
+-- DO $$ BEGIN
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_danh_muc') THEN
+--         DROP TRIGGER set_timestamp_danh_muc ON danh_muc;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_nguoi_dung') THEN
+--         DROP TRIGGER set_timestamp_nguoi_dung ON nguoi_dung;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_dia_chi') THEN
+--         DROP TRIGGER set_timestamp_dia_chi ON dia_chi;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_san_pham') THEN
+--         DROP TRIGGER set_timestamp_san_pham ON san_pham;
+--     END IF;
+--      IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_thuong_hieu') THEN
+--         DROP TRIGGER set_timestamp_thuong_hieu ON thuong_hieu; -- Trigger for Brand if it had ngay_cap_nhat
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_dot_giam_gia') THEN
+--         DROP TRIGGER set_timestamp_dot_giam_gia ON dot_giam_gia;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_phieu_giam_gia') THEN
+--         DROP TRIGGER set_timestamp_phieu_giam_gia ON phieu_giam_gia;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_san_pham_chi_tiet') THEN
+--         DROP TRIGGER set_timestamp_san_pham_chi_tiet ON san_pham_chi_tiet;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_gio_hang') THEN
+--         DROP TRIGGER set_timestamp_gio_hang ON gio_hang;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_hoa_don') THEN
+--         DROP TRIGGER set_timestamp_hoa_don ON hoa_don;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_danh_gia') THEN
+--         DROP TRIGGER set_timestamp_danh_gia ON danh_gia;
+--     END IF;
+--     IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_timestamp_wishlist') THEN
+--         DROP TRIGGER set_timestamp_wishlist ON wishlist;
+--     END IF;
+-- END $$;
+--
+--
+-- -- Áp dụng trigger cho các bảng có cột ngay_cap_nhat
+-- CREATE TRIGGER set_timestamp_danh_muc BEFORE UPDATE ON danh_muc FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_nguoi_dung BEFORE UPDATE ON nguoi_dung FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_dia_chi BEFORE UPDATE ON dia_chi FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_san_pham BEFORE UPDATE ON san_pham FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- -- CREATE TRIGGER set_timestamp_thuong_hieu BEFORE UPDATE ON thuong_hieu FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp(); -- Add if thuong_hieu has ngay_cap_nhat
+-- CREATE TRIGGER set_timestamp_dot_giam_gia BEFORE UPDATE ON dot_giam_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_phieu_giam_gia BEFORE UPDATE ON phieu_giam_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_san_pham_chi_tiet BEFORE UPDATE ON san_pham_chi_tiet FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_gio_hang BEFORE UPDATE ON gio_hang FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_hoa_don BEFORE UPDATE ON hoa_don FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_danh_gia BEFORE UPDATE ON danh_gia FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+-- CREATE TRIGGER set_timestamp_wishlist BEFORE UPDATE ON wishlist FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 -- =============================================================================
--- KẾT THÚC SCRIPT TẠO BẢNG V5
+-- 7. INSERT DỮ LIỆU MẪU
+-- =============================================================================
+
+-- Insert sample user
+INSERT INTO nguoi_dung (ma_nguoi_dung, avatar, ho_ten, gioi_tinh, ngay_sinh, cccd, email, so_dien_thoai, mat_khau, vai_tro, trang_thai)
+VALUES
+    ('CUS001', 'avatar1.jpg', 'Nguyen Van A', 'NAM', '1990-01-01', '123456789012', 'nguyenvana@example.com', '0123456789', 'hashedpassword', 'CUSTOMER', TRUE);
+
+-- Insert sample category
+INSERT INTO danh_muc (ma_danh_muc, ten_danh_muc)
+VALUES ('DM001', 'Laptop');
+
+-- Insert sample address for user (assuming nguoi_dung id = 1)
+INSERT INTO dia_chi (nguoi_dung_id, ho_ten_nguoi_nhan, so_dien_thoai_nguoi_nhan, duong, phuong_xa, quan_huyen, tinh_thanh, la_mac_dinh)
+VALUES (1, 'Nguyen Van A', '0123456789', '12A Nguyen Trai', 'Ben Thanh', '1', 'HCM', TRUE);
+
+-- INSERT DATA MẪU CHO BẢNG CPU
+INSERT INTO cpu (mo_ta_cpu) VALUES
+('Intel Core i5-1340P'),
+('AMD Ryzen 5 5600H'),
+('Intel Core i7-12700H');
+
+-- INSERT DATA MẪU CHO BẢNG RAM
+INSERT INTO ram (mo_ta_ram) VALUES
+('16GB DDR5 5600MHz'),
+('8GB DDR4 2666MHz'),
+('32GB DDR5 6000MHz');
+
+-- INSERT DATA MẪU CHO BẢNG O_CUNG
+INSERT INTO o_cung (mo_ta_o_cung) VALUES
+('512GB NVMe Gen4 SSD'),
+('1TB SATA HDD'),
+('256GB NVMe Gen3 SSD');
+
+-- INSERT DATA MẪU CHO BẢNG GPU
+INSERT INTO gpu (mo_ta_gpu) VALUES
+('NVIDIA GeForce RTX 4060'),
+('AMD Radeon RX 6800M'),
+('NVIDIA GeForce GTX 1650');
+
+-- INSERT DATA MẪU CHO BẢNG MAN_HINH
+INSERT INTO man_hinh (mo_ta_man_hinh) VALUES
+('15.6 inch FHD IPS 144Hz'),
+('14 inch QHD OLED'),
+('17.3 inch 4K UHD');
+
+-- INSERT DATA MẪU CHO BẢNG CONG_GIAO_TIEP
+INSERT INTO cong_giao_tiep (mo_ta_cong) VALUES
+('2x USB 3.2, 1x HDMI, 1x Ethernet'),
+('1x USB-C, 2x USB-A, 1x DisplayPort'),
+('3x USB-A, 1x USB-C, 1x SD Card Reader');
+
+-- INSERT DATA MẪU CHO BẢNG BAN_PHIM
+INSERT INTO ban_phim (mo_ta_ban_phim) VALUES
+('RGB Backlit Keyboard'),
+('Chiclet Keyboard'),
+('Mechanical Keyboard');
+
+-- INSERT DATA MẪU CHO BẢNG KET_NOI_MANG
+INSERT INTO ket_noi_mang (mo_ta_ket_noi) VALUES
+('Wi-Fi 6E'),
+('Gigabit Ethernet'),
+('Wi-Fi 5');
+
+-- INSERT DATA MẪU CHO BẢNG AM_THANH
+INSERT INTO am_thanh (mo_ta_am_thanh) VALUES
+('Dolby Atmos'),
+('Stereo Speakers'),
+('Hi-Res Audio');
+
+-- INSERT DATA MẪU CHO BẢNG WEBCAM
+INSERT INTO webcam (mo_ta_wc) VALUES
+('1080p HD Webcam'),
+('720p HD Webcam'),
+('4K Ultra HD Webcam');
+
+-- INSERT DATA MẪU CHO BẢNG BAO_MAT
+INSERT INTO bao_mat (mo_ta_bao_mat) VALUES
+('Fingerprint Reader'),
+('IR Camera for Face Unlock'),
+('TPM 2.0 Module');
+
+-- INSERT DATA MẪU CHO BẢNG HE_DIEU_HANH
+INSERT INTO he_dieu_hanh (mo_ta_he_dieu_hanh) VALUES
+('Windows 11 Home'),
+('Ubuntu 22.04 LTS'),
+('macOS Monterey');
+
+-- INSERT DATA MẪU CHO BẢNG PIN
+INSERT INTO pin (mo_ta_pin) VALUES
+('4-cell 75Wh'),
+('3-cell 45Wh'),
+('6-cell 99Wh');
+
+-- INSERT DATA MẪU CHO BẢNG THIET_KE
+INSERT INTO thiet_ke (mo_ta_thiet_ke) VALUES
+('Slim and light design, 1.2kg, aluminum body'),
+('Robust design with cooling system, 2.5kg, plastic body'),
+('Premium design, 1.8kg, magnesium alloy body');
+
+-- INSERT DATA MẪU CHO BẢNG THUONG_HIEU
+INSERT INTO thuong_hieu (mo_ta_thuong_hieu) VALUES
+('Dell'),
+('Apple'),
+('Logitech');
+
+-- Insert sample product (SPU)
+INSERT INTO san_pham (ma_san_pham, ten_san_pham, thuong_hieu_id, mo_ta, hinh_anh, ngay_ra_mat, trang_thai)
+VALUES ('SP001', 'Laptop Lenovo Ideapad 3', 1, 'Laptop hiệu năng tốt cho công việc', '["image1.jpg", "image2.jpg"]', '2025-03-01', TRUE);
+
+-- Insert product-category mapping (san_pham id = 1, danh_muc id = 1)
+INSERT INTO san_pham_danh_muc (san_pham_id, danh_muc_id)
+VALUES (1, 1);
+
+-- Insert sample discount campaign
+INSERT INTO dot_giam_gia (ma_dot_giam_gia, ten_dot_giam_gia, phan_tram_giam, ngay_bat_dau, ngay_ket_thuc, trang_thai)
+VALUES ('DG001', 'Mua sắm mùa hè', 15.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z', TRUE);
+
+-- Insert sample voucher
+INSERT INTO phieu_giam_gia (ma_phieu_giam_gia, loai_phieu_giam_gia, gia_tri_giam, gia_tri_don_hang_toi_thieu, ngay_bat_dau, ngay_ket_thuc, mo_ta, so_luong_ban_dau)
+VALUES ('PGG001', 'PHAN_TRAM', 10.00, 1000000.00, '2025-07-01T00:00:00Z', '2025-07-31T00:00:00Z', 'Voucher giảm 10%', 100);
+
+-- Insert sample product detail / SKU (san_pham id = 1)
+INSERT INTO san_pham_chi_tiet (san_pham_id, sku, mau_sac, so_luong_ton_kho, gia_ban, hinh_anh, trang_thai, cpu_id, ram_id, o_cung_id)
+VALUES (1, 'SKU001', 'Blue', 50, 15000000.00, '["spct1.jpg", "spct2.jpg"]', TRUE, 1, 1, 1);
+-- (Giả sử bạn đã insert dữ liệu mẫu cho cpu, ram, o_cung tương ứng với id = 1)
+
+-- Insert SKU - Discount mapping (san_pham_chi_tiet id = 1, dot_giam_gia id = 1)
+INSERT INTO san_pham_chi_tiet_dot_giam_gia (san_pham_chi_tiet_id, dot_giam_gia_id)
+VALUES (1, 1);
+
+-- Insert sample shopping cart for user id = 1
+INSERT INTO gio_hang (nguoi_dung_id, trang_thai)
+VALUES (1, TRUE);
+
+-- Insert sample cart item (gio_hang id = 1, san_pham_chi_tiet id = 1)
+INSERT INTO gio_hang_chi_tiet (gio_hang_id, san_pham_chi_tiet_id, so_luong)
+VALUES (1, 1, 2);
+
+-- Insert sample order
+INSERT INTO hoa_don (ma_hoa_don, khach_hang_id, dia_chi_giao_hang_duong, dia_chi_giao_hang_phuong_xa, dia_chi_giao_hang_quan_huyen, dia_chi_giao_hang_tinh_thanh, gia_tri_san_pham, tong_thanh_toan, trang_thai_giao_hang)
+VALUES ('HD001', 1, '12A Nguyen Trai', 'Ben Thanh', '1', 'HCM', 15000000.00, 14000000.00, 'DANG_XU_LY');
+
+-- Insert sample order line item (hoa_don id = 1, san_pham_chi_tiet id = 1)
+INSERT INTO hoa_don_chi_tiet (hoa_don_id, san_pham_chi_tiet_id, so_luong, gia_goc, gia_ban, thanh_tien, ten_san_pham_snapshot, sku_snapshot)
+VALUES (1, 1, 1, 15000000.00, 14000000.00, 14000000.00, 'Laptop Lenovo Ideapad 3', 'SKU001');
+
+-- Insert sample order-voucher mapping (hoa_don id = 1, phieu_giam_gia id = 1)
+INSERT INTO hoa_don_phieu_giam_gia (hoa_don_id, phieu_giam_gia_id, gia_tri_da_giam)
+VALUES (1, 1, 1000000.00);
+
+-- Insert sample payment transaction (hoa_don id = 1, nguoi_dung id = 1)
+INSERT INTO thanh_toan (nguoi_dung_id, trang_thai_giao_dich, phuong_thuc_thanh_toan, ma_giao_dich, gia_tri)
+VALUES (1, 'DA_THANH_TOAN', 'VISA', 'TXN001', 14000000.00);
+
+-- Insert sample product review (san_pham_chi_tiet id = 1, nguoi_dung id = 1)
+INSERT INTO danh_gia (san_pham_chi_tiet_id, nguoi_dung_id, so_sao, noi_dung, trang_thai)
+VALUES (1, 1, 5, 'Sản phẩm tuyệt vời!', 'DUYET');
+
+-- Insert sample wishlist for user id = 1
+INSERT INTO wishlist (nguoi_dung_id)
+VALUES (1);
+
+-- Insert sample wishlist item (wishlist id = 1, san_pham id = 1)
+INSERT INTO wishlist_item (wishlist_id, san_pham_id)
+VALUES (1, 1);
+
+-- Insert sample mapping voucher - user (phieu_giam_gia id = 1, nguoi_dung id = 1)
+INSERT INTO phieu_giam_gia_nguoi_dung (phieu_giam_gia_id, nguoi_dung_id)
+VALUES (1, 1);
+
+-- =============================================================================
+-- KẾT THÚC SCRIPT TẠO BẢNG V5 & INSERT SAMPLE DATA
 -- =============================================================================

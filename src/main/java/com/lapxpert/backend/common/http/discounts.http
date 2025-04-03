@@ -1,0 +1,31 @@
+GET http://localhost:8080/api/v1/discounts
+
+###
+PUT http://localhost:8080/api/v1/discounts
+Content-Type: application/json
+
+{
+  "maDotGiamGia": "DG001",
+  "tenDotGiamGia": "Mua sắm mùa hè",
+  "phanTramGiam": 15.00,
+  "ngayBatDau": "2025-06-01T00:00:00Z",
+  "ngayKetThuc": "2025-06-30T00:00:00Z",
+  "trangThai": true
+}
+
+###
+PUT http://localhost:8080/api/v1/discounts
+Content-Type: application/json
+
+{
+  "id": 1,
+  "maDotGiamGia": "DG001",
+  "tenDotGiamGia": "Mua sắm mùa hè",
+  "phanTramGiam": 15.00,
+  "ngayBatDau": "2025-06-01T00:00:00Z",
+  "ngayKetThuc": "2025-06-30T00:00:00Z",
+  "trangThai": true
+}
+
+###
+GET http://localhost:8080/api/v1/discounts/toggle/1

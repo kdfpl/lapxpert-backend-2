@@ -1,11 +1,11 @@
 package com.lapxpert.backend.dotgiamgia.domain.service;
 
-import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDTO;
+import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDto;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaMapper;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.dotgiamgia.domain.repository.DotGiamGiaRepository;
-import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDTO;
-import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietMapper;
+import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
+import com.lapxpert.backend.sanpham.application.mapper.SanPhamChiTietMapper;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,12 +31,12 @@ public class DotGiamGiaService {
         this.sanPhamChiTietMapper = sanPhamChiTietMapper;
     }
 
-    public List<DotGiamGiaDTO> findAll() {
+    public List<DotGiamGiaDto> findAll() {
         return dotGiamGiaMapper.toDtos(dotGiamGiaRepository.findAllByDaAn(false));
     }
 
     @Transactional
-    public ResponseEntity<DotGiamGiaDTO> save(DotGiamGiaDTO dto) {
+    public ResponseEntity<DotGiamGiaDto> save(DotGiamGiaDto dto) {
         DotGiamGia entity = dotGiamGiaMapper.toEntity(dto);
 
         if (entity.getId() != null) {
@@ -51,7 +51,7 @@ public class DotGiamGiaService {
     }
 
     @Transactional
-    public ResponseEntity<DotGiamGiaDTO> toggle(Long id) {
+    public ResponseEntity<DotGiamGiaDto> toggle(Long id) {
         DotGiamGia entity = dotGiamGiaRepository.findById(id).orElse(null);
         if (entity != null) {
             entity.setDaAn(!entity.getDaAn());
@@ -62,7 +62,7 @@ public class DotGiamGiaService {
     }
 
     @Transactional
-    public ResponseEntity<List<DotGiamGiaDTO>> toggleMultiple(List<Long> ids) {
+    public ResponseEntity<List<DotGiamGiaDto>> toggleMultiple(List<Long> ids) {
         List<DotGiamGia> entities = dotGiamGiaRepository.findAllById(ids);
         if (!entities.isEmpty()) {
             for (DotGiamGia entity : entities) {
@@ -79,7 +79,7 @@ public class DotGiamGiaService {
     }
 
     @Transactional
-    public Set<SanPhamChiTietDTO> findAllSanPhamChiTietsByDotGiamGiaId(Long id) {
+    public Set<SanPhamChiTietDto> findAllSanPhamChiTietsByDotGiamGiaId(Long id) {
         DotGiamGia dgg = dotGiamGiaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("DotGiamGia not found with id: " + id));
         Set<SanPhamChiTiet> sanPhamChiTiets = dgg.getSanPhamChiTiets();
@@ -87,7 +87,7 @@ public class DotGiamGiaService {
     }
 
     @Transactional
-    public ResponseEntity<DotGiamGiaDTO> addSanPhamChiTiets(Long dotGiamGiaId, List<Long> sanPhamChiTietIds) {
+    public DotGiamGiaDto addSanPhamChiTiets(Long dotGiamGiaId, List<Long> sanPhamChiTietIds) {
         DotGiamGia dotGiamGia = dotGiamGiaRepository.findById(dotGiamGiaId)
                 .orElseThrow(() -> new RuntimeException("DotGiamGia not found with id: " + dotGiamGiaId));
 
@@ -97,11 +97,11 @@ public class DotGiamGiaService {
             dotGiamGia.getSanPhamChiTiets().add(sanPhamChiTiet);
             sanPhamChiTiet.getDotGiamGias().add(dotGiamGia);
         }
-        return ResponseEntity.ok(dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(dotGiamGia)));
+        return dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(dotGiamGia));
     }
 
     @Transactional
-    public ResponseEntity<DotGiamGiaDTO> removeSanPhamChiTiets(Long dotGiamGiaId, List<Long> sanPhamChiTietIds) {
+    public DotGiamGiaDto removeSanPhamChiTiets(Long dotGiamGiaId, List<Long> sanPhamChiTietIds) {
         DotGiamGia dotGiamGia = dotGiamGiaRepository.findById(dotGiamGiaId)
                 .orElseThrow(() -> new RuntimeException("DotGiamGia not found with id: " + dotGiamGiaId));
 
@@ -111,6 +111,6 @@ public class DotGiamGiaService {
             dotGiamGia.getSanPhamChiTiets().remove(sanPhamChiTiet);
             sanPhamChiTiet.getDotGiamGias().remove(dotGiamGia);
         }
-        return ResponseEntity.ok(dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(dotGiamGia)));
+        return dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(dotGiamGia));
     }
 }

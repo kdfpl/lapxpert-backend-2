@@ -7,9 +7,9 @@ import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface DotGiamGiaMapper {
-    DotGiamGiaDTO toDto(DotGiamGia entity);
+    DotGiamGiaDto toDto(DotGiamGia entity);
 
-    List<DotGiamGiaDTO> toDtos(List<DotGiamGia> entities);
+    List<DotGiamGiaDto> toDtos(List<DotGiamGia> entities);
 
-    DotGiamGia toEntity(DotGiamGiaDTO dto);
+    DotGiamGia toEntity(DotGiamGiaDto dto);
 }

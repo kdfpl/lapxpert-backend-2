@@ -1,5 +1,6 @@
 package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.DanhMuc;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.ThuongHieu;
 import jakarta.persistence.*;
@@ -14,6 +15,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,9 +44,9 @@ public class SanPham {
     @Column(name = "mo_ta", length = Integer.MAX_VALUE)
     private String moTa;
 
-    @Column(name = "hinh_anh")
+    @Column(name = "hinh_anh", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> hinhAnh;
+    private List<String> hinhAnh;
 
     @Column(name = "ngay_ra_mat")
     private LocalDate ngayRaMat;
@@ -66,5 +68,9 @@ public class SanPham {
             joinColumns = @JoinColumn(name = "san_pham_id"),
             inverseJoinColumns = @JoinColumn(name = "danh_muc_id"))
     private Set<DanhMuc> danhMucs = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "sanPham", fetch = FetchType.LAZY)
+    private Set<SanPhamChiTiet> sanPhamChiTiets = new LinkedHashSet<>();
 
 }

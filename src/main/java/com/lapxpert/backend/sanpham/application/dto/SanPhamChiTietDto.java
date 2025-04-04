@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Data
-public class SanPhamChiTietDTO {
+public class SanPhamChiTietDto {
     private Long id;
     private String sku;
     private BigDecimal giaBan;

@@ -3,6 +3,7 @@ package com.lapxpert.backend.dotgiamgia.domain.service;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDto;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaMapper;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
+import com.lapxpert.backend.dotgiamgia.domain.entity.TrangThai;
 import com.lapxpert.backend.dotgiamgia.domain.repository.DotGiamGiaRepository;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
 import com.lapxpert.backend.sanpham.application.mapper.SanPhamChiTietMapper;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -38,7 +40,6 @@ public class DotGiamGiaService {
     @Transactional
     public ResponseEntity<DotGiamGiaDto> save(DotGiamGiaDto dto) {
         DotGiamGia entity = dotGiamGiaMapper.toEntity(dto);
-
         if (entity.getId() != null) {
             DotGiamGia existingEntity = dotGiamGiaRepository.findById(entity.getId()).orElse(null);
             if (existingEntity != null) {
@@ -46,7 +47,6 @@ public class DotGiamGiaService {
                 return ResponseEntity.ok(dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(entity)));
             }
         }
-
         return ResponseEntity.status(HttpStatus.CREATED).body(dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(entity)));
     }
 
@@ -54,8 +54,16 @@ public class DotGiamGiaService {
     public ResponseEntity<DotGiamGiaDto> toggle(Long id) {
         DotGiamGia entity = dotGiamGiaRepository.findById(id).orElse(null);
         if (entity != null) {
-            entity.setDaAn(!entity.getDaAn());
-            return ResponseEntity.ok(dotGiamGiaMapper.toDto(dotGiamGiaRepository.save(entity)));
+            // Tạo một bản copy của Set để tránh ConcurrentModificationException khi duyệt và sửa đổi
+            Set<SanPhamChiTiet> associatedProducts = Set.copyOf(entity.getSanPhamChiTiets());
+            for (SanPhamChiTiet spct : associatedProducts) {
+                spct.getDotGiamGias().remove(entity);
+            }
+            entity.getSanPhamChiTiets().clear();
+            entity.setDaAn(true);
+            entity.setTrangThai(TrangThai.KET_THUC);
+            DotGiamGia savedEntity = dotGiamGiaRepository.save(entity);
+            return ResponseEntity.ok(dotGiamGiaMapper.toDto(savedEntity));
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -66,16 +74,20 @@ public class DotGiamGiaService {
         List<DotGiamGia> entities = dotGiamGiaRepository.findAllById(ids);
         if (!entities.isEmpty()) {
             for (DotGiamGia entity : entities) {
-                entity.setDaAn(!entity.getDaAn());
+                // Tạo một bản copy của Set để tránh ConcurrentModificationException
+                Set<SanPhamChiTiet> associatedProducts = Set.copyOf(entity.getSanPhamChiTiets());
+                for (SanPhamChiTiet spct : associatedProducts) {
+                    spct.getDotGiamGias().remove(entity);
+                }
+                entity.getSanPhamChiTiets().clear();
+                entity.setDaAn(true);
+                entity.setTrangThai(TrangThai.KET_THUC);
             }
-            return ResponseEntity.ok(dotGiamGiaMapper.toDtos(dotGiamGiaRepository.saveAll(entities)));
+            List<DotGiamGia> savedEntities = dotGiamGiaRepository.saveAll(entities);
+            return ResponseEntity.ok(dotGiamGiaMapper.toDtos(savedEntities));
         } else {
             return ResponseEntity.notFound().build();
         }
-    }
-
-    public DotGiamGia findById(Long id) {
-        return dotGiamGiaRepository.findById(id).orElse(null);
     }
 
     @Transactional

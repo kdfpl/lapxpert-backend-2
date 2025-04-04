@@ -40,7 +40,7 @@ Content-Type: application/json
 [1, 2]
 
 ###
-DELETE http://localhost:8080/api/v1/discounts/1/spct
+DELETE http://localhost:8080/api/v1/discounts/4/spct
 Content-Type: application/json
 
 [1, 2]

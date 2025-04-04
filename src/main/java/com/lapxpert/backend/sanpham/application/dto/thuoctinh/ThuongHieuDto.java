@@ -1,4 +1,4 @@
-package com.lapxpert.backend.sanpham.application.dto;
+package com.lapxpert.backend.sanpham.application.dto.thuoctinh;
 
 import lombok.Data;
 

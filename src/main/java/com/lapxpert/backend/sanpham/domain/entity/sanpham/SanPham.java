@@ -1,6 +1,5 @@
 package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.DanhMuc;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.ThuongHieu;
 import jakarta.persistence.*;
@@ -11,18 +10,21 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "san_pham")
+@EntityListeners(AuditingEntityListener.class)
 public class SanPham {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "san_pham_id_gen")
@@ -57,11 +59,13 @@ public class SanPham {
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_tao")
-    private OffsetDateTime ngayTao;
+    @CreatedDate
+    private Instant ngayTao;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
-    private OffsetDateTime ngayCapNhat;
+    @LastModifiedDate
+    private Instant ngayCapNhat;
 
     @ManyToMany
     @JoinTable(name = "san_pham_danh_muc",
@@ -69,7 +73,6 @@ public class SanPham {
             inverseJoinColumns = @JoinColumn(name = "danh_muc_id"))
     private Set<DanhMuc> danhMucs = new LinkedHashSet<>();
 
-    @JsonIgnore
     @OneToMany(mappedBy = "sanPham", fetch = FetchType.LAZY)
     private Set<SanPhamChiTiet> sanPhamChiTiets = new LinkedHashSet<>();
 

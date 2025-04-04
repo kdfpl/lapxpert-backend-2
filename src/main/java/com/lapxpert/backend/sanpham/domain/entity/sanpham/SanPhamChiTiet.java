@@ -8,9 +8,12 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +22,7 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "san_pham_chi_tiet")
+@EntityListeners(AuditingEntityListener.class)
 public class SanPhamChiTiet {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "san_pham_chi_tiet_id_gen")
@@ -57,11 +61,13 @@ public class SanPhamChiTiet {
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_tao")
-    private OffsetDateTime ngayTao;
+    @CreatedDate
+    private Instant ngayTao;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
-    private OffsetDateTime ngayCapNhat;
+    @LastModifiedDate
+    private Instant ngayCapNhat;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)

@@ -1,6 +1,6 @@
 package com.lapxpert.backend.sanpham.application.mapper;
 
-import com.lapxpert.backend.sanpham.application.dto.ThuongHieuDto;
+import com.lapxpert.backend.sanpham.application.dto.thuoctinh.ThuongHieuDto;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.ThuongHieu;
 import org.mapstruct.Mapper;
 

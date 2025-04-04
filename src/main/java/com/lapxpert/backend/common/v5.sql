@@ -316,6 +316,14 @@ CREATE TABLE hoa_don_phieu_giam_gia (
 );
 COMMENT ON TABLE hoa_don_phieu_giam_gia IS 'Mapping vouchers applied to orders and the amount discounted';
 
+CREATE TABLE lich_su_hoa_don (
+    id BIGSERIAL PRIMARY KEY,
+    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
+    trang_thai VARCHAR(50) NOT NULL,  -- Ví dụ: 'DANG_XU_LY', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'DA_HUY'
+    mieu_ta TEXT,                     -- Ghi chú hoặc mô tả thay đổi
+    thoi_gian TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE thanh_toan (
     id BIGSERIAL PRIMARY KEY,
     nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE RESTRICT, -- Added back FK to user
@@ -665,6 +673,9 @@ VALUES (1, 1, 2);
 -- Insert sample order
 INSERT INTO hoa_don (ma_hoa_don, khach_hang_id, dia_chi_giao_hang_duong, dia_chi_giao_hang_phuong_xa, dia_chi_giao_hang_quan_huyen, dia_chi_giao_hang_tinh_thanh, gia_tri_san_pham, tong_thanh_toan, trang_thai_giao_hang)
 VALUES ('HD001', 1, '12A Nguyen Trai', 'Ben Thanh', '1', 'HCM', 15000000.00, 14000000.00, 'DANG_XU_LY');
+
+INSERT INTO lich_su_hoa_don (hoa_don_id, trang_thai, mieu_ta)
+VALUES (1, 'DA_GIAO_HANG', 'Đơn hàng được giao thành công tại địa chỉ XYZ');
 
 -- Insert sample order line item (hoa_don id = 1, san_pham_chi_tiet id = 1)
 INSERT INTO hoa_don_chi_tiet (hoa_don_id, san_pham_chi_tiet_id, so_luong, gia_goc, gia_ban, thanh_tien, ten_san_pham_snapshot, sku_snapshot)

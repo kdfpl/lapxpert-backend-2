@@ -40,8 +40,22 @@ public class DotGiamGiaController {
         return service.toggleMultiple(ids);
     }
 
-    @GetMapping("spct/{id}")
+    @GetMapping("{id}/spct")
     public ResponseEntity<Set<SanPhamChiTietDTO>> findAllSanPhamChiTietsByDotGiamGiaId(@PathVariable Long id) {
         return ResponseEntity.ok(service.findAllSanPhamChiTietsByDotGiamGiaId(id));
+    }
+
+    @PutMapping("{id}/spct")
+    public ResponseEntity<DotGiamGiaDTO> addSanPhamChiTiets(
+            @PathVariable Long id,
+            @RequestBody List<Long> sanPhamChiTietIds) {
+        return service.addSanPhamChiTiets(id, sanPhamChiTietIds);
+    }
+
+    @DeleteMapping("{id}/spct")
+    public ResponseEntity<DotGiamGiaDTO> removeSanPhamChiTiets(
+            @PathVariable Long id,
+            @RequestBody List<Long> sanPhamChiTietIds) {
+        return service.removeSanPhamChiTiets(id, sanPhamChiTietIds);
     }
 }

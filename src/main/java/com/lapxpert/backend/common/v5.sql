@@ -105,47 +105,47 @@ COMMENT ON TABLE thuong_hieu IS 'Product Brands (e.g., Dell, Apple, Logitech)';
 -- 3. TẠO CÁC BẢNG CORE
 -- =============================================================================
 CREATE TABLE danh_muc (
-    id BIGSERIAL PRIMARY KEY,
-    ma_danh_muc VARCHAR(50) UNIQUE NOT NULL,
-    ten_danh_muc VARCHAR(255) NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                          id BIGSERIAL PRIMARY KEY,
+                          ma_danh_muc VARCHAR(50) UNIQUE NOT NULL,
+                          ten_danh_muc VARCHAR(255) NOT NULL,
+                          ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE danh_muc IS 'Product Categories';
 
 CREATE TABLE nguoi_dung (
-    id BIGSERIAL PRIMARY KEY,
-    ma_nguoi_dung VARCHAR(50) UNIQUE,
-    avatar VARCHAR(512),
-    ho_ten VARCHAR(255) NOT NULL,
-    gioi_tinh gioi_tinh_enum,
-    ngay_sinh DATE,
-    cccd VARCHAR(12) UNIQUE, -- Changed from string, added UNIQUE, allow NULL
-    email VARCHAR(255) UNIQUE NOT NULL,
-    so_dien_thoai VARCHAR(20) UNIQUE,
-    mat_khau VARCHAR(255) NOT NULL,
-    vai_tro vai_tro_enum NOT NULL DEFAULT 'CUSTOMER',
-    trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                            id BIGSERIAL PRIMARY KEY,
+                            ma_nguoi_dung VARCHAR(50) UNIQUE,
+                            avatar VARCHAR(512),
+                            ho_ten VARCHAR(255) NOT NULL,
+                            gioi_tinh gioi_tinh_enum,
+                            ngay_sinh DATE,
+                            cccd VARCHAR(12) UNIQUE, -- Changed from string, added UNIQUE, allow NULL
+                            email VARCHAR(255) UNIQUE NOT NULL,
+                            so_dien_thoai VARCHAR(20) UNIQUE,
+                            mat_khau VARCHAR(255) NOT NULL,
+                            vai_tro vai_tro_enum NOT NULL DEFAULT 'CUSTOMER',
+                            trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
+                            ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                            ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE nguoi_dung IS 'Users (Admin, Staff, Customer)';
 COMMENT ON COLUMN nguoi_dung.cccd IS 'Citizen Identity Card number (consider encryption/security)';
 
 CREATE TABLE dia_chi (
-    id BIGSERIAL PRIMARY KEY,
-    nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
-    ho_ten_nguoi_nhan VARCHAR(255), -- Added back
-    so_dien_thoai_nguoi_nhan VARCHAR(20), -- Added back
-    duong VARCHAR(255) NOT NULL,
-    phuong_xa VARCHAR(100) NOT NULL,
-    quan_huyen VARCHAR(100) NOT NULL,
-    tinh_thanh VARCHAR(100) NOT NULL,
-    quoc_gia VARCHAR(100) DEFAULT 'Việt Nam',
-    loai_dia_chi VARCHAR(50),
-    la_mac_dinh BOOLEAN DEFAULT FALSE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                         id BIGSERIAL PRIMARY KEY,
+                         nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+                         ho_ten_nguoi_nhan VARCHAR(255), -- Added back
+                         so_dien_thoai_nguoi_nhan VARCHAR(20), -- Added back
+                         duong VARCHAR(255) NOT NULL,
+                         phuong_xa VARCHAR(100) NOT NULL,
+                         quan_huyen VARCHAR(100) NOT NULL,
+                         tinh_thanh VARCHAR(100) NOT NULL,
+                         quoc_gia VARCHAR(100) DEFAULT 'Việt Nam',
+                         loai_dia_chi VARCHAR(50),
+                         la_mac_dinh BOOLEAN DEFAULT FALSE NOT NULL,
+                         ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                         ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE dia_chi IS 'User Addresses';
 COMMENT ON COLUMN dia_chi.ho_ten_nguoi_nhan IS 'Recipient name (can be different from user)';
@@ -153,222 +153,222 @@ COMMENT ON COLUMN dia_chi.so_dien_thoai_nguoi_nhan IS 'Recipient phone number';
 
 
 CREATE TABLE san_pham (
-    id BIGSERIAL PRIMARY KEY,
-    ma_san_pham VARCHAR(100) UNIQUE NOT NULL,
-    ten_san_pham VARCHAR(255) NOT NULL,
-    thuong_hieu_id BIGINT REFERENCES thuong_hieu(id) ON DELETE SET NULL, -- Added FK
-    mo_ta TEXT,
-    hinh_anh JSONB,
-    ngay_ra_mat DATE,
-    trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                          id BIGSERIAL PRIMARY KEY,
+                          ma_san_pham VARCHAR(100) UNIQUE NOT NULL,
+                          ten_san_pham VARCHAR(255) NOT NULL,
+                          thuong_hieu_id BIGINT REFERENCES thuong_hieu(id) ON DELETE SET NULL, -- Added FK
+                          mo_ta TEXT,
+                          hinh_anh JSONB,
+                          ngay_ra_mat DATE,
+                          trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
+                          ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE san_pham IS 'Products (SPU)';
 
 CREATE TABLE san_pham_danh_muc (
-    san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
-    danh_muc_id BIGINT NOT NULL REFERENCES danh_muc(id) ON DELETE CASCADE,
-    PRIMARY KEY (san_pham_id, danh_muc_id)
+                                   san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
+                                   danh_muc_id BIGINT NOT NULL REFERENCES danh_muc(id) ON DELETE CASCADE,
+                                   PRIMARY KEY (san_pham_id, danh_muc_id)
 );
 COMMENT ON TABLE san_pham_danh_muc IS 'Mapping between Products and Categories';
 
 CREATE TABLE dot_giam_gia (
-    id BIGSERIAL PRIMARY KEY,
-    ma_dot_giam_gia VARCHAR(50) UNIQUE NOT NULL,
-    ten_dot_giam_gia VARCHAR(255) NOT NULL,
-    phan_tram_giam NUMERIC(5, 2) NOT NULL CHECK (phan_tram_giam >= 0 AND phan_tram_giam <= 100),
-    ngay_bat_dau TIMESTAMPTZ NOT NULL,
-    ngay_ket_thuc TIMESTAMPTZ NOT NULL,
-    trang_thai trang_thai_dot_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL,
-    da_an BOOLEAN DEFAULT TRUE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT check_ngay_dot_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
+                              id BIGSERIAL PRIMARY KEY,
+                              ma_dot_giam_gia VARCHAR(50) UNIQUE NOT NULL,
+                              ten_dot_giam_gia VARCHAR(255) NOT NULL,
+                              phan_tram_giam NUMERIC(5, 2) NOT NULL CHECK (phan_tram_giam >= 0 AND phan_tram_giam <= 100),
+                              ngay_bat_dau TIMESTAMPTZ NOT NULL,
+                              ngay_ket_thuc TIMESTAMPTZ NOT NULL,
+                              trang_thai trang_thai_dot_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL,
+                              da_an BOOLEAN DEFAULT TRUE NOT NULL,
+                              ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                              ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                              CONSTRAINT check_ngay_dot_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
 );
 COMMENT ON TABLE dot_giam_gia IS 'Discount Campaigns';
 COMMENT ON COLUMN dot_giam_gia.trang_thai IS 'Admin activation status (active/inactive)';
 
 
 CREATE TABLE phieu_giam_gia (
-    id BIGSERIAL PRIMARY KEY,
-    ma_phieu_giam_gia VARCHAR(50) UNIQUE NOT NULL,
-    loai_phieu_giam_gia loai_phieu_giam_gia_enum NOT NULL,
-    gia_tri_giam NUMERIC(15, 2) NOT NULL CHECK (gia_tri_giam >= 0),
-    gia_tri_don_hang_toi_thieu NUMERIC(15, 2) DEFAULT 0 CHECK (gia_tri_don_hang_toi_thieu >= 0),
-    ngay_bat_dau TIMESTAMPTZ NOT NULL,
-    ngay_ket_thuc TIMESTAMPTZ NOT NULL,
-    mo_ta TEXT,
-    phieu_rieng_tu boolean DEFAULT FALSE,
-    so_luong_ban_dau INT DEFAULT 0 NOT NULL,
-    so_luong_da_dung INT DEFAULT 0 NOT NULL,
-    trang_thai trang_thai_phieu_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau),
-    CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
+                                id BIGSERIAL PRIMARY KEY,
+                                ma_phieu_giam_gia VARCHAR(50) UNIQUE NOT NULL,
+                                loai_phieu_giam_gia loai_phieu_giam_gia_enum NOT NULL,
+                                gia_tri_giam NUMERIC(15, 2) NOT NULL CHECK (gia_tri_giam >= 0),
+                                gia_tri_don_hang_toi_thieu NUMERIC(15, 2) DEFAULT 0 CHECK (gia_tri_don_hang_toi_thieu >= 0),
+                                ngay_bat_dau TIMESTAMPTZ NOT NULL,
+                                ngay_ket_thuc TIMESTAMPTZ NOT NULL,
+                                mo_ta TEXT,
+                                phieu_rieng_tu boolean DEFAULT FALSE,
+                                so_luong_ban_dau INT DEFAULT 0 NOT NULL,
+                                so_luong_da_dung INT DEFAULT 0 NOT NULL,
+                                trang_thai trang_thai_phieu_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL, -- Use new Enum
+                                ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau),
+                                CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
 );
 COMMENT ON TABLE phieu_giam_gia IS 'Vouchers / Coupon Codes';
 COMMENT ON COLUMN phieu_giam_gia.trang_thai IS 'Time-based status (CHUA_DIEN_RA, DA_DIEN_RA, KET_THUC) - consider auto-updating mechanism';
 
 
 CREATE TABLE san_pham_chi_tiet (
-    id BIGSERIAL PRIMARY KEY,
-    san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
-    sku VARCHAR(100) UNIQUE NOT NULL,
-    mau_sac VARCHAR(50),
-    so_luong_ton_kho INT NOT NULL DEFAULT 0 CHECK (so_luong_ton_kho >= 0),
-    gia_ban NUMERIC(15, 2) NOT NULL CHECK (gia_ban >= 0),
-    gia_khuyen_mai NUMERIC(15, 2),
-    hinh_anh JSONB,
-    trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    cpu_id BIGINT REFERENCES cpu(id) ON DELETE SET NULL,
-    ram_id BIGINT REFERENCES ram(id) ON DELETE SET NULL,
-    o_cung_id BIGINT REFERENCES o_cung(id) ON DELETE SET NULL,
-    gpu_id BIGINT REFERENCES gpu(id) ON DELETE SET NULL,
-    man_hinh_id BIGINT REFERENCES man_hinh(id) ON DELETE SET NULL,
-    cong_giao_tiep_id BIGINT REFERENCES cong_giao_tiep(id) ON DELETE SET NULL,
-    ban_phim_id BIGINT REFERENCES ban_phim(id) ON DELETE SET NULL,
-    ket_noi_mang_id BIGINT REFERENCES ket_noi_mang(id) ON DELETE SET NULL,
-    am_thanh_id BIGINT REFERENCES am_thanh(id) ON DELETE SET NULL,
-    webcam_id BIGINT REFERENCES webcam(id) ON DELETE SET NULL,
-    bao_mat_id BIGINT REFERENCES bao_mat(id) ON DELETE SET NULL,
-    he_dieu_hanh_id BIGINT REFERENCES he_dieu_hanh(id) ON DELETE SET NULL,
-    pin_id BIGINT REFERENCES pin(id) ON DELETE SET NULL,
-    thiet_ke_id BIGINT REFERENCES thiet_ke(id) ON DELETE SET NULL
+                                   id BIGSERIAL PRIMARY KEY,
+                                   san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
+                                   sku VARCHAR(100) UNIQUE NOT NULL,
+                                   mau_sac VARCHAR(50),
+                                   so_luong_ton_kho INT NOT NULL DEFAULT 0 CHECK (so_luong_ton_kho >= 0),
+                                   gia_ban NUMERIC(15, 2) NOT NULL CHECK (gia_ban >= 0),
+                                   gia_khuyen_mai NUMERIC(15, 2),
+                                   hinh_anh JSONB,
+                                   trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
+                                   ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                   ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                   cpu_id BIGINT REFERENCES cpu(id) ON DELETE SET NULL,
+                                   ram_id BIGINT REFERENCES ram(id) ON DELETE SET NULL,
+                                   o_cung_id BIGINT REFERENCES o_cung(id) ON DELETE SET NULL,
+                                   gpu_id BIGINT REFERENCES gpu(id) ON DELETE SET NULL,
+                                   man_hinh_id BIGINT REFERENCES man_hinh(id) ON DELETE SET NULL,
+                                   cong_giao_tiep_id BIGINT REFERENCES cong_giao_tiep(id) ON DELETE SET NULL,
+                                   ban_phim_id BIGINT REFERENCES ban_phim(id) ON DELETE SET NULL,
+                                   ket_noi_mang_id BIGINT REFERENCES ket_noi_mang(id) ON DELETE SET NULL,
+                                   am_thanh_id BIGINT REFERENCES am_thanh(id) ON DELETE SET NULL,
+                                   webcam_id BIGINT REFERENCES webcam(id) ON DELETE SET NULL,
+                                   bao_mat_id BIGINT REFERENCES bao_mat(id) ON DELETE SET NULL,
+                                   he_dieu_hanh_id BIGINT REFERENCES he_dieu_hanh(id) ON DELETE SET NULL,
+                                   pin_id BIGINT REFERENCES pin(id) ON DELETE SET NULL,
+                                   thiet_ke_id BIGINT REFERENCES thiet_ke(id) ON DELETE SET NULL
 );
 COMMENT ON TABLE san_pham_chi_tiet IS 'Product Variants (SKU) with normalized attributes';
 
 CREATE TABLE san_pham_chi_tiet_dot_giam_gia (
-    san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE,
-    dot_giam_gia_id BIGINT NOT NULL REFERENCES dot_giam_gia(id) ON DELETE CASCADE,
-    PRIMARY KEY (san_pham_chi_tiet_id, dot_giam_gia_id)
+                                                san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE,
+                                                dot_giam_gia_id BIGINT NOT NULL REFERENCES dot_giam_gia(id) ON DELETE CASCADE,
+                                                PRIMARY KEY (san_pham_chi_tiet_id, dot_giam_gia_id)
 );
 COMMENT ON TABLE san_pham_chi_tiet_dot_giam_gia IS 'Mapping between SKUs and Discount Campaigns';
 
 CREATE TABLE gio_hang (
-    id BIGSERIAL PRIMARY KEY,
-    nguoi_dung_id BIGINT UNIQUE NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
-    trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                          id BIGSERIAL PRIMARY KEY,
+                          nguoi_dung_id BIGINT UNIQUE NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+                          trang_thai BOOLEAN DEFAULT TRUE NOT NULL,
+                          ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE gio_hang IS 'Shopping Cart';
 
 CREATE TABLE gio_hang_chi_tiet (
-    id BIGSERIAL PRIMARY KEY,
-    gio_hang_id BIGINT NOT NULL REFERENCES gio_hang(id) ON DELETE CASCADE,
-    san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE, -- Should this be RESTRICT or SET NULL on delete?
-    so_luong INT NOT NULL CHECK (so_luong > 0),
-    ngay_them TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (gio_hang_id, san_pham_chi_tiet_id)
+                                   id BIGSERIAL PRIMARY KEY,
+                                   gio_hang_id BIGINT NOT NULL REFERENCES gio_hang(id) ON DELETE CASCADE,
+                                   san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE, -- Should this be RESTRICT or SET NULL on delete?
+                                   so_luong INT NOT NULL CHECK (so_luong > 0),
+                                   ngay_them TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                   UNIQUE (gio_hang_id, san_pham_chi_tiet_id)
 );
 COMMENT ON TABLE gio_hang_chi_tiet IS 'Cart Items';
 
 CREATE TABLE hoa_don (
-    id BIGSERIAL PRIMARY KEY,
-    ma_hoa_don VARCHAR(50) UNIQUE NOT NULL,
-    khach_hang_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE RESTRICT,
-    nhan_vien_id BIGINT REFERENCES nguoi_dung(id) ON DELETE SET NULL,
+                         id BIGSERIAL PRIMARY KEY,
+                         ma_hoa_don VARCHAR(50) UNIQUE NOT NULL,
+                         khach_hang_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE RESTRICT,
+                         nhan_vien_id BIGINT REFERENCES nguoi_dung(id) ON DELETE SET NULL,
     -- dia_chi_giao_hang_day_du TEXT, -- Consider adding this snapshot back
-    dia_chi_giao_hang_ho_ten VARCHAR(255),
-    dia_chi_giao_hang_so_dien_thoai VARCHAR(20),
-    dia_chi_giao_hang_duong VARCHAR(255),
-    dia_chi_giao_hang_phuong_xa VARCHAR(100),
-    dia_chi_giao_hang_quan_huyen VARCHAR(100),
-    dia_chi_giao_hang_tinh_thanh VARCHAR(100),
-    gia_tri_san_pham NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    gia_tri_giam_gia_voucher NUMERIC(15, 2) DEFAULT 0,
-    gia_tri_giam_gia_dot_giam NUMERIC(15, 2) DEFAULT 0,
-    phi_van_chuyen NUMERIC(15, 2) DEFAULT 0,
-    tong_thanh_toan NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    trang_thai_giao_hang trang_thai_giao_hang_enum NOT NULL DEFAULT 'DANG_XU_LY',
+                         dia_chi_giao_hang_ho_ten VARCHAR(255),
+                         dia_chi_giao_hang_so_dien_thoai VARCHAR(20),
+                         dia_chi_giao_hang_duong VARCHAR(255),
+                         dia_chi_giao_hang_phuong_xa VARCHAR(100),
+                         dia_chi_giao_hang_quan_huyen VARCHAR(100),
+                         dia_chi_giao_hang_tinh_thanh VARCHAR(100),
+                         gia_tri_san_pham NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                         gia_tri_giam_gia_voucher NUMERIC(15, 2) DEFAULT 0,
+                         gia_tri_giam_gia_dot_giam NUMERIC(15, 2) DEFAULT 0,
+                         phi_van_chuyen NUMERIC(15, 2) DEFAULT 0,
+                         tong_thanh_toan NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                         trang_thai_giao_hang trang_thai_giao_hang_enum NOT NULL DEFAULT 'DANG_XU_LY',
     -- trang_thai_thanh_toan ENUM(...) -- Consider adding a payment status here (e.g., PENDING, PARTIAL, PAID, REFUNDED)
-    ma_van_don VARCHAR(100),
-    ghi_chu_khach_hang TEXT,
-    ghi_chu_cua_hang TEXT,
+                         ma_van_don VARCHAR(100),
+                         ghi_chu_khach_hang TEXT,
+                         ghi_chu_cua_hang TEXT,
 
 
 
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                         ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                         ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE hoa_don IS 'Customer Orders';
 
 CREATE TABLE hoa_don_chi_tiet (
-    id BIGSERIAL PRIMARY KEY,
-    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
-    san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE RESTRICT,
-    so_luong INT NOT NULL CHECK (so_luong > 0),
-    gia_goc NUMERIC(15, 2) NOT NULL,
-    gia_ban NUMERIC(15, 2) NOT NULL,
-    thanh_tien NUMERIC(15, 2) NOT NULL,
-    ten_san_pham_snapshot VARCHAR(255),
-    sku_snapshot VARCHAR(100),
-    hinh_anh_snapshot VARCHAR(512)
+                                  id BIGSERIAL PRIMARY KEY,
+                                  hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
+                                  san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE RESTRICT,
+                                  so_luong INT NOT NULL CHECK (so_luong > 0),
+                                  gia_goc NUMERIC(15, 2) NOT NULL,
+                                  gia_ban NUMERIC(15, 2) NOT NULL,
+                                  thanh_tien NUMERIC(15, 2) NOT NULL,
+                                  ten_san_pham_snapshot VARCHAR(255),
+                                  sku_snapshot VARCHAR(100),
+                                  hinh_anh_snapshot VARCHAR(512)
 );
 COMMENT ON TABLE hoa_don_chi_tiet IS 'Order Line Items (Snapshot of product details at time of order)';
 
 CREATE TABLE hoa_don_phieu_giam_gia (
-    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
-    phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE RESTRICT, -- Prevent deleting used voucher
-    gia_tri_da_giam NUMERIC(15, 2) NOT NULL CHECK (gia_tri_da_giam >= 0),
-    PRIMARY KEY (hoa_don_id, phieu_giam_gia_id)
+                                        hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
+                                        phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE RESTRICT, -- Prevent deleting used voucher
+                                        gia_tri_da_giam NUMERIC(15, 2) NOT NULL CHECK (gia_tri_da_giam >= 0),
+                                        PRIMARY KEY (hoa_don_id, phieu_giam_gia_id)
 );
 COMMENT ON TABLE hoa_don_phieu_giam_gia IS 'Mapping vouchers applied to orders and the amount discounted';
 
 CREATE TABLE lich_su_hoa_don (
-    id BIGSERIAL PRIMARY KEY,
-    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
-    trang_thai VARCHAR(50) NOT NULL,  -- Ví dụ: 'DANG_XU_LY', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'DA_HUY'
-    mieu_ta TEXT,                     -- Ghi chú hoặc mô tả thay đổi
-    thoi_gian TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                                 id BIGSERIAL PRIMARY KEY,
+                                 hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
+                                 trang_thai VARCHAR(50) NOT NULL,  -- Ví dụ: 'DANG_XU_LY', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'DA_HUY'
+                                 mieu_ta TEXT,                     -- Ghi chú hoặc mô tả thay đổi
+                                 thoi_gian TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE thanh_toan (
-    id BIGSERIAL PRIMARY KEY,
-    nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE RESTRICT, -- Added back FK to user
-    trang_thai_giao_dich trang_thai_giao_dich_enum NOT NULL DEFAULT 'CHO_XU_LY',
-    phuong_thuc_thanh_toan phuong_thuc_thanh_toan_enum NOT NULL,
-    ma_giao_dich VARCHAR(255) UNIQUE,
-    gia_tri NUMERIC(15, 2) NOT NULL CHECK(gia_tri >= 0),
-    thoi_gian_thanh_toan TIMESTAMPTZ,
-    ghi_chu TEXT,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                            id BIGSERIAL PRIMARY KEY,
+                            nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE RESTRICT, -- Added back FK to user
+                            trang_thai_giao_dich trang_thai_giao_dich_enum NOT NULL DEFAULT 'CHO_XU_LY',
+                            phuong_thuc_thanh_toan phuong_thuc_thanh_toan_enum NOT NULL,
+                            ma_giao_dich VARCHAR(255) UNIQUE,
+                            gia_tri NUMERIC(15, 2) NOT NULL CHECK(gia_tri >= 0),
+                            thoi_gian_thanh_toan TIMESTAMPTZ,
+                            ghi_chu TEXT,
+                            ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE thanh_toan IS 'User payment transactions, linked via joining tables';
 
 CREATE TABLE danh_gia (
-    id BIGSERIAL PRIMARY KEY,
-    san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE,
-    nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
-    hoa_don_chi_tiet_id BIGINT UNIQUE REFERENCES hoa_don_chi_tiet(id) ON DELETE SET NULL,
-    so_sao INT NOT NULL CHECK (so_sao >= 1 AND so_sao <= 5),
-    noi_dung TEXT,
-    hinh_anh JSONB,
-    trang_thai VARCHAR(20) DEFAULT 'DANG_CHO' NOT NULL CHECK (trang_thai IN ('DANG_CHO', 'DUYET', 'TU_CHOI')), -- Added CHECK constraint
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (san_pham_chi_tiet_id, nguoi_dung_id)
+                          id BIGSERIAL PRIMARY KEY,
+                          san_pham_chi_tiet_id BIGINT NOT NULL REFERENCES san_pham_chi_tiet(id) ON DELETE CASCADE,
+                          nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+                          hoa_don_chi_tiet_id BIGINT UNIQUE REFERENCES hoa_don_chi_tiet(id) ON DELETE SET NULL,
+                          so_sao INT NOT NULL CHECK (so_sao >= 1 AND so_sao <= 5),
+                          noi_dung TEXT,
+                          hinh_anh JSONB,
+                          trang_thai VARCHAR(20) DEFAULT 'DANG_CHO' NOT NULL CHECK (trang_thai IN ('DANG_CHO', 'DUYET', 'TU_CHOI')), -- Added CHECK constraint
+                          ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          UNIQUE (san_pham_chi_tiet_id, nguoi_dung_id)
 );
 COMMENT ON TABLE danh_gia IS 'Product Reviews';
 
 CREATE TABLE wishlist (
-    id BIGSERIAL PRIMARY KEY,
-    nguoi_dung_id BIGINT UNIQUE NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
-    ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                          id BIGSERIAL PRIMARY KEY,
+                          nguoi_dung_id BIGINT UNIQUE NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+                          ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                          ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE wishlist IS 'User Wishlist';
 
 CREATE TABLE wishlist_item (
     -- id BIGSERIAL PRIMARY KEY, -- Option 1: Use surrogate key
-    wishlist_id BIGINT NOT NULL REFERENCES wishlist(id) ON DELETE CASCADE,
-    san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
-    ngay_them TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (wishlist_id, san_pham_id) -- Option 2: Use composite key (chosen)
+                               wishlist_id BIGINT NOT NULL REFERENCES wishlist(id) ON DELETE CASCADE,
+                               san_pham_id BIGINT NOT NULL REFERENCES san_pham(id) ON DELETE CASCADE,
+                               ngay_them TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                               PRIMARY KEY (wishlist_id, san_pham_id) -- Option 2: Use composite key (chosen)
     -- UNIQUE (wishlist_id, san_pham_id) -- Needed if using Option 1
 );
 COMMENT ON TABLE wishlist_item IS 'Wishlist Items (linking Wishlist to Product SPU)';
@@ -379,20 +379,20 @@ COMMENT ON TABLE wishlist_item IS 'Wishlist Items (linking Wishlist to Product S
 -- =============================================================================
 
 CREATE TABLE hoa_don_thanh_toan (
-    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
-    thanh_toan_id BIGINT NOT NULL REFERENCES thanh_toan(id) ON DELETE CASCADE,
-    so_tien_ap_dung NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (so_tien_ap_dung >= 0),
-    PRIMARY KEY (hoa_don_id, thanh_toan_id)
+                                    hoa_don_id BIGINT NOT NULL REFERENCES hoa_don(id) ON DELETE CASCADE,
+                                    thanh_toan_id BIGINT NOT NULL REFERENCES thanh_toan(id) ON DELETE CASCADE,
+                                    so_tien_ap_dung NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (so_tien_ap_dung >= 0),
+                                    PRIMARY KEY (hoa_don_id, thanh_toan_id)
 );
 COMMENT ON TABLE hoa_don_thanh_toan IS 'Many-to-Many mapping between Orders and Payments.';
 COMMENT ON COLUMN hoa_don_thanh_toan.so_tien_ap_dung IS 'Amount of this payment applied to this specific order.';
 
 CREATE TABLE phieu_giam_gia_nguoi_dung (
-    phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE CASCADE,
-    nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
-    ngay_nhan TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Example: Add timestamp when user got the voucher
-    da_su_dung BOOLEAN DEFAULT FALSE NOT NULL, -- Example: Track if this specific instance used by user
-    PRIMARY KEY (phieu_giam_gia_id, nguoi_dung_id) -- Composite primary key
+                                           phieu_giam_gia_id BIGINT NOT NULL REFERENCES phieu_giam_gia(id) ON DELETE CASCADE,
+                                           nguoi_dung_id BIGINT NOT NULL REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+                                           ngay_nhan TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Example: Add timestamp when user got the voucher
+                                           da_su_dung BOOLEAN DEFAULT FALSE NOT NULL, -- Example: Track if this specific instance used by user
+                                           PRIMARY KEY (phieu_giam_gia_id, nguoi_dung_id) -- Composite primary key
 );
 COMMENT ON TABLE phieu_giam_gia_nguoi_dung IS 'Mapping which user owns/saved which voucher and its usage status for that user.';
 
@@ -551,93 +551,93 @@ VALUES (1, 'Nguyen Van A', '0123456789', '12A Nguyen Trai', 'Ben Thanh', '1', 'H
 
 -- INSERT DATA MẪU CHO BẢNG CPU
 INSERT INTO cpu (mo_ta_cpu) VALUES
-('Intel Core i5-1340P'),
-('AMD Ryzen 5 5600H'),
-('Intel Core i7-12700H');
+                                ('Intel Core i5-1340P'),
+                                ('AMD Ryzen 5 5600H'),
+                                ('Intel Core i7-12700H');
 
 -- INSERT DATA MẪU CHO BẢNG RAM
 INSERT INTO ram (mo_ta_ram) VALUES
-('16GB DDR5 5600MHz'),
-('8GB DDR4 2666MHz'),
-('32GB DDR5 6000MHz');
+                                ('16GB DDR5 5600MHz'),
+                                ('8GB DDR4 2666MHz'),
+                                ('32GB DDR5 6000MHz');
 
 -- INSERT DATA MẪU CHO BẢNG O_CUNG
 INSERT INTO o_cung (mo_ta_o_cung) VALUES
-('512GB NVMe Gen4 SSD'),
-('1TB SATA HDD'),
-('256GB NVMe Gen3 SSD');
+                                      ('512GB NVMe Gen4 SSD'),
+                                      ('1TB SATA HDD'),
+                                      ('256GB NVMe Gen3 SSD');
 
 -- INSERT DATA MẪU CHO BẢNG GPU
 INSERT INTO gpu (mo_ta_gpu) VALUES
-('NVIDIA GeForce RTX 4060'),
-('AMD Radeon RX 6800M'),
-('NVIDIA GeForce GTX 1650');
+                                ('NVIDIA GeForce RTX 4060'),
+                                ('AMD Radeon RX 6800M'),
+                                ('NVIDIA GeForce GTX 1650');
 
 -- INSERT DATA MẪU CHO BẢNG MAN_HINH
 INSERT INTO man_hinh (mo_ta_man_hinh) VALUES
-('15.6 inch FHD IPS 144Hz'),
-('14 inch QHD OLED'),
-('17.3 inch 4K UHD');
+                                          ('15.6 inch FHD IPS 144Hz'),
+                                          ('14 inch QHD OLED'),
+                                          ('17.3 inch 4K UHD');
 
 -- INSERT DATA MẪU CHO BẢNG CONG_GIAO_TIEP
 INSERT INTO cong_giao_tiep (mo_ta_cong) VALUES
-('2x USB 3.2, 1x HDMI, 1x Ethernet'),
-('1x USB-C, 2x USB-A, 1x DisplayPort'),
-('3x USB-A, 1x USB-C, 1x SD Card Reader');
+                                            ('2x USB 3.2, 1x HDMI, 1x Ethernet'),
+                                            ('1x USB-C, 2x USB-A, 1x DisplayPort'),
+                                            ('3x USB-A, 1x USB-C, 1x SD Card Reader');
 
 -- INSERT DATA MẪU CHO BẢNG BAN_PHIM
 INSERT INTO ban_phim (mo_ta_ban_phim) VALUES
-('RGB Backlit Keyboard'),
-('Chiclet Keyboard'),
-('Mechanical Keyboard');
+                                          ('RGB Backlit Keyboard'),
+                                          ('Chiclet Keyboard'),
+                                          ('Mechanical Keyboard');
 
 -- INSERT DATA MẪU CHO BẢNG KET_NOI_MANG
 INSERT INTO ket_noi_mang (mo_ta_ket_noi) VALUES
-('Wi-Fi 6E'),
-('Gigabit Ethernet'),
-('Wi-Fi 5');
+                                             ('Wi-Fi 6E'),
+                                             ('Gigabit Ethernet'),
+                                             ('Wi-Fi 5');
 
 -- INSERT DATA MẪU CHO BẢNG AM_THANH
 INSERT INTO am_thanh (mo_ta_am_thanh) VALUES
-('Dolby Atmos'),
-('Stereo Speakers'),
-('Hi-Res Audio');
+                                          ('Dolby Atmos'),
+                                          ('Stereo Speakers'),
+                                          ('Hi-Res Audio');
 
 -- INSERT DATA MẪU CHO BẢNG WEBCAM
 INSERT INTO webcam (mo_ta_wc) VALUES
-('1080p HD Webcam'),
-('720p HD Webcam'),
-('4K Ultra HD Webcam');
+                                  ('1080p HD Webcam'),
+                                  ('720p HD Webcam'),
+                                  ('4K Ultra HD Webcam');
 
 -- INSERT DATA MẪU CHO BẢNG BAO_MAT
 INSERT INTO bao_mat (mo_ta_bao_mat) VALUES
-('Fingerprint Reader'),
-('IR Camera for Face Unlock'),
-('TPM 2.0 Module');
+                                        ('Fingerprint Reader'),
+                                        ('IR Camera for Face Unlock'),
+                                        ('TPM 2.0 Module');
 
 -- INSERT DATA MẪU CHO BẢNG HE_DIEU_HANH
 INSERT INTO he_dieu_hanh (mo_ta_he_dieu_hanh) VALUES
-('Windows 11 Home'),
-('Ubuntu 22.04 LTS'),
-('macOS Monterey');
+                                                  ('Windows 11 Home'),
+                                                  ('Ubuntu 22.04 LTS'),
+                                                  ('macOS Monterey');
 
 -- INSERT DATA MẪU CHO BẢNG PIN
 INSERT INTO pin (mo_ta_pin) VALUES
-('4-cell 75Wh'),
-('3-cell 45Wh'),
-('6-cell 99Wh');
+                                ('4-cell 75Wh'),
+                                ('3-cell 45Wh'),
+                                ('6-cell 99Wh');
 
 -- INSERT DATA MẪU CHO BẢNG THIET_KE
 INSERT INTO thiet_ke (mo_ta_thiet_ke) VALUES
-('Slim and light design, 1.2kg, aluminum body'),
-('Robust design with cooling system, 2.5kg, plastic body'),
-('Premium design, 1.8kg, magnesium alloy body');
+                                          ('Slim and light design, 1.2kg, aluminum body'),
+                                          ('Robust design with cooling system, 2.5kg, plastic body'),
+                                          ('Premium design, 1.8kg, magnesium alloy body');
 
 -- INSERT DATA MẪU CHO BẢNG THUONG_HIEU
 INSERT INTO thuong_hieu (mo_ta_thuong_hieu) VALUES
-('Dell'),
-('Apple'),
-('Logitech');
+                                                ('Dell'),
+                                                ('Apple'),
+                                                ('Logitech');
 
 -- Insert sample product (SPU)
 INSERT INTO san_pham (ma_san_pham, ten_san_pham, thuong_hieu_id, mo_ta, hinh_anh, ngay_ra_mat, trang_thai)
@@ -650,7 +650,7 @@ VALUES (1, 1);
 -- Insert sample discount campaign
 INSERT INTO dot_giam_gia (ma_dot_giam_gia, ten_dot_giam_gia, phan_tram_giam, ngay_bat_dau, ngay_ket_thuc)
 VALUES ('DG001', 'Mua sắm mùa hè', 15.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z'),
-('DG002', 'Mùa hè bố đời deal trên trời', 35.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z');
+       ('DG002', 'Mùa hè bố đời deal trên trời', 35.00, '2025-06-01T00:00:00Z', '2025-06-30T00:00:00Z');
 
 -- Insert sample voucher
 INSERT INTO phieu_giam_gia (ma_phieu_giam_gia, loai_phieu_giam_gia, gia_tri_giam, gia_tri_don_hang_toi_thieu, ngay_bat_dau, ngay_ket_thuc, mo_ta, so_luong_ban_dau)

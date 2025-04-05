@@ -113,6 +113,8 @@ CREATE TABLE dia_chi
 (
     id                       BIGSERIAL PRIMARY KEY,
     nguoi_dung_id            BIGINT       NOT NULL,
+    ho_ten_nguoi_nhan        VARCHAR(255),
+    so_dien_thoai_nguoi_nhan VARCHAR(20),
     duong                    VARCHAR(255) NOT NULL,
     phuong_xa                VARCHAR(100) NOT NULL,
     quan_huyen               VARCHAR(100) NOT NULL,

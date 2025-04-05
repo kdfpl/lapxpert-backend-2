@@ -34,6 +34,12 @@ public class SanPhamController {
         return ResponseEntity.ok(savedProduct);
     }
 
+    @PostMapping("/addMultiple")
+    public ResponseEntity<SanPhamDto> addProducts(@RequestBody SanPhamDto sanPhamDto) {
+        SanPhamDto savedProduct = sanPhamService.createSanPhamWithChiTiet(sanPhamDto);
+        return ResponseEntity.ok(savedProduct);
+    }
+
     // Cập nhật sản phẩm
     @PutMapping("/update/{id}")
     public ResponseEntity<SanPham> updateProduct(@PathVariable Long id, @RequestBody SanPham sanPham) {

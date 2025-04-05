@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/v1/products/attributes")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
-public class ThuocTinhController {
+public class    ThuocTinhController {
     private final AmThanhService amThanhService;
     private final CpuService cpuService;
     private final BanPhimService banPhimService;

@@ -3,6 +3,7 @@ package com.lapxpert.backend.sanpham.application.controller;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.service.SanPhamChiTietService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,12 +12,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/products-details")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class SanPhamChiTietController {
     private final SanPhamChiTietService sanPhamChiTietService;
-
-    public SanPhamChiTietController(SanPhamChiTietService sanPhamChiTietService) {
-        this.sanPhamChiTietService = sanPhamChiTietService;
-    }
 
     // Lấy danh sách sản phẩm có trạng thái = true
     @GetMapping("/list")

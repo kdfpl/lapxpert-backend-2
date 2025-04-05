@@ -4,20 +4,17 @@ import com.lapxpert.backend.sanpham.application.dto.SanPhamDto;
 import com.lapxpert.backend.sanpham.application.mapper.SanPhamMapper;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SanPhamService {
     private final SanPhamRepository sanPhamRepository;
     private final SanPhamMapper sanPhamMapper;
-
-    public SanPhamService(SanPhamRepository sanPhamRepository, SanPhamMapper sanPhamMapper) {
-        this.sanPhamRepository = sanPhamRepository;
-        this.sanPhamMapper = sanPhamMapper;
-    }
 
     //Hàm cho đợt giảm giá
     @Transactional
@@ -36,6 +33,7 @@ public class SanPhamService {
     // Thêm sản phẩm mới
     @Transactional
     public SanPham addProduct(SanPham sanPham) {
+        sanPham.setTrangThai(true);
         return sanPhamRepository.save(sanPham);
     }
 

@@ -289,6 +289,9 @@ CREATE TABLE hoa_don (
     ma_van_don VARCHAR(100),
     ghi_chu_khach_hang TEXT,
     ghi_chu_cua_hang TEXT,
+
+
+
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

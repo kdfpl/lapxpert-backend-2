@@ -4,20 +4,17 @@ import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
 import com.lapxpert.backend.sanpham.application.mapper.SanPhamChiTietMapper;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SanPhamChiTietService {
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
     private final SanPhamChiTietMapper sanPhamChiTietMapper;
-
-    public SanPhamChiTietService(SanPhamChiTietRepository sanPhamChiTietRepository, SanPhamChiTietMapper sanPhamChiTietMapper) {
-        this.sanPhamChiTietRepository = sanPhamChiTietRepository;
-        this.sanPhamChiTietMapper = sanPhamChiTietMapper;
-    }
 
     // Lấy danh sách sản phẩm có trạng thái = true
     @Transactional(readOnly = true)

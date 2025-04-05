@@ -3,6 +3,7 @@ package com.lapxpert.backend.sanpham.application.controller;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamDto;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
 import com.lapxpert.backend.sanpham.domain.service.SanPhamService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,12 +12,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/products")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class SanPhamController {
     private final SanPhamService sanPhamService;
-
-    public SanPhamController(SanPhamService sanPhamService) {
-        this.sanPhamService = sanPhamService;
-    }
 
     @GetMapping
     public ResponseEntity<List<SanPhamDto>> findAll() {

@@ -10,6 +10,7 @@ import java.util.Set;
 @Mapper(componentModel = "spring", uses = {SanPhamChiTietMapper.class, ThuongHieuMapper.class})
 public interface SanPhamMapper {
     SanPhamDto toDto(SanPham sanPham);
+    SanPham toEntity(SanPhamDto dto);
 
     List<SanPhamDto> toDtos(List<SanPham> entities);
 

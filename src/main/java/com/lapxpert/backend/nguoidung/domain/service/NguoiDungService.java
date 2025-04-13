@@ -9,14 +9,18 @@ import com.lapxpert.backend.nguoidung.domain.repository.DiaChiRepository;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
 @Service
 public class NguoiDungService {
+
+    private BCryptPasswordEncoder passwordEncoder;
     @Autowired
     private NguoiDungRepository nguoiDungRepository;
 
@@ -187,7 +191,7 @@ public class NguoiDungService {
         nguoiDung.setSoDienThoai(khachHangDTO.getSoDienThoai());
         nguoiDung.setTrangThai(khachHangDTO.getTrangThai());
         nguoiDung.setVaiTro(VaiTro.CUSTOMER);
-        nguoiDung.setMatKhau(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        nguoiDung.setMatKhau(passwordEncoder.encode(UUID.randomUUID().toString().replace("-", "").substring(0, 12)));
 
         nguoiDungRepository.save(nguoiDung);
 

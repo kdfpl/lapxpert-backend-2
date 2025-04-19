@@ -11,6 +11,7 @@ import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -25,35 +26,31 @@ public class PhieuGiamGia {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(name = "loai_phieu_giam_gia")
-    private boolean loaiPhieuGiamGia;
+    @Column(name = "ma_phieu_giam_gia", nullable = false, length = 50)
+    private String maPhieuGiamGia;
 
+    @Column(name = "loai_phieu_giam_gia")
+    private Boolean loaiPhieuGiamGia;
     @Column(name = "trang_thai", nullable = false)
     @Enumerated
     @JdbcType(PostgreSQLEnumJdbcType.class)
     private TrangThaiPhieuGiamGia trangThai;
-
-    @Column(name = "ma_phieu_giam_gia", nullable = false, length = 50)
-    private String maPhieuGiamGia;
-
     @Column(name = "gia_tri_giam", nullable = false, precision = 15, scale = 2)
     private BigDecimal giaTriGiam;
 
     @Column(name = "gia_tri_don_hang_toi_thieu", precision = 15, scale = 2)
     private BigDecimal giaTriDonHangToiThieu;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     @Column(name = "ngay_bat_dau", nullable = false)
     private OffsetDateTime ngayBatDau;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     @Column(name = "ngay_ket_thuc", nullable = false)
     private OffsetDateTime ngayKetThuc;
 
     @Column(name = "mo_ta", length = Integer.MAX_VALUE)
     private String moTa;
 
-    @Column(name = "phieu_rieng_tu", nullable = false)
+    @Column(name = "phieu_rieng_tu")
     private Boolean phieuRiengTu = false;
 
     @Column(name = "so_luong_ban_dau", nullable = false)
@@ -64,7 +61,6 @@ public class PhieuGiamGia {
 
     @Column(name = "ngay_tao")
     private OffsetDateTime ngayTao;
-
     @Column(name = "ngay_cap_nhat")
     private OffsetDateTime ngayCapNhat;
 
@@ -88,4 +84,6 @@ public class PhieuGiamGia {
             return TrangThaiPhieuGiamGia.DA_DIEN_RA;
         }
     }
+    @OneToMany(mappedBy = "phieuGiamGia")
+    private List<PhieuGiamGiaNguoiDung> danhSachNguoiDung;
 }

@@ -1,5 +1,6 @@
 package com.lapxpert.backend.nguoidung.domain.service;
 
+import com.lapxpert.backend.common.service.EmailService;
 import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.domain.entity.VaiTro;
@@ -26,6 +27,9 @@ public class NguoiDungService {
 
     @Autowired
     private DiaChiRepository diaChiRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public KhachHangDTO getKhachHang(Long id) {
@@ -181,6 +185,8 @@ public class NguoiDungService {
     public KhachHangDTO addKhachHang(KhachHangDTO khachHangDTO) {
         validateUniqueEmailAndPhone(khachHangDTO.getEmail(), khachHangDTO.getSoDienThoai(), null);
 
+        String rawPassword = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+
         NguoiDung nguoiDung = new NguoiDung();
         nguoiDung.setMaNguoiDung(generateMaNguoiDung(khachHangDTO.getHoTen(), VaiTro.CUSTOMER));
         nguoiDung.setAvatar(khachHangDTO.getAvatar());
@@ -191,15 +197,18 @@ public class NguoiDungService {
         nguoiDung.setSoDienThoai(khachHangDTO.getSoDienThoai());
         nguoiDung.setTrangThai(khachHangDTO.getTrangThai());
         nguoiDung.setVaiTro(VaiTro.CUSTOMER);
-        nguoiDung.setMatKhau(passwordEncoder.encode(UUID.randomUUID().toString().replace("-", "").substring(0, 12)));
 
+        nguoiDung.setMatKhau(passwordEncoder.encode(rawPassword));
         nguoiDungRepository.save(nguoiDung);
 
         List<DiaChi> diaChis = khachHangDTO.getDiaChis().stream()
                 .peek(diaChi -> diaChi.setNguoiDung(nguoiDung))
                 .collect(Collectors.toList());
 
-        diaChiRepository.saveAllAndFlush(khachHangDTO.getDiaChis());
+        diaChiRepository.saveAllAndFlush(diaChis);
+
+
+        emailService.sendPasswordEmail(nguoiDung.getEmail(), rawPassword);
 
         return new KhachHangDTO(
                 nguoiDung.getId(),
@@ -215,9 +224,12 @@ public class NguoiDungService {
         );
     }
 
+
     @Transactional
     public NhanVienDTO addNhanVien(NhanVienDTO nhanVienDTO) {
         validateUniqueEmailAndPhone(nhanVienDTO.getEmail(), nhanVienDTO.getSoDienThoai(), null);
+
+        String rawPassword = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
         NguoiDung nguoiDung = new NguoiDung();
         nguoiDung.setMaNguoiDung(generateMaNguoiDung(nhanVienDTO.getHoTen(), VaiTro.STAFF));
@@ -230,7 +242,7 @@ public class NguoiDungService {
         nguoiDung.setVaiTro(nhanVienDTO.getVaiTro());
         nguoiDung.setGioiTinh(nhanVienDTO.getGioiTinh());
         nguoiDung.setTrangThai(nhanVienDTO.getTrangThai());
-        nguoiDung.setMatKhau(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        nguoiDung.setMatKhau(passwordEncoder.encode(rawPassword));
         nguoiDungRepository.save(nguoiDung);
 
         List<DiaChi> diaChis = nhanVienDTO.getDiaChis().stream()
@@ -238,6 +250,8 @@ public class NguoiDungService {
                 .collect(Collectors.toList());
 
         diaChiRepository.saveAllAndFlush(nhanVienDTO.getDiaChis());
+
+        emailService.sendPasswordEmail(nguoiDung.getEmail(), rawPassword);
 
         return new NhanVienDTO(
                 nguoiDung.getId(),

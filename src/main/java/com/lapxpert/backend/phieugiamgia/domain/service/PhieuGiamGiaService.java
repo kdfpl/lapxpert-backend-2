@@ -225,9 +225,8 @@ public class PhieuGiamGiaService {
                 phieuGiamGiaNguoiDungRepository.deleteByPhieuGiamGiaIdAndNguoiDungIdNotIn(phieu.getId(), danhSachKhachHangCu);
             }
 
-            // Thêm các khách hàng mới (chưa có trong danh sách cũ)
             for (Long nguoiDungId : danhSachKhachHangMoi) {
-                if (!danhSachKhachHangCu.contains(nguoiDungId)) { // Kiểm tra nếu khách hàng này chưa có trong danh sách cũ
+                if (!danhSachKhachHangCu.contains(nguoiDungId)) {
                     PhieuGiamGiaNguoiDungId id = new PhieuGiamGiaNguoiDungId(phieu.getId(), nguoiDungId);
                     PhieuGiamGiaNguoiDung phieuND = new PhieuGiamGiaNguoiDung();
                     phieuND.setId(id);
@@ -240,7 +239,6 @@ public class PhieuGiamGiaService {
                 }
             }
 
-            // Gửi email cho các khách hàng mới được thêm vào danh sách
             List<String> selectedCustomerEmails = req.getDanhSachNguoiDung().stream()
                     .map(nguoiDungId -> nguoiDungRepository.findById(nguoiDungId)
                             .map(NguoiDung::getEmail)

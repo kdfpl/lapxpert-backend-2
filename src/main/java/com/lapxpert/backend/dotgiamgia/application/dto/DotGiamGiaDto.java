@@ -11,7 +11,7 @@ import java.time.Instant;
  * DTO for {@link com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia}
  */
 @Data
-public class DotGiamGiaDto implements Serializable {
+public class DotGiamGiaDTO implements Serializable {
     Long id;
     String maDotGiamGia;
     String tenDotGiamGia;

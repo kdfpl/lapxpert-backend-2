@@ -1,8 +1,6 @@
 package com.lapxpert.backend.phieugiamgia.application.dto;
 
-import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGia;
-import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaNguoiDung;
 import lombok.Value;
 
 import java.io.Serializable;
@@ -16,9 +14,9 @@ import java.util.List;
 @Value
 public class PhieuGiamGiaDto implements Serializable {
     Long id;
+    String maPhieuGiamGia;
     Boolean loaiPhieuGiamGia;
     PhieuGiamGia.TrangThaiPhieuGiamGia trangThai;
-    String maPhieuGiamGia;
     BigDecimal giaTriGiam;
     BigDecimal giaTriDonHangToiThieu;
     OffsetDateTime ngayBatDau;
@@ -26,9 +24,8 @@ public class PhieuGiamGiaDto implements Serializable {
     String moTa;
     Boolean phieuRiengTu;
     Integer soLuongBanDau;
-    Integer soLuongDaDung;
+    Integer soLuongDaDung ;
     OffsetDateTime ngayTao;
     OffsetDateTime ngayCapNhat;
-
-    private List<PhieuGiamGiaNguoiDung> phieuGiamGiaNguoiDungs;
+    List<Long> danhSachNguoiDung;
 }

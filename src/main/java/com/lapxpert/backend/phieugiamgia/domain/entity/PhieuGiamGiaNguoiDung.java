@@ -1,5 +1,6 @@
 package com.lapxpert.backend.phieugiamgia.domain.entity;
 
+import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,16 +17,15 @@ public class PhieuGiamGiaNguoiDung {
     @EmbeddedId
     private PhieuGiamGiaNguoiDungId id;
 
+    @ManyToOne
     @MapsId("phieuGiamGiaId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "phieu_giam_gia_id", nullable = false)
+    @JoinColumn(name = "phieu_giam_gia_id")
     private PhieuGiamGia phieuGiamGia;
 
-    @Column(name = "ngay_nhan")
-    private OffsetDateTime ngayNhan;
+    @ManyToOne
+    @MapsId("nguoiDungId")
+    @JoinColumn(name = "nguoi_dung_id")
+    private NguoiDung nguoiDung;
 
-    @Column(name = "da_su_dung", nullable = false)
-    private Boolean daSuDung = false;
 
 }

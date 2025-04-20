@@ -7,6 +7,4 @@ import java.util.List;
 
 public interface HoaDonRepository extends JpaRepository<HoaDon, Long> {
     List<HoaDon> findByTrangThaiGiaoHang(HoaDon.TrangThaiGiaoHang trangThaiGiaoHang);
-//    @Query( nativeQuery = true, value = "")
-//    List<HoaDon> findAllhaveSP();
 }

@@ -1,4 +1,4 @@
-package com.lapxpert.backend.hoadon.service;
+package com.lapxpert.backend.hoadon.domain.service;
 
 
 import com.lapxpert.backend.hoadon.enity.HoaDon;

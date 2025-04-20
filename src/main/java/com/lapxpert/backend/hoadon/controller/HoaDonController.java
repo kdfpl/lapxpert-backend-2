@@ -1,16 +1,17 @@
 package com.lapxpert.backend.hoadon.controller;
 
 
+import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
 import com.lapxpert.backend.hoadon.enity.HoaDon;
-import com.lapxpert.backend.hoadon.service.HoaDonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/v1/hoa-don")
+
 public class HoaDonController {
 
     @Autowired

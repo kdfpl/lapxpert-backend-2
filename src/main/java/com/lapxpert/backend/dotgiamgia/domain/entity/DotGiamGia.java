@@ -63,7 +63,6 @@ public class DotGiamGia {
     @JdbcType(PostgreSQLEnumJdbcType.class)
     private TrangThai trangThai;
 
-
     @ManyToMany(mappedBy = "dotGiamGias")
     private Set<SanPhamChiTiet> sanPhamChiTiets = new LinkedHashSet<>();
 

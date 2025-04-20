@@ -1,111 +1,375 @@
 package com.lapxpert.backend.thongke.application.controller;
 
-import com.lapxpert.backend.hoadon.service.HoaDonService;
+import com.lapxpert.backend.thongke.application.enity.*;
+import com.lapxpert.backend.thongke.application.service.ThongKeDSService;
+import com.lapxpert.backend.thongke.application.service.ThongKeDTService;
+import com.lapxpert.backend.thongke.application.service.ThongKeHDService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.text.Format;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/thong-ke")
 @CrossOrigin(origins = "*")
 public class ThongKeController {
     @Autowired
-    HoaDonService hoaDonService;
+    ThongKeHDService thongKeHDService;
+    @Autowired
+    ThongKeDTService thongKeDTService;
+
+    @Autowired
+    ThongKeDSService thongKeDSService;
 
 
+    @GetMapping("/this-month")
+    public Map<String, Object> getSalesDataThisMonth() {
+        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuTungHangTrongThangNay();
 
-
-    @GetMapping("/month")
-    public Map<String, Object> getSalesDataMonth() {
         List<String> labels = generateLabels(30, "Ngày");
-        List<Map<String, Object>> datasets = generateDatasets("month");
 
-        return Map.of("labels", labels, "datasets", datasets);
+
+        Map<String, Map<String, String>> brandStyles = new HashMap<>();
+        brandStyles.put("Apple", Map.of(
+                "backgroundColor", "rgba(255, 99, 132, 0.5)",
+                "borderColor", "#ff6384"
+        ));
+        brandStyles.put("Asus", Map.of(
+                "backgroundColor", "rgba(1, 255, 0, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Acer", Map.of(
+                "backgroundColor", "rgba(0, 235, 255, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Dell", Map.of(
+                "backgroundColor", "rgba(75, 192, 192, 0.5)",
+                "borderColor", "#4BC0C0"
+        ));
+        brandStyles.put("Lenovo", Map.of(
+                "backgroundColor", "rgba(153, 102, 255, 0.5)",
+                "borderColor", "#9966FF"
+        ));
+        brandStyles.put("MSI", Map.of(
+                "backgroundColor", "rgba(255, 159, 64, 0.5)",
+                "borderColor", "#FF9F40"
+        ));
+        brandStyles.put("HP", Map.of(
+                "backgroundColor", "rgba(255, 206, 86, 0.5)",
+                "borderColor", "#FFCE56"
+        ));
+        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
+        for (DoanhThuHangNgay doanhThu : salesData) {
+            String brand = doanhThu.getBrand();
+            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThu.getRevenue());
+        }
+
+        List<Map<String, Object>> datasets = new ArrayList<>();
+
+        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
+            String brand = entry.getKey();
+            List<Integer> data = entry.getValue();
+
+            Map<String, Object> dataset = new HashMap<>();
+            dataset.put("label", brand);
+            dataset.put("data", data);
+            dataset.put("type", "bar");
+
+            if (brandStyles.containsKey(brand)) {
+                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
+                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
+            } else {
+                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
+                dataset.put("borderColor", "#000000");
+            }
+
+            datasets.add(dataset);
+        }
+
+        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayTrongThangNay();
+        Map<String, Object> totalDataset = new HashMap<>();
+        totalDataset.put("label", "Tổng doanh thu");
+        totalDataset.put("data", tong);
+        totalDataset.put("type", "line");
+        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
+        totalDataset.put("borderColor", "#42A5F5");
+        totalDataset.put("pointBackgroundColor", "#42A5F5");
+        totalDataset.put("fill", true);
+        totalDataset.put("tension", 0.3);
+        datasets.add(totalDataset);
+
+        return Map.of(
+                "labels", labels,
+                "datasets", datasets
+        );
     }
 
-    @GetMapping("/week")
-    public Map<String, Object> getSalesDataWeek() {
+    @GetMapping("/this-week")
+    public Map<String, Object> getSalesDataThisWeek() {
+        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuTungHangTrongTuanNay();
+
         List<String> labels = List.of("Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật");
-        List<Map<String, Object>> datasets = generateDatasets("week");
 
-        return Map.of("labels", labels, "datasets", datasets);
+        Map<String, Map<String, String>> brandStyles = new HashMap<>();
+        brandStyles.put("Apple", Map.of(
+                "backgroundColor", "rgba(255, 99, 132, 0.5)",
+                "borderColor", "#ff6384"
+        ));
+        brandStyles.put("Asus", Map.of(
+                "backgroundColor", "rgba(1, 255, 0, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Acer", Map.of(
+                "backgroundColor", "rgba(0, 235, 255, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Dell", Map.of(
+                "backgroundColor", "rgba(75, 192, 192, 0.5)",
+                "borderColor", "#4BC0C0"
+        ));
+        brandStyles.put("Lenovo", Map.of(
+                "backgroundColor", "rgba(153, 102, 255, 0.5)",
+                "borderColor", "#9966FF"
+        ));
+        brandStyles.put("MSI", Map.of(
+                "backgroundColor", "rgba(255, 159, 64, 0.5)",
+                "borderColor", "#FF9F40"
+        ));
+        brandStyles.put("HP", Map.of(
+                "backgroundColor", "rgba(255, 206, 86, 0.5)",
+                "borderColor", "#FFCE56"
+        ));
+
+        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
+        for (DoanhThuHangNgay doanhThu : salesData) {
+            String brand = doanhThu.getBrand();
+            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThu.getRevenue());
+        }
+
+        List<Map<String, Object>> datasets = new ArrayList<>();
+
+        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
+            String brand = entry.getKey();
+            List<Integer> data = entry.getValue();
+
+            Map<String, Object> dataset = new HashMap<>();
+            dataset.put("label", brand);
+            dataset.put("data", data);
+            dataset.put("type", "bar");
+
+            if (brandStyles.containsKey(brand)) {
+                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
+                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
+            } else {
+                dataset.put("backgroundColor", "rgba(0, 255, 8, 0.8)");
+                dataset.put("borderColor", "#a2eb36 ");
+            }
+
+            datasets.add(dataset);
+        }
+
+        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayTrongTuanNay();
+        Map<String, Object> totalDataset = new HashMap<>();
+        totalDataset.put("label", "Tổng doanh thu");
+        totalDataset.put("data", tong);
+        totalDataset.put("type", "line");
+        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
+        totalDataset.put("borderColor", "#42A5F5");
+        totalDataset.put("pointBackgroundColor", "#42A5F5");
+        totalDataset.put("fill", true);
+        totalDataset.put("tension", 0.3);
+        datasets.add(totalDataset);
+
+        return Map.of(
+                "labels", labels,
+                "datasets", datasets
+        );
     }
 
-    @GetMapping("/year")
-    public Map<String, Object> getSalesDataYear() {
+    @GetMapping("/this-year")
+    public Map<String, Object> getSalesDataThisYear() {
+        List<DoanhThuThangDTO> salesData = thongKeDTService.DoanhThuTungHangTrongNamNay();
         List<String> labels = List.of("Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
                 "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12");
-        List<Map<String, Object>> datasets = generateDatasets("year");
 
-        return Map.of("labels", labels, "datasets", datasets);
+        Map<String, Map<String, String>> brandStyles = new HashMap<>();
+        brandStyles.put("Apple", Map.of(
+                "backgroundColor", "rgba(255, 99, 132, 0.5)",
+                "borderColor", "#ff6384"
+        ));
+        brandStyles.put("Asus", Map.of(
+                "backgroundColor", "rgba(1, 255, 0, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Acer", Map.of(
+                "backgroundColor", "rgba(0, 235, 255, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Dell", Map.of(
+                "backgroundColor", "rgba(75, 192, 192, 0.5)",
+                "borderColor", "#4BC0C0"
+        ));
+        brandStyles.put("Lenovo", Map.of(
+                "backgroundColor", "rgba(153, 102, 255, 0.5)",
+                "borderColor", "#9966FF"
+        ));
+        brandStyles.put("MSI", Map.of(
+                "backgroundColor", "rgba(255, 159, 64, 0.5)",
+                "borderColor", "#FF9F40"
+        ));
+        brandStyles.put("HP", Map.of(
+                "backgroundColor", "rgba(255, 206, 86, 0.5)",
+                "borderColor", "#FFCE56"
+        ));
+
+        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
+        for (DoanhThuThangDTO doanhThuT : salesData) {
+            String brand = doanhThuT.getBrand();
+            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThuT.getTotalRevenue());
+        }
+
+        List<Map<String, Object>> datasets = new ArrayList<>();
+
+        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
+            String brand = entry.getKey();
+            List<Integer> data = entry.getValue();
+
+            Map<String, Object> dataset = new HashMap<>();
+            dataset.put("label", brand);
+            dataset.put("data", data);
+            dataset.put("type", "bar");
+
+            if (brandStyles.containsKey(brand)) {
+                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
+                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
+            } else {
+                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
+                dataset.put("borderColor", "#000000");
+            }
+
+            datasets.add(dataset);
+        }
+
+        List<TongDoanhThuThangDTO> tong = thongKeDTService.TongDoanhThuTungThangTrongNamNay();
+        List<Integer> TongDT = new ArrayList<>();
+        for (int i = 0; i < tong.size(); i++) {
+            TongDT.add(tong.get(i).getTotalRevenue());
+        }
+
+
+        Map<String, Object> totalDataset = new HashMap<>();
+        totalDataset.put("label", "Tổng doanh thu");
+        totalDataset.put("data", TongDT);
+        totalDataset.put("type", "line");
+        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
+        totalDataset.put("borderColor", "#42A5F5");
+        totalDataset.put("pointBackgroundColor", "#42A5F5");
+        totalDataset.put("fill", true);
+        totalDataset.put("tension", 0.3);
+        datasets.add(totalDataset);
+
+        return Map.of(
+                "labels", labels,
+                "datasets", datasets
+        );
     }
 
-    //tự gen ra dữ liệu mẫu
-    private List<Map<String, Object>> generateDatasets(String period) {
-        List<String> brands = List.of("Apple", "ASUS", "Dell", "Lenovo", "MSI", "HP");
-        List<String> colors = List.of(
-                "rgba(255, 99, 132, 0.5)", "#ff6384",
-                "rgba(54, 162, 235, 0.5)", "#36A2EB",
-                "rgba(75, 192, 192, 0.5)", "#4BC0C0",
-                "rgba(153, 102, 255, 0.5)", "#9966FF",
-                "rgba(255, 159, 64, 0.5)", "#FF9F40",
-                "rgba(255, 206, 86, 0.5)", "#FFCE56"
-        );
+    @GetMapping("/custom-data")
+    public Map<String, Object> getSalesDataCustom(@RequestParam(name = "start_date") LocalDate start_date,@RequestParam(name = "end_date") LocalDate end_date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate startDate = LocalDate.parse(start_date.toString(), formatter);
+        LocalDate endDate = LocalDate.parse(end_date.toString(), formatter);
 
-        List<List<Integer>> salesData = switch (period) {
-            case "week" -> List.of(
-                    List.of(1262, 2912, 2165, 2335, 2943, 1765, 1734),
-                    List.of(1500, 1900, 1300, 1700, 2100, 1800, 2000),
-                    List.of(1400, 1600, 1800, 2200, 2500, 2000, 2300),
-                    List.of(1200, 1400, 1600, 1900, 2100, 1800, 2000),
-                    List.of(1000, 1300, 1500, 1700, 2000, 1800, 1900),
-                    List.of(900, 1100, 1300, 1600, 1900, 1700, 1800)
-            );
-            case "month" -> List.of(
-                    generateRandomData(30, 1000, 3000),
-                    generateRandomData(30, 1200, 3200),
-                    generateRandomData(30, 1400, 3500),
-                    generateRandomData(30, 1600, 3700),
-                    generateRandomData(30, 1800, 4000),
-                    generateRandomData(30, 2000, 4200)
-            );
-            case "year" -> List.of(
-                    generateRandomData(12, 1000, 5000),
-                    generateRandomData(12, 1500, 6000),
-                    generateRandomData(12, 2000, 7000),
-                    generateRandomData(12, 2500, 8000),
-                    generateRandomData(12, 3000, 9000),
-                    generateRandomData(12, 3500, 10000)
-            );
-            default -> throw new IllegalArgumentException("Lỗi period: " + period);
-        };
+        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuCustomTime(start_date, end_date);
 
-
-        List<Map<String, Object>> datasets = IntStream.range(0, brands.size())
-                .mapToObj(i -> createDataset("bar", brands.get(i), colors.get(i * 2), colors.get(i * 2 + 1), salesData.get(i)))
+        List<String> labels = Stream.iterate(startDate, date -> date.plusDays(1))
+                .limit(startDate.datesUntil(endDate.plusDays(1)).count())
+                .map(LocalDate::toString) // hoặc .map(d -> d.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .collect(Collectors.toList());
 
-        //Đây là tính tổng doanh thu :Đ
-        datasets.add(createLineDataset("Tổng doanh thu", "#42A5F5", "rgba(66, 165, 245, 0.2)",
-                salesData.stream().reduce((a, b) -> IntStream.range(0, a.size()).map(i -> a.get(i) + b.get(i)).boxed().toList()).orElse(List.of())));
+        Map<String, Map<String, String>> brandStyles = new HashMap<>();
+        brandStyles.put("Apple", Map.of(
+                "backgroundColor", "rgba(255, 99, 132, 0.5)",
+                "borderColor", "#ff6384"
+        ));
+        brandStyles.put("Asus", Map.of(
+                "backgroundColor", "rgba(1, 255, 0, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Acer", Map.of(
+                "backgroundColor", "rgba(0, 235, 255, 0.8)",
+                "borderColor", "#36A2EB"
+        ));
+        brandStyles.put("Dell", Map.of(
+                "backgroundColor", "rgba(75, 192, 192, 0.5)",
+                "borderColor", "#4BC0C0"
+        ));
+        brandStyles.put("Lenovo", Map.of(
+                "backgroundColor", "rgba(153, 102, 255, 0.5)",
+                "borderColor", "#9966FF"
+        ));
+        brandStyles.put("MSI", Map.of(
+                "backgroundColor", "rgba(255, 159, 64, 0.5)",
+                "borderColor", "#FF9F40"
+        ));
+        brandStyles.put("HP", Map.of(
+                "backgroundColor", "rgba(255, 206, 86, 0.5)",
+                "borderColor", "#FFCE56"
+        ));
 
-        return datasets;
-    }
+        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
+        for (DoanhThuHangNgay doanhThuT : salesData) {
+            String brand = doanhThuT.getBrand();
+            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThuT.getRevenue());
+        }
 
-    private List<Integer> generateRandomData(int size, int min, int max) {
-        Random random = new Random();
-        return IntStream.range(0, size)
-                .map(i -> random.nextInt(max - min + 1) + min)
-                .boxed()
-                .toList();
+        List<Map<String, Object>> datasets = new ArrayList<>();
+
+        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
+            String brand = entry.getKey();
+            List<Integer> data = entry.getValue();
+
+            Map<String, Object> dataset = new HashMap<>();
+            dataset.put("label", brand);
+            dataset.put("data", data);
+            dataset.put("type", "bar");
+
+            if (brandStyles.containsKey(brand)) {
+                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
+                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
+            } else {
+                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
+                dataset.put("borderColor", "#000000");
+            }
+
+            datasets.add(dataset);
+        }
+
+        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayCustom(start_date,end_date);
+
+
+
+        Map<String, Object> totalDataset = new HashMap<>();
+        totalDataset.put("label", "Tổng doanh thu");
+        totalDataset.put("data", tong);
+        totalDataset.put("type", "line");
+        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
+        totalDataset.put("borderColor", "#42A5F5");
+        totalDataset.put("pointBackgroundColor", "#42A5F5");
+        totalDataset.put("fill", true);
+        totalDataset.put("tension", 0.3);
+        datasets.add(totalDataset);
+
+        return Map.of(
+                "labels", labels,
+                "datasets", datasets
+        );
     }
 
     private List<String> generateLabels(int days, String prefix) {
@@ -114,47 +378,72 @@ public class ThongKeController {
                 .toList();
     }
 
-    private Map<String, Object> createLineDataset(String label, String borderColor, String backgroundColor, List<Integer> data) {
+    @GetMapping("/top-month")
+    public Map<String, Object> getTopThangData() {
+        List<String> label = new ArrayList<>();
+        List<Integer> data = new ArrayList<>();
+        for (int i=0; i < thongKeDSService.getTopDoanhSoThang().size(); i++) {
+            label.add(thongKeDSService.getTopDoanhSoThang().get(i).getBrand());
+            data.add(thongKeDSService.getTopDoanhSoThang().get(i).getTotalSales());
+        }
         return Map.of(
-                "type", "line",
-                "label", label,
-                "borderColor", borderColor,
-                "pointBackgroundColor", borderColor,
-                "backgroundColor", backgroundColor,
-                "data", data,
-                "fill", true,
-                "tension", 0.3
+                "labels", label,
+                "data",data
         );
     }
 
-    private Map<String, Object> createDataset(String type, String label, String backgroundColor, String borderColor, List<Integer> data) {
-        return Map.of(
-                "type", type,
-                "label", label,
-                "backgroundColor", backgroundColor,
-                "borderColor", borderColor,
-                "data", data
-        );
-    }
-    @GetMapping("/top-month")
-    public Map<String, Object> getTopMonthData() {
-        return Map.of(
-                "labels", List.of("Dell", "HP", "Apple", "Lenovo", "Asus", "Acer","MSI"),
-                "data", List.of(100, 119, 152,359, 242,234,143)
-        );
-    }
-    @GetMapping("/top-day")
-    public Map<String, Object> getTopDayData() {
-        return Map.of(
-                "labels", List.of("Dell", "HP", "Apple", "Lenovo", "Asus", "Acer","MSI"),
-                "data", List.of(1, 2, 4,1, 2,1,1)
-        );
-    }
     @GetMapping("/top-week")
-    public Map<String, Object> getTopWeekData() {
+    public Map<String, Object> getTopTuanData() {
+        List<String> label = new ArrayList<>();
+        List<Integer> data = new ArrayList<>();
+        for (int i=0; i < thongKeDSService.getTopDoanhSoTuan().size(); i++) {
+            label.add(thongKeDSService.getTopDoanhSoTuan().get(i).getBrand());
+            data.add(thongKeDSService.getTopDoanhSoTuan().get(i).getTotalSales());
+        }
         return Map.of(
-                "labels", List.of("Dell", "HP", "Apple", "Lenovo", "Asus", "Acer","MSI"),
-                "data", List.of(50, 67, 78,154, 123,112,67)
+                "labels", label,
+                "data",data
         );
     }
+
+    @GetMapping("/top-day")
+    public Map<String, Object> getTopNgayData() {
+        List<String> label = new ArrayList<>();
+        List<Integer> data = new ArrayList<>();
+        for (int i=0; i < thongKeDSService.getTopDoanhSoNgay().size(); i++) {
+            label.add(thongKeDSService.getTopDoanhSoNgay().get(i).getBrand());
+            data.add(thongKeDSService.getTopDoanhSoNgay().get(i).getTotalSales());
+        }
+        return Map.of(
+                "labels", label,
+                "data",data
+        );
+    }
+
+    @GetMapping("/top-custom")
+    public Map<String, Object> getTopCustomData(@RequestParam(name = "start_dateTop") LocalDate start_date, @RequestParam   (name = "end_dateTop") LocalDate end_date) {
+        List<String> label = new ArrayList<>();
+        List<Integer> data = new ArrayList<>();
+        for (int i=0; i < thongKeDSService.getTopDoanhSoCustom(start_date, end_date).size(); i++) {
+            label.add(thongKeDSService.getTopDoanhSoCustom(start_date, end_date).get(i).getBrand());
+            data.add(thongKeDSService.getTopDoanhSoCustom(start_date, end_date).get(i).getTotalSales());
+        }
+        return Map.of(
+                "labels", label,
+                "data",data
+        );
+    }
+
+
+
+    @GetMapping("/hoa-don")
+    public List<HoaDonSanPhamView> getHoaDonsCoSanPhamByTrangThai(@RequestParam(value = "trangThai", required = false) String trangThai) {
+        return thongKeHDService.getHoaDonsCoSanPhamByTrangThai(trangThai);
+    }
+    @GetMapping("/doanh-so")
+        public Map<String, Object> DoanhSo(){
+        return Map.of("DoanhSo",5555);
+
+        }
+
 }

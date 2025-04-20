@@ -10,7 +10,7 @@ import java.util.List;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/hoa-don")
+@RequestMapping("/api/v1/hoa-don")
 public class HoaDonController {
 
     @Autowired

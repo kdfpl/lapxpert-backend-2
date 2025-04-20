@@ -16,8 +16,10 @@ public interface NguoiDungRepository extends JpaRepository<NguoiDung, Long> {
     Optional<NguoiDung> findTopByMaNguoiDungStartingWithOrderByMaNguoiDungDesc(String maNguoiDungPrefix);
 
     Optional<NguoiDung> findByEmail(String email);
+    Optional<NguoiDung> findByEmailAndMatKhau(String email,String matKhau);
 
     Optional<NguoiDung> findBySoDienThoai(String phone);
 
     List<NguoiDung> findByVaiTroIn(List<VaiTro> asList);
+
 }

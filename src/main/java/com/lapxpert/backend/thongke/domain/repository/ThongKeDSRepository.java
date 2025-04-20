@@ -1,7 +1,7 @@
-package com.lapxpert.backend.thongke.application.repository;
+package com.lapxpert.backend.thongke.domain.repository;
 
-import com.lapxpert.backend.thongke.application.enity.TopDoanhSo;
-import com.lapxpert.backend.thongke.application.enity.TopDoanhSoDTO;
+import com.lapxpert.backend.thongke.domain.entity.TopDoanhSo;
+import com.lapxpert.backend.thongke.domain.entity.TopDoanhSoDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

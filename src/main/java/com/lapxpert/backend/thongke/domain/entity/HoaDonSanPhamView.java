@@ -1,4 +1,4 @@
-package com.lapxpert.backend.thongke.application.enity;
+package com.lapxpert.backend.thongke.domain.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

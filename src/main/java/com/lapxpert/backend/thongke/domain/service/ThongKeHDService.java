@@ -1,9 +1,9 @@
-package com.lapxpert.backend.thongke.application.service;
+package com.lapxpert.backend.thongke.domain.service;
 
 
 import com.lapxpert.backend.hoadon.enity.HoaDon;
-import com.lapxpert.backend.thongke.application.enity.HoaDonSanPhamView;
-import com.lapxpert.backend.thongke.application.repository.ThongKeHDRepository;
+import com.lapxpert.backend.thongke.domain.entity.HoaDonSanPhamView;
+import com.lapxpert.backend.thongke.domain.repository.ThongKeHDRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

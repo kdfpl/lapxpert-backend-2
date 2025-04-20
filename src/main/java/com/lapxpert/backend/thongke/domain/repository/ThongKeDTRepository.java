@@ -1,18 +1,13 @@
-package com.lapxpert.backend.thongke.application.repository;
+package com.lapxpert.backend.thongke.domain.repository;
 
-import com.lapxpert.backend.hoadon.enity.HoaDon;
-import com.lapxpert.backend.thongke.application.enity.DoanhThuHangNgay;
-import com.lapxpert.backend.thongke.application.enity.DoanhThuThangDTO;
-import com.lapxpert.backend.thongke.application.enity.HoaDonSanPhamView;
-import com.lapxpert.backend.thongke.application.enity.TongDoanhThuThangDTO;
+import com.lapxpert.backend.thongke.domain.entity.DoanhThuHangNgay;
+import com.lapxpert.backend.thongke.domain.entity.DoanhThuThangDTO;
+import com.lapxpert.backend.thongke.domain.entity.TongDoanhThuThangDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 public interface ThongKeDTRepository extends JpaRepository<DoanhThuHangNgay, Integer> {
 @Query(nativeQuery = true, value = "SELECT \n" +

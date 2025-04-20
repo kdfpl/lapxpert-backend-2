@@ -1,4 +1,4 @@
-package com.lapxpert.backend.thongke.application.enity;
+package com.lapxpert.backend.thongke.domain.entity;
 
 public interface TongDoanhThuThangDTO {
     String getMonth();

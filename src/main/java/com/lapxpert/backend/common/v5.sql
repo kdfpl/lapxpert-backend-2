@@ -52,6 +52,7 @@
 -- DROP TYPE IF EXISTS vai_tro_enum;
 -- DROP TYPE IF EXISTS gioi_tinh_enum;
 -- COMMIT;
+<<<<<<< HEAD
 BEGIN;
 DROP FUNCTION IF EXISTS trigger_set_timestamp() CASCADE;
 DROP TABLE IF EXISTS phieu_giam_gia_nguoi_dung CASCADE;
@@ -101,6 +102,8 @@ DROP TYPE IF EXISTS vai_tro_enum;
 DROP TYPE IF EXISTS gioi_tinh_enum;
 DROP TYPE IF EXISTS trang_thai_dot_giam_gia_enum;
 COMMIT;
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 
 
 -- =============================================================================
@@ -118,6 +121,7 @@ CREATE TYPE trang_thai_phieu_giam_gia AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 'KE
 -- 2. TẠO BẢNG THUỘC TÍNH VÀ THƯƠNG HIỆU
 -- =============================================================================
 CREATE TABLE cpu ( id BIGSERIAL PRIMARY KEY, ten_cpu VARCHAR(255) UNIQUE NOT NULL );
+<<<<<<< HEAD
 =======
 CREATE TYPE loai_phieu_giam_gia_enum AS ENUM ('PHAN_TRAM', 'GIA_TRI');
 CREATE TYPE trang_thai_giao_hang_enum AS ENUM ('DANG_XU_LY', 'CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_DONG_GOI', 'DANG_GIAO_HANG', 'DA_GIAO_HANG', 'HOAN_THANH', 'DA_HUY', 'YEU_CAU_TRA_HANG', 'DA_TRA_HANG');
@@ -129,13 +133,18 @@ CREATE TYPE trang_thai_dot_giam_gia_enum AS ENUM ('CHUA_DIEN_RA', 'DA_DIEN_RA', 
 -- 2. TẠO BẢNG THUỘC TÍNH VÀ THƯƠNG HIỆU
 -- =============================================================================
 CREATE TABLE cpu ( id BIGSERIAL PRIMARY KEY, mo_ta_cpu VARCHAR(255) UNIQUE NOT NULL );
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 COMMENT ON TABLE cpu IS 'CPU types (e.g., Intel Core i5-1340P)';
 CREATE TABLE ram ( id BIGSERIAL PRIMARY KEY, mo_ta_ram VARCHAR(100) UNIQUE NOT NULL );
 COMMENT ON TABLE ram IS 'RAM configurations (e.g., 16GB DDR5 5600MHz)';
 CREATE TABLE o_cung ( id BIGSERIAL PRIMARY KEY, mo_ta_o_cung VARCHAR(150) UNIQUE NOT NULL );
 COMMENT ON TABLE o_cung IS 'Storage configurations (e.g., 512GB NVMe Gen4 SSD)';
 CREATE TABLE gpu ( id BIGSERIAL PRIMARY KEY, ten_gpu VARCHAR(255) UNIQUE NOT NULL );
+<<<<<<< HEAD
 CREATE TABLE gpu ( id BIGSERIAL PRIMARY KEY, mo_ta_gpu VARCHAR(255) UNIQUE NOT NULL );
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 COMMENT ON TABLE gpu IS 'GPU types (e.g., NVIDIA GeForce RTX 4060)';
 CREATE TABLE man_hinh ( id BIGSERIAL PRIMARY KEY, mo_ta_man_hinh VARCHAR(300) UNIQUE NOT NULL );
 COMMENT ON TABLE man_hinh IS 'Screen configurations (e.g., 15.6 inch FHD IPS 144Hz)';
@@ -152,8 +161,11 @@ COMMENT ON TABLE webcam IS 'Webcam descriptions (e.g., FHD Webcam)';
 CREATE TABLE bao_mat ( id BIGSERIAL PRIMARY KEY, mo_ta_bao_mat VARCHAR(200) UNIQUE NOT NULL );
 COMMENT ON TABLE bao_mat IS 'Security features (e.g., Fingerprint Reader)';
 CREATE TABLE he_dieu_hanh ( id BIGSERIAL PRIMARY KEY, ten_he_dieu_hanh VARCHAR(100) UNIQUE NOT NULL );
+<<<<<<< HEAD
 =======
 CREATE TABLE he_dieu_hanh ( id BIGSERIAL PRIMARY KEY, mo_ta_he_dieu_hanh VARCHAR(100) UNIQUE NOT NULL );
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 COMMENT ON TABLE he_dieu_hanh IS 'Operating Systems (e.g., Windows 11 Home)';
 CREATE TABLE pin ( id BIGSERIAL PRIMARY KEY, mo_ta_pin VARCHAR(150) UNIQUE NOT NULL );
 COMMENT ON TABLE pin IS 'Battery configurations (e.g., 4-cell 75Wh)';
@@ -243,8 +255,11 @@ CREATE TABLE dot_giam_gia (
     ngay_bat_dau TIMESTAMPTZ NOT NULL,
     ngay_ket_thuc TIMESTAMPTZ NOT NULL,
     trang_thai BOOLEAN DEFAULT TRUE NOT NULL, -- Represents admin activation, not time-based status
+<<<<<<< HEAD
     trang_thai trang_thai_dot_giam_gia_enum DEFAULT 'CHUA_DIEN_RA' NOT NULL,
     da_an BOOLEAN DEFAULT TRUE NOT NULL,
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_ngay_dot_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
@@ -269,6 +284,7 @@ CREATE TABLE phieu_giam_gia (
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau)
     -- CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
+<<<<<<< HEAD
     phieu_rieng_tu boolean DEFAULT FALSE,
     so_luong_ban_dau INT DEFAULT 0 NOT NULL,
     so_luong_da_dung INT DEFAULT 0 NOT NULL,
@@ -277,6 +293,8 @@ CREATE TABLE phieu_giam_gia (
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_ngay_phieu_giam_gia CHECK (ngay_ket_thuc > ngay_bat_dau),
     CONSTRAINT check_so_luong_phieu_giam_gia CHECK (so_luong_da_dung <= so_luong_ban_dau) -- Add if so_luong_ban_dau is always NOT NULL
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 );
 COMMENT ON TABLE phieu_giam_gia IS 'Vouchers / Coupon Codes';
 COMMENT ON COLUMN phieu_giam_gia.trang_thai IS 'Time-based status (CHUA_DIEN_RA, DA_DIEN_RA, KET_THUC) - consider auto-updating mechanism';
@@ -408,7 +426,10 @@ CREATE TABLE danh_gia (
     noi_dung TEXT,
     hinh_anh JSONB,
     trang_thai VARCHAR(20) DEFAULT 'PENDING' NOT NULL CHECK (trang_thai IN ('PENDING', 'APPROVED', 'REJECTED')), -- Added CHECK constraint
+<<<<<<< HEAD
     trang_thai VARCHAR(20) DEFAULT 'DANG_CHO' NOT NULL CHECK (trang_thai IN ('DANG_CHO', 'DUYET', 'TU_CHOI')), -- Added CHECK constraint
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
     ngay_tao TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (san_pham_chi_tiet_id, nguoi_dung_id)
@@ -480,8 +501,11 @@ CREATE INDEX idx_san_pham_thuong_hieu_id ON san_pham(thuong_hieu_id); -- Index F
 CREATE INDEX idx_san_pham_trang_thai ON san_pham(trang_thai);
 CREATE INDEX idx_dot_giam_gia_ngay ON dot_giam_gia(ngay_bat_dau, ngay_ket_thuc);
 CREATE INDEX idx_dot_giam_gia_trang_thai ON dot_giam_gia(trang_thai);
+<<<<<<< HEAD
 
 CREATE INDEX idx_dot_giam_gia_da_an ON dot_giam_gia(da_an);
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 CREATE INDEX idx_phieu_giam_gia_ngay ON phieu_giam_gia(ngay_bat_dau, ngay_ket_thuc);
 CREATE INDEX idx_phieu_giam_gia_trang_thai ON phieu_giam_gia(trang_thai);
 CREATE INDEX idx_spct_san_pham_id ON san_pham_chi_tiet(san_pham_id);
@@ -605,6 +629,7 @@ CREATE TRIGGER set_timestamp_wishlist BEFORE UPDATE ON wishlist FOR EACH ROW EXE
 
 -- =============================================================================
 -- KẾT THÚC SCRIPT TẠO BẢNG V5
+<<<<<<< HEAD
 -- CREATE OR REPLACE FUNCTION trigger_set_timestamp()
 -- RETURNS TRIGGER AS $$
 -- BEGIN
@@ -858,4 +883,6 @@ VALUES (1, 1);
 
 -- =============================================================================
 -- KẾT THÚC SCRIPT TẠO BẢNG V5 & INSERT SAMPLE DATA
+=======
+>>>>>>> 43645785e900cb18eb7f217e7bfe82fc7d70df76
 -- =============================================================================

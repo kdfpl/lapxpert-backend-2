@@ -3,24 +3,26 @@ package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.*;
 import jakarta.persistence.*;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.*;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "san_pham_chi_tiet")
+@EntityListeners(AuditingEntityListener.class)
 public class SanPhamChiTiet {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "san_pham_chi_tiet_id_gen")
@@ -49,9 +51,9 @@ public class SanPhamChiTiet {
     @Column(name = "gia_khuyen_mai", precision = 15, scale = 2)
     private BigDecimal giaKhuyenMai;
 
-    @Column(name = "hinh_anh")
+    @Column(name = "hinh_anh", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> hinhAnh;
+    private List<String> hinhAnh;
 
     @ColumnDefault("true")
     @Column(name = "trang_thai", nullable = false)
@@ -59,11 +61,13 @@ public class SanPhamChiTiet {
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_tao")
-    private OffsetDateTime ngayTao;
+    @CreatedDate
+    private Instant ngayTao;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
-    private OffsetDateTime ngayCapNhat;
+    @LastModifiedDate
+    private Instant ngayCapNhat;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)

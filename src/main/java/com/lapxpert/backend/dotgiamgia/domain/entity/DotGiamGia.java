@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "dot_giam_gia")
+@EntityListeners(AuditingEntityListener.class)
 public class DotGiamGia {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "dot_giam_gia_id_gen")
@@ -49,6 +51,7 @@ public class DotGiamGia {
     @Column(name = "ngay_tao")
     @CreatedDate
     private Instant ngayTao;
+
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "ngay_cap_nhat")
     @LastModifiedDate
@@ -59,7 +62,6 @@ public class DotGiamGia {
     @Enumerated
     @JdbcType(PostgreSQLEnumJdbcType.class)
     private TrangThai trangThai;
-
 
     @ManyToMany(mappedBy = "dotGiamGias")
     private Set<SanPhamChiTiet> sanPhamChiTiets = new LinkedHashSet<>();

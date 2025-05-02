@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @RestController
-@RequestMapping("/thong-ke")
+@RequestMapping("api/v1/thong-ke")
 @CrossOrigin(origins = "*")
 public class ThongKeController {
     @Autowired

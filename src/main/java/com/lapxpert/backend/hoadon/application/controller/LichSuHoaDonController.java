@@ -1,8 +1,9 @@
-package com.lapxpert.backend.hoadon.controller;
-import com.lapxpert.backend.hoadon.enity.HoaDon;
-import com.lapxpert.backend.hoadon.enity.LichSuHoaDon;
-import com.lapxpert.backend.hoadon.repository.LichSuHoaDonRepository;
-import com.lapxpert.backend.hoadon.service.LichSuHoaDonService;
+package com.lapxpert.backend.hoadon.application.controller;
+import com.lapxpert.backend.hoadon.domain.service.LichSuHoaDonService;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.entity.LichSuHoaDon;
+import com.lapxpert.backend.hoadon.domain.repository.LichSuHoaDonRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

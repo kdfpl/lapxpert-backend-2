@@ -1,8 +1,8 @@
-package com.lapxpert.backend.hoadon.controller;
+package com.lapxpert.backend.hoadon.application.controller;
 
 
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
-import com.lapxpert.backend.hoadon.enity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

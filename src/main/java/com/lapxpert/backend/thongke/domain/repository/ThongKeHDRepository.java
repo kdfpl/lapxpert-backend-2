@@ -1,6 +1,6 @@
 package com.lapxpert.backend.thongke.domain.repository;
 
-import com.lapxpert.backend.hoadon.enity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.thongke.domain.entity.HoaDonSanPhamView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

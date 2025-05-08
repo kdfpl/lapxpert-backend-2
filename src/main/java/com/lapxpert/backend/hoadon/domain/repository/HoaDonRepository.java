@@ -1,6 +1,6 @@
-package com.lapxpert.backend.hoadon.repository;
+package com.lapxpert.backend.hoadon.domain.repository;
 
-import com.lapxpert.backend.hoadon.enity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

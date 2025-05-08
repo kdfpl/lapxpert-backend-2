@@ -1,4 +1,4 @@
-package com.lapxpert.backend.hoadon.enity;
+package com.lapxpert.backend.hoadon.domain.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;

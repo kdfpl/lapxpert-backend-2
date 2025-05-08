@@ -1,7 +1,7 @@
 package com.lapxpert.backend.thongke.domain.service;
 
 
-import com.lapxpert.backend.hoadon.enity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.thongke.domain.entity.HoaDonSanPhamView;
 import com.lapxpert.backend.thongke.domain.repository.ThongKeHDRepository;
 import org.springframework.beans.factory.annotation.Autowired;

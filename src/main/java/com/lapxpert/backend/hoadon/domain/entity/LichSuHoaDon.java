@@ -1,4 +1,4 @@
-package com.lapxpert.backend.hoadon.enity;
+package com.lapxpert.backend.hoadon.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

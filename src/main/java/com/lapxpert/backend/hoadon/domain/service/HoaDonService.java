@@ -1,8 +1,8 @@
 package com.lapxpert.backend.hoadon.domain.service;
 
 
-import com.lapxpert.backend.hoadon.enity.HoaDon;
-import com.lapxpert.backend.hoadon.repository.HoaDonRepository;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
+import com.lapxpert.backend.hoadon.domain.repository.HoaDonRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

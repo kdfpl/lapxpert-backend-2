@@ -38,6 +38,10 @@ public class DotGiamGiaService {
         return dotGiamGiaMapper.toDtos(dotGiamGiaRepository.findAllByDaAn(false));
     }
 
+    public DotGiamGiaDto findById(Long id) {
+        return dotGiamGiaMapper.toDto(dotGiamGiaRepository.findById(id).orElse(null));
+    }
+
     @Transactional
     public ResponseEntity<DotGiamGiaDto> save(DotGiamGiaDto dto) {
         DotGiamGia entity = dotGiamGiaMapper.toEntity(dto);

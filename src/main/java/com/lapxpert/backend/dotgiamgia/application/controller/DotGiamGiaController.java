@@ -26,6 +26,11 @@ public class DotGiamGiaController {
         return ResponseEntity.ok(service.findAll());
     }
 
+    @GetMapping("{id}")
+    public ResponseEntity<DotGiamGiaDto> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findById(id));
+    }
+
     @PutMapping
     public ResponseEntity<DotGiamGiaDto> save(@RequestBody DotGiamGiaDto dto) {
         return service.save(dto);

@@ -41,6 +41,7 @@ dependencies {
 	annotationProcessor 'org.mapstruct:mapstruct-processor:+'
 	implementation 'io.hypersistence:hypersistence-utils-hibernate-60:3.9.4'
 	implementation 'org.springframework.boot:spring-boot-starter-mail:3.4.4'
+	implementation 'io.minio:minio:8.5.17'
 }
 
 tasks.named('test') {

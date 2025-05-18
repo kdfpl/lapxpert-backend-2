@@ -9,6 +9,9 @@ import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
 import com.lapxpert.backend.sanpham.domain.repository.thuoctinh.ThuongHieuRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +49,8 @@ public class SanPhamService {
             throw new RuntimeException("Định dạng mã sản phẩm không hợp lệ: " + lastMaSanPham);
         }
     }
+
+    @CacheEvict(value = {"sanPhamList", "activeSanPhamList"}, allEntries = true)
     @Transactional
     public SanPhamDto createSanPhamWithChiTiet(SanPhamDto sanPhamDto) {
         // Chuyển đổi DTO sang Entity
@@ -75,13 +80,15 @@ public class SanPhamService {
 
         return sanPhamMapper.toDto(savedSanPham);
     }
-    @Transactional
+
+//    @Cacheable(value = "sanPhamList")
+    @Transactional(readOnly = true)
     public List<SanPhamDto> findAll() {
         List<SanPham> entities = sanPhamRepository.findAll();
         return sanPhamMapper.toDtos(entities);
     }
 
-    // Lấy danh sách sản phẩm có trạng thái = true
+//    @Cacheable(value = "activeSanPhamList")
     @Transactional(readOnly = true)
     public List<SanPhamDto> getActiveProducts() {
         List<SanPham> entities = sanPhamRepository.findAllByTrangThai(true);
@@ -89,6 +96,10 @@ public class SanPhamService {
     }
 
     // Thêm sản phẩm mới
+    @Caching(evict = {
+            @CacheEvict(value = "sanPhamList", allEntries = true),
+            @CacheEvict(value = "activeSanPhamList", allEntries = true)
+    })
     @Transactional
     public SanPham addProduct(SanPham sanPham) {
         sanPham.setTrangThai(true);
@@ -96,6 +107,10 @@ public class SanPhamService {
     }
 
     // Cập nhật sản phẩm
+    @Caching(evict = {
+            @CacheEvict(value = "sanPhamList", allEntries = true),
+            @CacheEvict(value = "activeSanPhamList", allEntries = true)
+    })
     @Transactional
     public SanPham updateProduct(Long id, SanPham sanPham) {
         return sanPhamRepository.findById(id).map(existing -> {
@@ -111,6 +126,10 @@ public class SanPhamService {
 
     // Xóa mềm sản phẩm (đặt trạng thái thành false)
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "sanPhamList", allEntries = true),
+            @CacheEvict(value = "activeSanPhamList", allEntries = true)
+    })
     public void softDeleteProduct(Long id) {
         sanPhamRepository.findById(id).ifPresent(sanPham -> {
             sanPham.setTrangThai(false);

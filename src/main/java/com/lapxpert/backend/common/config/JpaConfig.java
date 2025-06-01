@@ -1,11 +1,13 @@
 package com.lapxpert.backend.common.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+/**
+ * JPA configuration for transaction management.
+ * Note: JPA Auditing is configured in AuditConfig.java
+ */
 @Configuration
-@EnableJpaAuditing
 @EnableTransactionManagement
 public class JpaConfig {
 }

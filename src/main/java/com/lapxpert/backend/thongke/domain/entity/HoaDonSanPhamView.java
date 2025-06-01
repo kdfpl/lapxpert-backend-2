@@ -7,5 +7,5 @@ public interface HoaDonSanPhamView {
     String getTenSanPham();
     LocalDateTime getNgayTao();
     BigDecimal getGiaBan();
-    String getTrangThaiGiaoHang();
+    String getTrangThaiDonHang();
 }

@@ -3,8 +3,10 @@ package com.lapxpert.backend.sanpham.application.controller;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.service.SanPhamChiTietService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.List;
 @RequestMapping("/api/v1/products-details")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
+@Validated
 public class SanPhamChiTietController {
     private final SanPhamChiTietService sanPhamChiTietService;
 
@@ -24,14 +27,14 @@ public class SanPhamChiTietController {
 
     // Thêm sản phẩm mới
     @PostMapping("/add")
-    public ResponseEntity<SanPhamChiTiet> addProductDetailed(@RequestBody SanPhamChiTiet sanPham) {
+    public ResponseEntity<SanPhamChiTiet> addProductDetailed(@Valid @RequestBody SanPhamChiTiet sanPham) {
         SanPhamChiTiet savedProduct = sanPhamChiTietService.addProduct(sanPham);
         return ResponseEntity.ok(savedProduct);
     }
 
     // Cập nhật sản phẩm
     @PutMapping("/update/{id}")
-    public ResponseEntity<SanPhamChiTiet> updateProductDetailed(@PathVariable Long id, @RequestBody SanPhamChiTiet sanPham) {
+    public ResponseEntity<SanPhamChiTiet> updateProductDetailed(@PathVariable Long id, @Valid @RequestBody SanPhamChiTiet sanPham) {
         SanPhamChiTiet updatedProduct = sanPhamChiTietService.updateProduct(id, sanPham);
         return ResponseEntity.ok(updatedProduct);
     }

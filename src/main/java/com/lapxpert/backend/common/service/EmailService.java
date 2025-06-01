@@ -1,6 +1,7 @@
 package com.lapxpert.backend.common.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -12,14 +13,15 @@ public class EmailService {
     @Autowired
     private JavaMailSender emailSender;
 
-    private final String defaultSender = "hoangmlinh3@gmail.com";
+    @Value("${spring.mail.username}")
+    private String configuredSenderEmail;
 
     public void sendEmail(String to, String subject, String text) {
-        sendEmail(to, subject, text, defaultSender);
+        sendEmail(to, subject, text, configuredSenderEmail);
     }
 
     public void sendBulkEmail(List<String> to, String subject, String text) {
-        sendBulkEmail(to, subject, text, defaultSender);
+        sendBulkEmail(to, subject, text, configuredSenderEmail);
     }
 
 

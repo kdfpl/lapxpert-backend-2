@@ -1,6 +1,6 @@
 package com.lapxpert.backend.sanpham.domain.repository;
 
-import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.Cpu;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 

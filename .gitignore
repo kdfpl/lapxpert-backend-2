@@ -1,4 +1,14 @@
 HELP.md
+
+# General
+*.log
+*.tmp
+*.swp
+
+# Maven
+target/
+
+# Gradle
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -35,3 +45,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+src/main/resources/docs/

@@ -13,7 +13,7 @@ public interface ThongKeHDRepository extends JpaRepository<HoaDon, Long> {
             "    sp.ten_san_pham,\n" +
             "    hd.ngay_tao,\n" +
             "    hdct.gia_ban,\n" +
-            "    hd.trang_thai_giao_hang\n" +
+            "    hd.trang_thai_don_hang\n" +
             "FROM hoa_don hd\n" +
             "INNER JOIN hoa_don_chi_tiet hdct ON hd.id = hdct.hoa_don_id\n" +
             "INNER JOIN san_pham_chi_tiet spct ON hdct.san_pham_chi_tiet_id = spct.id\n" +
@@ -22,18 +22,18 @@ public interface ThongKeHDRepository extends JpaRepository<HoaDon, Long> {
 
 
     @Query(value = """
-    SELECT 
+    SELECT
         sp.ten_san_pham AS tenSanPham,
         hd.ngay_tao AS ngayTao,
         hdct.gia_ban AS giaBan,
-        hd.trang_thai_giao_hang AS trangThaiGiaoHang
+        hd.trang_thai_don_hang AS trangThaiDonHang
     FROM hoa_don hd
     INNER JOIN hoa_don_chi_tiet hdct ON hd.id = hdct.hoa_don_id
-    INNER JOIN san_pham_chi_tiet spct ON hdct.spct_id = spct.id
+    INNER JOIN san_pham_chi_tiet spct ON hdct.san_pham_chi_tiet_id = spct.id
     INNER JOIN san_pham sp ON spct.san_pham_id = sp.id
-    WHERE hd.trang_thai_giao_hang = :trangThaiGiaoHang
+    WHERE hd.trang_thai_don_hang = :trangThaiDonHang
     """, nativeQuery = true)
-    List<HoaDonSanPhamView> findByTrangThaiGiaoHang(@Param("trangThaiGiaoHang") String trangThaiGiaoHang);
+    List<HoaDonSanPhamView> findByTrangThaiDonHang(@Param("trangThaiDonHang") String trangThaiDonHang);
 
 
 

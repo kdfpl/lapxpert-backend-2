@@ -1,7 +1,5 @@
 package com.lapxpert.backend.phieugiamgia.domain.repository;
 
-import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
-import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGia;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaNguoiDung;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaNguoiDungId;
 import jakarta.transaction.Transactional;

@@ -15,7 +15,9 @@ import java.time.ZonedDateTime;
 public class DiaChi {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "dia_chi_id_gen")
+    @SequenceGenerator(name = "dia_chi_id_gen", sequenceName = "dia_chi_id_seq", allocationSize = 1)
+    @Column(name = "id", nullable = false)
     private Long id;
 
     @JsonIgnore
@@ -36,17 +38,21 @@ public class DiaChi {
     private String tinhThanh;
 
     @Column(name = "quoc_gia", length = 100, columnDefinition = "varchar(100) default 'Việt Nam'")
+    @Builder.Default
     private String quocGia = "Việt Nam";
 
     @Column(name = "loai_dia_chi", length = 50)
     private String loaiDiaChi;
 
     @Column(name = "la_mac_dinh", nullable = false)
+    @Builder.Default
     private Boolean laMacDinh = false;
 
     @Column(name = "ngay_tao", columnDefinition = "timestamp with time zone default CURRENT_TIMESTAMP")
+    @Builder.Default
     private ZonedDateTime ngayTao = ZonedDateTime.now();
 
     @Column(name = "ngay_cap_nhat", columnDefinition = "timestamp with time zone default CURRENT_TIMESTAMP")
+    @Builder.Default
     private ZonedDateTime ngayCapNhat = ZonedDateTime.now();
 }

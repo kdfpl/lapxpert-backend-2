@@ -2,6 +2,8 @@ package com.lapxpert.backend.sanpham.application.controller;
 
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.*;
 import com.lapxpert.backend.sanpham.domain.service.thuoctinh.*;
+import com.lapxpert.backend.sanpham.application.mapper.DanhMucMapper;
+import com.lapxpert.backend.sanpham.application.dto.thuoctinh.DanhMucDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +31,9 @@ public class    ThuocTinhController {
     private final ThietKeService thietKeService;
     private final WebcamService webcamService;
     private final DanhMucService danhMucService;
+    private final DanhMucMapper danhMucMapper;
     private final ThuongHieuService thuongHieuService;
+    private final MauSacService mauSacService;
 
     // AmThanh CRUD
     @GetMapping("/audio")
@@ -523,18 +527,25 @@ public class    ThuocTinhController {
 
     // Category (DanhMuc) CRUD
     @GetMapping("/categories")
-    public ResponseEntity<List<DanhMuc>> findAllCategories() {
-        return ResponseEntity.ok(danhMucService.findAll());
+    public ResponseEntity<List<DanhMucDto>> findAllCategories() {
+        List<DanhMuc> categories = danhMucService.findAll();
+        return ResponseEntity.ok(danhMucMapper.toDtos(categories));
     }
 
     @PutMapping("/categories")
-    public ResponseEntity<DanhMuc> saveCategory(@RequestBody DanhMuc category) {
-        return ResponseEntity.ok(danhMucService.save(category));
+    public ResponseEntity<DanhMucDto> saveCategory(@RequestBody DanhMucDto categoryDto) {
+        DanhMuc category = danhMucMapper.toEntity(categoryDto);
+        DanhMuc savedCategory = danhMucService.save(category);
+        return ResponseEntity.ok(danhMucMapper.toDto(savedCategory));
     }
 
     @PutMapping("/categories/multiple")
-    public ResponseEntity<List<DanhMuc>> saveMultipleCategories(@RequestBody List<DanhMuc> categories) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(danhMucService.saveMultiple(categories));
+    public ResponseEntity<List<DanhMucDto>> saveMultipleCategories(@RequestBody List<DanhMucDto> categoryDtos) {
+        List<DanhMuc> categories = categoryDtos.stream()
+                .map(danhMucMapper::toEntity)
+                .toList();
+        List<DanhMuc> savedCategories = danhMucService.saveMultiple(categories);
+        return ResponseEntity.status(HttpStatus.CREATED).body(danhMucMapper.toDtos(savedCategories));
     }
 
     @DeleteMapping("/categories/{id}")
@@ -588,6 +599,41 @@ public class    ThuocTinhController {
             return ResponseEntity.badRequest().build();
         }
         thuongHieuService.deleteMultiple(ids);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Color CRUD
+    @GetMapping("/colors")
+    public ResponseEntity<List<MauSac>> findAllColors() {
+        return ResponseEntity.ok(mauSacService.findAll());
+    }
+
+    @PutMapping("/colors")
+    public ResponseEntity<MauSac> saveColor(@RequestBody MauSac color) {
+        return ResponseEntity.ok(mauSacService.save(color));
+    }
+
+    @PutMapping("/colors/multiple")
+    public ResponseEntity<List<MauSac>> saveMultipleColors(@RequestBody List<MauSac> colors) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(mauSacService.saveMultiple(colors));
+    }
+
+    @DeleteMapping("/colors/{id}")
+    public ResponseEntity<Void> deleteColor(@PathVariable Long id) {
+        MauSac existingColor = mauSacService.findById(id);
+        if (existingColor == null) {
+            return ResponseEntity.notFound().build();
+        }
+        mauSacService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/colors")
+    public ResponseEntity<Void> deleteMultipleColors(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        mauSacService.deleteMultiple(ids);
         return ResponseEntity.noContent().build();
     }
 

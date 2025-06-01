@@ -1,15 +1,17 @@
 package com.lapxpert.backend.nguoidung.application.controller;
 
-
 import com.lapxpert.backend.nguoidung.application.dto.KhachHangDTO;
 import com.lapxpert.backend.nguoidung.application.dto.NhanVienDTO;
+import com.lapxpert.backend.nguoidung.domain.entity.NguoiDungAuditHistory;
 import com.lapxpert.backend.nguoidung.domain.service.NguoiDungService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -24,7 +26,10 @@ public class NguoiDungController {
     }
 
     @GetMapping("/customer")
-    public ResponseEntity<List<KhachHangDTO>> getAllKhachHang() {
+    public ResponseEntity<List<KhachHangDTO>> getAllKhachHang(@RequestParam(required = false) String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            return ResponseEntity.ok(nguoiDungService.searchKhachHang(search.trim()));
+        }
         return ResponseEntity.ok(nguoiDungService.getAllKhachHang());
     }
 
@@ -44,25 +49,25 @@ public class NguoiDungController {
     }
 
     @PostMapping("/customer")
-    public ResponseEntity<KhachHangDTO> addKhachHang(@RequestBody KhachHangDTO khachHangDTO) {
+    public ResponseEntity<KhachHangDTO> addKhachHang(@RequestBody @Valid KhachHangDTO khachHangDTO) {
         KhachHangDTO createdKhachHang = nguoiDungService.addKhachHang(khachHangDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdKhachHang);
     }
 
     @PostMapping("/staff")
-    public ResponseEntity<NhanVienDTO> addNhanVien(@RequestBody NhanVienDTO nhanVienDTO) {
+    public ResponseEntity<NhanVienDTO> addNhanVien(@RequestBody @Valid NhanVienDTO nhanVienDTO) {
         NhanVienDTO createdNhanVien = nguoiDungService.addNhanVien(nhanVienDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdNhanVien);
     }
 
     @PutMapping("/customer/{id}")
-    public ResponseEntity<KhachHangDTO> updateKhachHang(@PathVariable Long id, @RequestBody KhachHangDTO khachHangDTO) {
+    public ResponseEntity<KhachHangDTO> updateKhachHang(@PathVariable Long id, @RequestBody @Valid KhachHangDTO khachHangDTO) {
         KhachHangDTO updatedNguoiDung = nguoiDungService.updateKhachHang(id, khachHangDTO);
         return ResponseEntity.ok(updatedNguoiDung);
     }
 
     @PutMapping("/staff/{id}")
-    public ResponseEntity<NhanVienDTO> updateNhanVien(@PathVariable Long id, @RequestBody NhanVienDTO nhanVienDTO) {
+    public ResponseEntity<NhanVienDTO> updateNhanVien(@PathVariable Long id, @RequestBody @Valid NhanVienDTO nhanVienDTO) {
         NhanVienDTO updatedNguoiDung = nguoiDungService.updateNhanVien(id, nhanVienDTO);
         return ResponseEntity.ok(updatedNguoiDung);
     }
@@ -89,6 +94,40 @@ public class NguoiDungController {
     public ResponseEntity<Void> restoreNhanVien(@PathVariable Long id) {
         nguoiDungService.restoreNhanVien(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // Utility endpoints for frontend validation
+    @GetMapping("/validate/email/{email}")
+    public ResponseEntity<Boolean> isEmailAvailable(@PathVariable String email) {
+        boolean isAvailable = nguoiDungService.isEmailAvailable(email);
+        return ResponseEntity.ok(isAvailable);
+    }
+
+    @GetMapping("/validate/phone/{phone}")
+    public ResponseEntity<Boolean> isPhoneAvailable(@PathVariable String phone) {
+        boolean isAvailable = nguoiDungService.isPhoneAvailable(phone);
+        return ResponseEntity.ok(isAvailable);
+    }
+
+    @GetMapping("/validate/cccd/{cccd}")
+    public ResponseEntity<Boolean> isCccdAvailable(@PathVariable String cccd) {
+        boolean isAvailable = nguoiDungService.isCccdAvailable(cccd);
+        return ResponseEntity.ok(isAvailable);
+    }
+
+
+
+    // Audit history endpoints
+    @GetMapping("/customer/{id}/audit-history")
+    public ResponseEntity<List<NguoiDungAuditHistory>> getCustomerAuditHistory(@PathVariable Long id) {
+        List<NguoiDungAuditHistory> auditHistory = nguoiDungService.getAuditHistory(id);
+        return ResponseEntity.ok(auditHistory);
+    }
+
+    @GetMapping("/staff/{id}/audit-history")
+    public ResponseEntity<List<NguoiDungAuditHistory>> getStaffAuditHistory(@PathVariable Long id) {
+        List<NguoiDungAuditHistory> auditHistory = nguoiDungService.getAuditHistory(id);
+        return ResponseEntity.ok(auditHistory);
     }
 }
 

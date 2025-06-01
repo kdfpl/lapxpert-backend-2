@@ -1,451 +1,295 @@
 package com.lapxpert.backend.thongke.application.controller;
 
-import com.lapxpert.backend.thongke.domain.entity.DoanhThuHangNgay;
-import com.lapxpert.backend.thongke.domain.entity.DoanhThuThangDTO;
-import com.lapxpert.backend.thongke.domain.entity.HoaDonSanPhamView;
-import com.lapxpert.backend.thongke.domain.entity.TongDoanhThuThangDTO;
-import com.lapxpert.backend.thongke.domain.service.ThongKeDSService;
-import com.lapxpert.backend.thongke.domain.service.ThongKeDTService;
-import com.lapxpert.backend.thongke.domain.service.ThongKeHDService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.lapxpert.backend.thongke.application.service.ThongKeService;
+import com.lapxpert.backend.thongke.domain.dto.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.Map;
 
+/**
+ * ThongKe (Statistics) Controller
+ * Provides comprehensive business intelligence and reporting endpoints
+ * Following Vietnamese naming conventions and clean architecture principles
+ */
 @RestController
-@RequestMapping("api/v1/thong-ke")
+@RequestMapping("/api/v1/thong-ke")
+@RequiredArgsConstructor
+@Slf4j
 @CrossOrigin(origins = "*")
 public class ThongKeController {
-    @Autowired
-    ThongKeHDService thongKeHDService;
-    @Autowired
-    ThongKeDTService thongKeDTService;
 
-    @Autowired
-    ThongKeDSService thongKeDSService;
+    private final ThongKeService thongKeService;
 
+    // ==================== DOANH THU (REVENUE) STATISTICS ====================
 
-    @GetMapping("/this-month")
-    public Map<String, Object> getSalesDataThisMonth() {
-        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuTungHangTrongThangNay();
-
-        List<String> labels = generateLabels(30, "Ngày");
-
-
-        Map<String, Map<String, String>> brandStyles = new HashMap<>();
-        brandStyles.put("Apple", Map.of(
-                "backgroundColor", "rgba(255, 99, 132, 0.5)",
-                "borderColor", "#ff6384"
-        ));
-        brandStyles.put("Asus", Map.of(
-                "backgroundColor", "rgba(1, 255, 0, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Acer", Map.of(
-                "backgroundColor", "rgba(0, 235, 255, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Dell", Map.of(
-                "backgroundColor", "rgba(75, 192, 192, 0.5)",
-                "borderColor", "#4BC0C0"
-        ));
-        brandStyles.put("Lenovo", Map.of(
-                "backgroundColor", "rgba(153, 102, 255, 0.5)",
-                "borderColor", "#9966FF"
-        ));
-        brandStyles.put("MSI", Map.of(
-                "backgroundColor", "rgba(255, 159, 64, 0.5)",
-                "borderColor", "#FF9F40"
-        ));
-        brandStyles.put("HP", Map.of(
-                "backgroundColor", "rgba(255, 206, 86, 0.5)",
-                "borderColor", "#FFCE56"
-        ));
-        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
-        for (DoanhThuHangNgay doanhThu : salesData) {
-            String brand = doanhThu.getBrand();
-            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThu.getRevenue());
+    /**
+     * Get daily revenue statistics
+     * @param tuNgay Start date (optional, defaults to 30 days ago)
+     * @param denNgay End date (optional, defaults to today)
+     * @return Daily revenue breakdown
+     */
+    @GetMapping("/doanh-thu/theo-ngay")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DoanhThuTheoNgayDto> layDoanhThuTheoNgay(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tuNgay,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate denNgay) {
+        
+        log.debug("Getting daily revenue statistics from {} to {}", tuNgay, denNgay);
+        
+        try {
+            DoanhThuTheoNgayDto result = thongKeService.layDoanhThuTheoNgay(tuNgay, denNgay);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting daily revenue statistics", e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        List<Map<String, Object>> datasets = new ArrayList<>();
-
-        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
-            String brand = entry.getKey();
-            List<Integer> data = entry.getValue();
-
-            Map<String, Object> dataset = new HashMap<>();
-            dataset.put("label", brand);
-            dataset.put("data", data);
-            dataset.put("type", "bar");
-
-            if (brandStyles.containsKey(brand)) {
-                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
-                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
-            } else {
-                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
-                dataset.put("borderColor", "#000000");
-            }
-
-            datasets.add(dataset);
-        }
-
-        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayTrongThangNay();
-        Map<String, Object> totalDataset = new HashMap<>();
-        totalDataset.put("label", "Tổng doanh thu");
-        totalDataset.put("data", tong);
-        totalDataset.put("type", "line");
-        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
-        totalDataset.put("borderColor", "#42A5F5");
-        totalDataset.put("pointBackgroundColor", "#42A5F5");
-        totalDataset.put("fill", true);
-        totalDataset.put("tension", 0.3);
-        datasets.add(totalDataset);
-
-        return Map.of(
-                "labels", labels,
-                "datasets", datasets
-        );
     }
 
-    @GetMapping("/this-week")
-    public Map<String, Object> getSalesDataThisWeek() {
-        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuTungHangTrongTuanNay();
-
-        List<String> labels = List.of("Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật");
-
-        Map<String, Map<String, String>> brandStyles = new HashMap<>();
-        brandStyles.put("Apple", Map.of(
-                "backgroundColor", "rgba(255, 99, 132, 0.5)",
-                "borderColor", "#ff6384"
-        ));
-        brandStyles.put("Asus", Map.of(
-                "backgroundColor", "rgba(1, 255, 0, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Acer", Map.of(
-                "backgroundColor", "rgba(0, 235, 255, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Dell", Map.of(
-                "backgroundColor", "rgba(75, 192, 192, 0.5)",
-                "borderColor", "#4BC0C0"
-        ));
-        brandStyles.put("Lenovo", Map.of(
-                "backgroundColor", "rgba(153, 102, 255, 0.5)",
-                "borderColor", "#9966FF"
-        ));
-        brandStyles.put("MSI", Map.of(
-                "backgroundColor", "rgba(255, 159, 64, 0.5)",
-                "borderColor", "#FF9F40"
-        ));
-        brandStyles.put("HP", Map.of(
-                "backgroundColor", "rgba(255, 206, 86, 0.5)",
-                "borderColor", "#FFCE56"
-        ));
-
-        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
-        for (DoanhThuHangNgay doanhThu : salesData) {
-            String brand = doanhThu.getBrand();
-            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThu.getRevenue());
+    /**
+     * Get monthly revenue statistics
+     * @param nam Year (optional, defaults to current year)
+     * @return Monthly revenue breakdown for the year
+     */
+    @GetMapping("/doanh-thu/theo-thang")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DoanhThuTheoThangDto> layDoanhThuTheoThang(
+            @RequestParam(required = false) Integer nam) {
+        
+        log.debug("Getting monthly revenue statistics for year {}", nam);
+        
+        try {
+            DoanhThuTheoThangDto result = thongKeService.layDoanhThuTheoThang(nam);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting monthly revenue statistics", e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        List<Map<String, Object>> datasets = new ArrayList<>();
-
-        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
-            String brand = entry.getKey();
-            List<Integer> data = entry.getValue();
-
-            Map<String, Object> dataset = new HashMap<>();
-            dataset.put("label", brand);
-            dataset.put("data", data);
-            dataset.put("type", "bar");
-
-            if (brandStyles.containsKey(brand)) {
-                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
-                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
-            } else {
-                dataset.put("backgroundColor", "rgba(0, 255, 8, 0.8)");
-                dataset.put("borderColor", "#a2eb36 ");
-            }
-
-            datasets.add(dataset);
-        }
-
-        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayTrongTuanNay();
-        Map<String, Object> totalDataset = new HashMap<>();
-        totalDataset.put("label", "Tổng doanh thu");
-        totalDataset.put("data", tong);
-        totalDataset.put("type", "line");
-        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
-        totalDataset.put("borderColor", "#42A5F5");
-        totalDataset.put("pointBackgroundColor", "#42A5F5");
-        totalDataset.put("fill", true);
-        totalDataset.put("tension", 0.3);
-        datasets.add(totalDataset);
-
-        return Map.of(
-                "labels", labels,
-                "datasets", datasets
-        );
     }
 
-    @GetMapping("/this-year")
-    public Map<String, Object> getSalesDataThisYear() {
-        List<DoanhThuThangDTO> salesData = thongKeDTService.DoanhThuTungHangTrongNamNay();
-        List<String> labels = List.of("Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-                "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12");
-
-        Map<String, Map<String, String>> brandStyles = new HashMap<>();
-        brandStyles.put("Apple", Map.of(
-                "backgroundColor", "rgba(255, 99, 132, 0.5)",
-                "borderColor", "#ff6384"
-        ));
-        brandStyles.put("Asus", Map.of(
-                "backgroundColor", "rgba(1, 255, 0, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Acer", Map.of(
-                "backgroundColor", "rgba(0, 235, 255, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Dell", Map.of(
-                "backgroundColor", "rgba(75, 192, 192, 0.5)",
-                "borderColor", "#4BC0C0"
-        ));
-        brandStyles.put("Lenovo", Map.of(
-                "backgroundColor", "rgba(153, 102, 255, 0.5)",
-                "borderColor", "#9966FF"
-        ));
-        brandStyles.put("MSI", Map.of(
-                "backgroundColor", "rgba(255, 159, 64, 0.5)",
-                "borderColor", "#FF9F40"
-        ));
-        brandStyles.put("HP", Map.of(
-                "backgroundColor", "rgba(255, 206, 86, 0.5)",
-                "borderColor", "#FFCE56"
-        ));
-
-        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
-        for (DoanhThuThangDTO doanhThuT : salesData) {
-            String brand = doanhThuT.getBrand();
-            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThuT.getTotalRevenue());
+    /**
+     * Get revenue overview/summary
+     * @return Revenue summary with key metrics
+     */
+    @GetMapping("/doanh-thu/tong-quan")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DoanhThuTongQuanDto> layDoanhThuTongQuan() {
+        log.debug("Getting revenue overview");
+        
+        try {
+            DoanhThuTongQuanDto result = thongKeService.layDoanhThuTongQuan();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting revenue overview", e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        List<Map<String, Object>> datasets = new ArrayList<>();
-
-        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
-            String brand = entry.getKey();
-            List<Integer> data = entry.getValue();
-
-            Map<String, Object> dataset = new HashMap<>();
-            dataset.put("label", brand);
-            dataset.put("data", data);
-            dataset.put("type", "bar");
-
-            if (brandStyles.containsKey(brand)) {
-                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
-                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
-            } else {
-                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
-                dataset.put("borderColor", "#000000");
-            }
-
-            datasets.add(dataset);
-        }
-
-        List<TongDoanhThuThangDTO> tong = thongKeDTService.TongDoanhThuTungThangTrongNamNay();
-        List<Integer> TongDT = new ArrayList<>();
-        for (int i = 0; i < tong.size(); i++) {
-            TongDT.add(tong.get(i).getTotalRevenue());
-        }
-
-
-        Map<String, Object> totalDataset = new HashMap<>();
-        totalDataset.put("label", "Tổng doanh thu");
-        totalDataset.put("data", TongDT);
-        totalDataset.put("type", "line");
-        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
-        totalDataset.put("borderColor", "#42A5F5");
-        totalDataset.put("pointBackgroundColor", "#42A5F5");
-        totalDataset.put("fill", true);
-        totalDataset.put("tension", 0.3);
-        datasets.add(totalDataset);
-
-        return Map.of(
-                "labels", labels,
-                "datasets", datasets
-        );
     }
 
-    @GetMapping("/custom-data")
-    public Map<String, Object> getSalesDataCustom(@RequestParam(name = "start_date") LocalDate start_date,@RequestParam(name = "end_date") LocalDate end_date) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate startDate = LocalDate.parse(start_date.toString(), formatter);
-        LocalDate endDate = LocalDate.parse(end_date.toString(), formatter);
+    // ==================== DON HANG (ORDER) STATISTICS ====================
 
-        List<DoanhThuHangNgay> salesData = thongKeDTService.DoanhThuCustomTime(start_date, end_date);
-
-        List<String> labels = Stream.iterate(startDate, date -> date.plusDays(1))
-                .limit(startDate.datesUntil(endDate.plusDays(1)).count())
-                .map(LocalDate::toString) // hoặc .map(d -> d.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-                .collect(Collectors.toList());
-
-        Map<String, Map<String, String>> brandStyles = new HashMap<>();
-        brandStyles.put("Apple", Map.of(
-                "backgroundColor", "rgba(255, 99, 132, 0.5)",
-                "borderColor", "#ff6384"
-        ));
-        brandStyles.put("Asus", Map.of(
-                "backgroundColor", "rgba(1, 255, 0, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Acer", Map.of(
-                "backgroundColor", "rgba(0, 235, 255, 0.8)",
-                "borderColor", "#36A2EB"
-        ));
-        brandStyles.put("Dell", Map.of(
-                "backgroundColor", "rgba(75, 192, 192, 0.5)",
-                "borderColor", "#4BC0C0"
-        ));
-        brandStyles.put("Lenovo", Map.of(
-                "backgroundColor", "rgba(153, 102, 255, 0.5)",
-                "borderColor", "#9966FF"
-        ));
-        brandStyles.put("MSI", Map.of(
-                "backgroundColor", "rgba(255, 159, 64, 0.5)",
-                "borderColor", "#FF9F40"
-        ));
-        brandStyles.put("HP", Map.of(
-                "backgroundColor", "rgba(255, 206, 86, 0.5)",
-                "borderColor", "#FFCE56"
-        ));
-
-        Map<String, List<Integer>> brandToRevenue = new LinkedHashMap<>();
-        for (DoanhThuHangNgay doanhThuT : salesData) {
-            String brand = doanhThuT.getBrand();
-            brandToRevenue.computeIfAbsent(brand, k -> new ArrayList<>()).add(doanhThuT.getRevenue());
+    /**
+     * Get order overview statistics
+     * @return Order summary with key metrics
+     */
+    @GetMapping("/don-hang/tong-quan")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DonHangTongQuanDto> layDonHangTongQuan() {
+        log.debug("Getting order overview");
+        
+        try {
+            DonHangTongQuanDto result = thongKeService.layDonHangTongQuan();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting order overview", e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        List<Map<String, Object>> datasets = new ArrayList<>();
-
-        for (Map.Entry<String, List<Integer>> entry : brandToRevenue.entrySet()) {
-            String brand = entry.getKey();
-            List<Integer> data = entry.getValue();
-
-            Map<String, Object> dataset = new HashMap<>();
-            dataset.put("label", brand);
-            dataset.put("data", data);
-            dataset.put("type", "bar");
-
-            if (brandStyles.containsKey(brand)) {
-                dataset.put("backgroundColor", brandStyles.get(brand).get("backgroundColor"));
-                dataset.put("borderColor", brandStyles.get(brand).get("borderColor"));
-            } else {
-                dataset.put("backgroundColor", "rgba(0, 0, 0, 0.5)");
-                dataset.put("borderColor", "#000000");
-            }
-
-            datasets.add(dataset);
-        }
-
-        List<Integer> tong = thongKeDTService.TongDoanhThuTungNgayCustom(start_date,end_date);
-
-
-
-        Map<String, Object> totalDataset = new HashMap<>();
-        totalDataset.put("label", "Tổng doanh thu");
-        totalDataset.put("data", tong);
-        totalDataset.put("type", "line");
-        totalDataset.put("backgroundColor", "rgba(66, 165, 245, 0.2)");
-        totalDataset.put("borderColor", "#42A5F5");
-        totalDataset.put("pointBackgroundColor", "#42A5F5");
-        totalDataset.put("fill", true);
-        totalDataset.put("tension", 0.3);
-        datasets.add(totalDataset);
-
-        return Map.of(
-                "labels", labels,
-                "datasets", datasets
-        );
     }
 
-    private List<String> generateLabels(int days, String prefix) {
-        return IntStream.rangeClosed(1, days)
-                .mapToObj(i -> prefix + " " + i)
-                .toList();
-    }
-
-    @GetMapping("/top-month")
-    public Map<String, Object> getTopThangData() {
-        List<String> label = new ArrayList<>();
-        List<Integer> data = new ArrayList<>();
-        for (int i=0; i < thongKeDSService.getTopDoanhSoThang().size(); i++) {
-            label.add(thongKeDSService.getTopDoanhSoThang().get(i).getBrand());
-            data.add(thongKeDSService.getTopDoanhSoThang().get(i).getTotalSales());
+    /**
+     * Get order statistics by status
+     * @return Order count breakdown by status
+     */
+    @GetMapping("/don-hang/theo-trang-thai")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DonHangTheoTrangThaiDto> layDonHangTheoTrangThai() {
+        log.debug("Getting order statistics by status");
+        
+        try {
+            DonHangTheoTrangThaiDto result = thongKeService.layDonHangTheoTrangThai();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting order statistics by status", e);
+            return ResponseEntity.internalServerError().build();
         }
-        return Map.of(
-                "labels", label,
-                "data",data
-        );
     }
 
-    @GetMapping("/top-week")
-    public Map<String, Object> getTopTuanData() {
-        List<String> label = new ArrayList<>();
-        List<Integer> data = new ArrayList<>();
-        for (int i=0; i < thongKeDSService.getTopDoanhSoTuan().size(); i++) {
-            label.add(thongKeDSService.getTopDoanhSoTuan().get(i).getBrand());
-            data.add(thongKeDSService.getTopDoanhSoTuan().get(i).getTotalSales());
+    /**
+     * Get average order value statistics
+     * @return Average order value metrics
+     */
+    @GetMapping("/don-hang/gia-tri-trung-binh")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<Map<String, Object>> layGiaTriDonHangTrungBinh() {
+        log.debug("Getting average order value statistics");
+        
+        try {
+            Map<String, Object> result = thongKeService.layGiaTriDonHangTrungBinh();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting average order value statistics", e);
+            return ResponseEntity.internalServerError().build();
         }
-        return Map.of(
-                "labels", label,
-                "data",data
-        );
     }
 
-    @GetMapping("/top-day")
-    public Map<String, Object> getTopNgayData() {
-        List<String> label = new ArrayList<>();
-        List<Integer> data = new ArrayList<>();
-        for (int i=0; i < thongKeDSService.getTopDoanhSoNgay().size(); i++) {
-            label.add(thongKeDSService.getTopDoanhSoNgay().get(i).getBrand());
-            data.add(thongKeDSService.getTopDoanhSoNgay().get(i).getTotalSales());
+    // ==================== SAN PHAM (PRODUCT) STATISTICS ====================
+
+    /**
+     * Get top selling products
+     * @param soLuong Number of top products to return (default: 10)
+     * @param tuNgay Start date for analysis period
+     * @param denNgay End date for analysis period
+     * @return List of top selling products
+     */
+    @GetMapping("/san-pham/ban-chay-nhat")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<SanPhamBanChayDto> laySanPhamBanChayNhat(
+            @RequestParam(defaultValue = "10") Integer soLuong,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tuNgay,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate denNgay) {
+        
+        log.debug("Getting top {} selling products from {} to {}", soLuong, tuNgay, denNgay);
+        
+        try {
+            SanPhamBanChayDto result = thongKeService.laySanPhamBanChayNhat(soLuong, tuNgay, denNgay);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting top selling products", e);
+            return ResponseEntity.internalServerError().build();
         }
-        return Map.of(
-                "labels", label,
-                "data",data
-        );
     }
 
-    @GetMapping("/top-custom")
-    public Map<String, Object> getTopCustomData(@RequestParam(name = "start_dateTop") LocalDate start_date, @RequestParam   (name = "end_dateTop") LocalDate end_date) {
-        List<String> label = new ArrayList<>();
-        List<Integer> data = new ArrayList<>();
-        for (int i=0; i < thongKeDSService.getTopDoanhSoCustom(start_date, end_date).size(); i++) {
-            label.add(thongKeDSService.getTopDoanhSoCustom(start_date, end_date).get(i).getBrand());
-            data.add(thongKeDSService.getTopDoanhSoCustom(start_date, end_date).get(i).getTotalSales());
+    /**
+     * Get low stock products
+     * @param nguongTonKho Stock threshold (default: 10)
+     * @return List of products with low stock
+     */
+    @GetMapping("/san-pham/sap-het-hang")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<SanPhamSapHetHangDto> laySanPhamSapHetHang(
+            @RequestParam(defaultValue = "10") Integer nguongTonKho) {
+        
+        log.debug("Getting low stock products with threshold {}", nguongTonKho);
+        
+        try {
+            SanPhamSapHetHangDto result = thongKeService.laySanPhamSapHetHang(nguongTonKho);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting low stock products", e);
+            return ResponseEntity.internalServerError().build();
         }
-        return Map.of(
-                "labels", label,
-                "data",data
-        );
     }
 
-
-
-    @GetMapping("/hoa-don")
-    public List<HoaDonSanPhamView> getHoaDonsCoSanPhamByTrangThai(@RequestParam(value = "trangThai", required = false) String trangThai) {
-        return thongKeHDService.getHoaDonsCoSanPhamByTrangThai(trangThai);
-    }
-    @GetMapping("/doanh-so")
-        public Map<String, Object> DoanhSo(){
-        return Map.of("DoanhSo",5555);
-
+    /**
+     * Get product performance by category
+     * @return Product performance breakdown by category
+     */
+    @GetMapping("/san-pham/theo-danh-muc")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<SanPhamTheoDanhMucDto> laySanPhamTheoDanhMuc() {
+        log.debug("Getting product performance by category");
+        
+        try {
+            SanPhamTheoDanhMucDto result = thongKeService.laySanPhamTheoDanhMuc();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting product performance by category", e);
+            return ResponseEntity.internalServerError().build();
         }
+    }
 
+    // ==================== KHACH HANG (CUSTOMER) STATISTICS ====================
+
+    /**
+     * Get new customer statistics
+     * @param tuNgay Start date for analysis period
+     * @param denNgay End date for analysis period
+     * @return New customer acquisition metrics
+     */
+    @GetMapping("/khach-hang/moi")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<KhachHangMoiDto> layKhachHangMoi(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tuNgay,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate denNgay) {
+        
+        log.debug("Getting new customer statistics from {} to {}", tuNgay, denNgay);
+        
+        try {
+            KhachHangMoiDto result = thongKeService.layKhachHangMoi(tuNgay, denNgay);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting new customer statistics", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get customer retention rate
+     * @return Customer retention metrics
+     */
+    @GetMapping("/khach-hang/ty-le-giu-chan")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<Map<String, Object>> layTyLeGiuChanKhachHang() {
+        log.debug("Getting customer retention rate");
+        
+        try {
+            Map<String, Object> result = thongKeService.layTyLeGiuChanKhachHang();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting customer retention rate", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get average customer value
+     * @return Customer lifetime value metrics
+     */
+    @GetMapping("/khach-hang/gia-tri-trung-binh")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<Map<String, Object>> layGiaTriKhachHangTrungBinh() {
+        log.debug("Getting average customer value");
+        
+        try {
+            Map<String, Object> result = thongKeService.layGiaTriKhachHangTrungBinh();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting average customer value", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ==================== DASHBOARD SUMMARY ====================
+
+    /**
+     * Get dashboard summary with key metrics
+     * @return Dashboard summary data
+     */
+    @GetMapping("/dashboard")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<DashboardSummaryDto> layDashboardSummary() {
+        log.debug("Getting dashboard summary");
+        
+        try {
+            DashboardSummaryDto result = thongKeService.layDashboardSummary();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting dashboard summary", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

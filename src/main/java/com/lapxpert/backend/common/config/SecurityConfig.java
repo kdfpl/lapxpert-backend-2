@@ -33,8 +33,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/hoa-don/**").hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers("/api/v1/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/hoa-don").hasRole("STAFF")
                         .requestMatchers("/api/v2/**").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Cho phép preflight request
                         .anyRequest().authenticated()

@@ -9,14 +9,12 @@ import com.lapxpert.backend.sanpham.domain.entity.SanPhamAuditHistory;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.DanhMuc;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+// TrangThaiSanPham enum removed - using Boolean status instead
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamAuditHistoryRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
-import com.lapxpert.backend.sanpham.domain.repository.thuoctinh.ThuongHieuRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,7 +74,10 @@ public class SanPhamService {
             Set<SanPhamChiTiet> chiTiets = sanPhamDto.getSanPhamChiTiets().stream()
                     .map(dto -> {
                         SanPhamChiTiet chiTiet = sanPhamChiTietMapper.toEntity(dto);
-                        chiTiet.setSerialNumber(savedSanPham.getMaSanPham()+chiTiet.getSerialNumber());
+                        // Generate SKU based on product code and variant attributes
+                        if (chiTiet.getSku() == null || chiTiet.getSku().isEmpty()) {
+                            chiTiet.setSku(generateVariantSku(savedSanPham.getMaSanPham(), chiTiet));
+                        }
                         chiTiet.setSanPham(savedSanPham);
                         return chiTiet;
                     })
@@ -314,25 +315,24 @@ public class SanPhamService {
                         // Update existing variant fields
                         updateVariantFromDto(existingVariant, dto);
                         incomingVariants.add(existingVariant);
-                        incomingSerialNumbers.add(existingVariant.getSerialNumber());
+                        incomingSerialNumbers.add(existingVariant.getSku());
                     }
                 } else {
                     // Create new variant
                     SanPhamChiTiet newVariant = sanPhamChiTietMapper.toEntity(dto);
 
-                    // Ensure unique serial number
-                    String baseSerial = newVariant.getSerialNumber();
-                    if (!baseSerial.startsWith(existingProduct.getMaSanPham())) {
-                        baseSerial = existingProduct.getMaSanPham() + "-" + baseSerial;
+                    // Generate SKU based on product code and variant attributes
+                    if (newVariant.getSku() == null || newVariant.getSku().isEmpty()) {
+                        newVariant.setSku(generateVariantSku(existingProduct.getMaSanPham(), newVariant));
                     }
 
-                    // Check for serial number conflicts and generate unique one if needed
-                    String uniqueSerial = generateUniqueSerialNumber(baseSerial, incomingSerialNumbers, existingVariants);
-                    newVariant.setSerialNumber(uniqueSerial);
-                    incomingSerialNumbers.add(uniqueSerial);
+                    // Check for SKU conflicts and generate unique one if needed
+                    String uniqueSku = generateUniqueSku(newVariant.getSku(), incomingSerialNumbers, existingVariants);
+                    newVariant.setSku(uniqueSku);
+                    incomingSerialNumbers.add(uniqueSku);
 
                     newVariant.setSanPham(existingProduct);
-                    newVariant.setTrangThai(TrangThaiSanPham.AVAILABLE);
+                    newVariant.setTrangThai(true); // Available status
                     incomingVariants.add(newVariant);
                 }
             }
@@ -345,7 +345,7 @@ public class SanPhamService {
 
             // Soft delete removed variants
             variantsToDelete.forEach(variant -> {
-                variant.setTrangThai(TrangThaiSanPham.UNAVAILABLE);
+                variant.setTrangThai(false); // Unavailable status
                 sanPhamChiTietRepository.save(variant);
             });
 
@@ -358,7 +358,7 @@ public class SanPhamService {
             Set<SanPhamChiTiet> finalVariants = new HashSet<>();
             finalVariants.addAll(savedVariants);
             finalVariants.addAll(existingVariants.stream()
-                .filter(v -> v.getTrangThai() == TrangThaiSanPham.AVAILABLE &&
+                .filter(v -> v.getTrangThai() == true &&
                            !variantsToDelete.contains(v))
                 .collect(Collectors.toSet()));
 
@@ -396,7 +396,7 @@ public class SanPhamService {
         if (dto.getHinhAnh() != null) variant.setHinhAnh(dto.getHinhAnh());
         if (dto.getTrangThai() != null) variant.setTrangThai(dto.getTrangThai());
 
-        // Update attribute relationships using mapper
+        // Update the 6 core attribute relationships using mapper
         SanPhamChiTiet tempVariant = sanPhamChiTietMapper.toEntity(dto);
         if (tempVariant.getMauSac() != null) variant.setMauSac(tempVariant.getMauSac());
         if (tempVariant.getCpu() != null) variant.setCpu(tempVariant.getCpu());
@@ -404,47 +404,64 @@ public class SanPhamService {
         if (tempVariant.getGpu() != null) variant.setGpu(tempVariant.getGpu());
         if (tempVariant.getOCung() != null) variant.setOCung(tempVariant.getOCung());
         if (tempVariant.getManHinh() != null) variant.setManHinh(tempVariant.getManHinh());
-        if (tempVariant.getHeDieuHanh() != null) variant.setHeDieuHanh(tempVariant.getHeDieuHanh());
-        if (tempVariant.getBanPhim() != null) variant.setBanPhim(tempVariant.getBanPhim());
-        if (tempVariant.getAmThanh() != null) variant.setAmThanh(tempVariant.getAmThanh());
-        if (tempVariant.getWebcam() != null) variant.setWebcam(tempVariant.getWebcam());
-        if (tempVariant.getKetNoiMang() != null) variant.setKetNoiMang(tempVariant.getKetNoiMang());
-        if (tempVariant.getCongGiaoTiep() != null) variant.setCongGiaoTiep(tempVariant.getCongGiaoTiep());
-        if (tempVariant.getPin() != null) variant.setPin(tempVariant.getPin());
-        if (tempVariant.getBaoMat() != null) variant.setBaoMat(tempVariant.getBaoMat());
-        if (tempVariant.getThietKe() != null) variant.setThietKe(tempVariant.getThietKe());
     }
 
     /**
-     * Generate unique serial number to avoid conflicts
-     * @param baseSerial Base serial number
-     * @param incomingSerials Set of incoming serial numbers
-     * @param existingVariants Set of existing variants
-     * @return Unique serial number
+     * Generate variant SKU based on product code and attributes
+     * @param productCode Product code
+     * @param variant Variant with attributes
+     * @return Generated SKU
      */
-    private String generateUniqueSerialNumber(String baseSerial, Set<String> incomingSerials, Set<SanPhamChiTiet> existingVariants) {
+    private String generateVariantSku(String productCode, SanPhamChiTiet variant) {
+        StringBuilder sku = new StringBuilder(productCode);
+
+        // Add core attributes to SKU
+        if (variant.getCpu() != null && variant.getCpu().getMoTaCpu() != null) {
+            sku.append("-").append(variant.getCpu().getMoTaCpu().replaceAll("\\s+", "").toUpperCase());
+        }
+        if (variant.getRam() != null && variant.getRam().getMoTaRam() != null) {
+            sku.append("-").append(variant.getRam().getMoTaRam().replaceAll("\\s+", "").toUpperCase());
+        }
+        if (variant.getOCung() != null && variant.getOCung().getMoTaOCung() != null) {
+            sku.append("-").append(variant.getOCung().getMoTaOCung().replaceAll("\\s+", "").toUpperCase());
+        }
+        if (variant.getMauSac() != null && variant.getMauSac().getMoTaMauSac() != null) {
+            sku.append("-").append(variant.getMauSac().getMoTaMauSac().replaceAll("\\s+", "").toUpperCase());
+        }
+
+        return sku.toString();
+    }
+
+    /**
+     * Generate unique SKU to avoid conflicts
+     * @param baseSku Base SKU
+     * @param incomingSkus Set of incoming SKUs
+     * @param existingVariants Set of existing variants
+     * @return Unique SKU
+     */
+    private String generateUniqueSku(String baseSku, Set<String> incomingSkus, Set<SanPhamChiTiet> existingVariants) {
         int counter = 1;
 
-        // Helper method to check if serial exists
-        java.util.function.Predicate<String> serialExists = serial ->
-            incomingSerials.contains(serial) ||
-            existingVariants.stream().anyMatch(v -> v.getSerialNumber().equals(serial));
+        // Helper method to check if SKU exists
+        java.util.function.Predicate<String> skuExists = sku ->
+            incomingSkus.contains(sku) ||
+            existingVariants.stream().anyMatch(v -> v.getSku() != null && v.getSku().equals(sku));
 
-        // Start with base serial
-        if (!serialExists.test(baseSerial)) {
-            return baseSerial;
+        // Start with base SKU
+        if (!skuExists.test(baseSku)) {
+            return baseSku;
         }
 
         // Generate numbered variants
         while (counter <= 999) {
-            String candidateSerial = baseSerial + "-" + String.format("%03d", counter);
-            if (!serialExists.test(candidateSerial)) {
-                return candidateSerial;
+            String candidateSku = baseSku + "-" + String.format("%03d", counter);
+            if (!skuExists.test(candidateSku)) {
+                return candidateSku;
             }
             counter++;
         }
 
-        throw new RuntimeException("Không thể tạo serial number duy nhất cho: " + baseSerial);
+        throw new RuntimeException("Không thể tạo SKU duy nhất cho: " + baseSku);
     }
 
     // Cập nhật sản phẩm với audit trail chi tiết
@@ -545,8 +562,7 @@ public class SanPhamService {
             try {
                 sanPhamRepository.findById(productId).ifPresentOrElse(
                     sanPham -> {
-                        // Capture old values for audit
-                        String oldValues = buildAuditJson(sanPham);
+                        // Capture old status for audit
                         Boolean oldStatus = sanPham.getTrangThai();
 
                         // Update status

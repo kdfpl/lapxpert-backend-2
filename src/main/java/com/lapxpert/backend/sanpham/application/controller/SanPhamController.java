@@ -6,7 +6,7 @@ import com.lapxpert.backend.sanpham.application.dto.SanPhamAuditHistoryDto;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamDto;
 import com.lapxpert.backend.sanpham.application.mapper.SanPhamAuditHistoryMapper;
 import com.lapxpert.backend.sanpham.domain.entity.SanPhamAuditHistory;
-import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
+
 import com.lapxpert.backend.sanpham.domain.service.SanPhamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

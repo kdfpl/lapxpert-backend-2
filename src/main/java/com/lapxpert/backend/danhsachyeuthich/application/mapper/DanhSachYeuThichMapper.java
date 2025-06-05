@@ -5,7 +5,7 @@ import com.lapxpert.backend.danhsachyeuthich.application.dto.SanPhamChiTietSumma
 import com.lapxpert.backend.danhsachyeuthich.domain.entity.DanhSachYeuThich;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+
 import org.mapstruct.*;
 
 import java.math.BigDecimal;
@@ -82,7 +82,7 @@ public interface DanhSachYeuThichMapper {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-                .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+                .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                 .map(SanPhamChiTiet::getGiaBan)
                 .min(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -100,7 +100,7 @@ public interface DanhSachYeuThichMapper {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-                .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+                .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                 .map(SanPhamChiTiet::getGiaBan)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -118,7 +118,7 @@ public interface DanhSachYeuThichMapper {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-                .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+                .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                 .map(variant -> {
                     BigDecimal promotionalPrice = variant.getGiaKhuyenMai();
                     BigDecimal regularPrice = variant.getGiaBan();
@@ -221,7 +221,7 @@ public interface DanhSachYeuThichMapper {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-                .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+                .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                 .count();
     }
 
@@ -274,7 +274,7 @@ public interface DanhSachYeuThichMapper {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-                .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+                .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                 .map(this::mapToSummaryDto)
                 .collect(Collectors.toList());
     }
@@ -287,7 +287,7 @@ public interface DanhSachYeuThichMapper {
     default SanPhamChiTietSummaryDto mapToSummaryDto(SanPhamChiTiet variant) {
         SanPhamChiTietSummaryDto dto = SanPhamChiTietSummaryDto.builder()
                 .id(variant.getId())
-                .serialNumber(variant.getSerialNumber())
+                .serialNumber(variant.getSku())
                 .mauSac(variant.getMauSac())
                 .giaBan(variant.getGiaBan())
                 .giaKhuyenMai(variant.getGiaKhuyenMai())

@@ -3,19 +3,16 @@ package com.lapxpert.backend.sanpham.domain.entity.sanpham;
 import com.lapxpert.backend.common.audit.BaseAuditableEntity;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.*;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
 import jakarta.persistence.*;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.Instant;
-import java.math.BigDecimal;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import org.hibernate.annotations.*;
-import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
@@ -24,8 +21,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Entity representing individual product variants with specific configurations.
- * Each variant represents a unique sellable item with its own serial number.
+ * Entity representing product variants with specific configurations.
+ * Each variant defines a unique sellable configuration with 6 core attributes:
+ * CPU, RAM, GPU, Color (MauSac), Storage (OCung), Screen Size (ManHinh).
+ * Individual units are tracked separately in SerialNumber entity.
  * Uses BaseAuditableEntity for basic audit fields and SanPhamChiTietAuditHistory for detailed change tracking.
  */
 @Getter
@@ -34,7 +33,15 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "san_pham_chi_tiet")
+@Table(name = "san_pham_chi_tiet",
+    indexes = {
+        @Index(name = "idx_san_pham_chi_tiet_sku", columnList = "sku"),
+        @Index(name = "idx_san_pham_chi_tiet_san_pham", columnList = "san_pham_id"),
+        @Index(name = "idx_san_pham_chi_tiet_active", columnList = "trang_thai")
+    },
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_san_pham_chi_tiet_sku", columnNames = {"sku"})
+    })
 public class SanPhamChiTiet extends BaseAuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "san_pham_chi_tiet_id_gen")
@@ -48,27 +55,65 @@ public class SanPhamChiTiet extends BaseAuditableEntity {
     private SanPham sanPham;
 
     /**
-     * Unique serial number for individual item tracking
-     * Renamed from 'sku' to better represent individual item identification
+     * Unique SKU for variant identification (e.g., "MBA-M2-8GB-256GB-SILVER")
+     * Used for variant-level operations and inventory grouping
      */
-    @NotBlank(message = "Số serial không được để trống")
-    @Size(max = 100, message = "Số serial không được vượt quá 100 ký tự")
-    @Column(name = "serial_number", nullable = false, length = 100, unique = true)
-    private String serialNumber;
+    @Column(name = "sku", length = 100, unique = true)
+    private String sku;
 
+    // === 6 CORE ATTRIBUTES (as per requirements) ===
+
+    /**
+     * CPU specification
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "cpu_id")
+    private Cpu cpu;
+
+    /**
+     * RAM specification
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "ram_id")
+    private Ram ram;
+
+    /**
+     * GPU specification
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "gpu_id")
+    private Gpu gpu;
+
+    /**
+     * Color specification
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "mau_sac_id")
     private MauSac mauSac;
 
-    @NotNull(message = "Giá bán không được để trống")
-    @DecimalMin(value = "0.0", inclusive = true, message = "Giá bán phải lớn hơn hoặc bằng 0")
-    @Digits(integer = 13, fraction = 2, message = "Giá bán không hợp lệ")
+    /**
+     * Storage specification
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "o_cung_id")
+    private OCung oCung;
+
+    /**
+     * Screen size specification
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "man_hinh_id")
+    private ManHinh manHinh;
+
     @Column(name = "gia_ban", nullable = false, precision = 15, scale = 2)
     private BigDecimal giaBan;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Giá khuyến mãi phải lớn hơn hoặc bằng 0")
-    @Digits(integer = 13, fraction = 2, message = "Giá khuyến mãi không hợp lệ")
     @Column(name = "gia_khuyen_mai", precision = 15, scale = 2)
     private BigDecimal giaKhuyenMai;
 
@@ -77,104 +122,12 @@ public class SanPhamChiTiet extends BaseAuditableEntity {
     private List<String> hinhAnh;
 
     /**
-     * Individual item status for inventory tracking
-     * Uses enum for better type safety and business logic
+     * Variant status (active/inactive for sales)
      */
-    @NotNull(message = "Trạng thái sản phẩm không được để trống")
-    @ColumnDefault("'AVAILABLE'")
+    @ColumnDefault("true")
     @Column(name = "trang_thai", nullable = false)
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Builder.Default
-    private TrangThaiSanPham trangThai = TrangThaiSanPham.AVAILABLE;
-
-    /**
-     * Timestamp when item was reserved (for timeout management)
-     */
-    @Column(name = "thoi_gian_dat_truoc")
-    private Instant thoiGianDatTruoc;
-
-    /**
-     * Channel that reserved this item (POS, ONLINE, etc.)
-     */
-    @Column(name = "kenh_dat_truoc", length = 20)
-    private String kenhDatTruoc;
-
-    /**
-     * Order ID that reserved this item (for tracking)
-     */
-    @Column(name = "don_hang_dat_truoc", length = 50)
-    private String donHangDatTruoc;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "cpu_id")
-    private Cpu cpu;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "ram_id")
-    private Ram ram;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "o_cung_id")
-    private OCung oCung;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "gpu_id")
-    private Gpu gpu;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "man_hinh_id")
-    private ManHinh manHinh;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "cong_giao_tiep_id")
-    private CongGiaoTiep congGiaoTiep;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "ban_phim_id")
-    private BanPhim banPhim;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "ket_noi_mang_id")
-    private KetNoiMang ketNoiMang;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "am_thanh_id")
-    private AmThanh amThanh;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "webcam_id")
-    private Webcam webcam;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "bao_mat_id")
-    private BaoMat baoMat;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "he_dieu_hanh_id")
-    private HeDieuHanh heDieuHanh;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "pin_id")
-    private Pin pin;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "thiet_ke_id")
-    private ThietKe thietKe;
+    private Boolean trangThai = true;
 
     @ManyToMany
     @JoinTable(name = "san_pham_chi_tiet_dot_giam_gia",
@@ -184,145 +137,25 @@ public class SanPhamChiTiet extends BaseAuditableEntity {
     private Set<DotGiamGia> dotGiamGias = new LinkedHashSet<>();
 
     /**
-     * Check if this item is available for purchase
-     * @return true if item can be sold
+     * Check if this variant is active for sales
+     * @return true if variant is active
      */
-    public boolean isAvailable() {
-        return trangThai == TrangThaiSanPham.AVAILABLE;
+    public boolean isActive() {
+        return trangThai != null && trangThai;
     }
 
     /**
-     * Check if this item is reserved
-     * @return true if item is reserved for an order
+     * Activate this variant for sales
      */
-    public boolean isReserved() {
-        return trangThai == TrangThaiSanPham.RESERVED;
+    public void activate() {
+        this.trangThai = true;
     }
 
     /**
-     * Check if this item has been sold
-     * @return true if item has been sold
+     * Deactivate this variant from sales
      */
-    public boolean isSold() {
-        return trangThai == TrangThaiSanPham.SOLD;
-    }
-
-    /**
-     * Reserve this item for an order
-     */
-    public void reserve() {
-        if (!isAvailable()) {
-            throw new IllegalStateException("Cannot reserve item that is not available. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.RESERVED;
-        this.thoiGianDatTruoc = Instant.now();
-    }
-
-    /**
-     * Reserve this item for an order with channel and order tracking
-     * @param channel Channel that is reserving the item (POS, ONLINE, etc.)
-     * @param orderId Order ID for tracking
-     */
-    public void reserveWithTracking(String channel, String orderId) {
-        if (!isAvailable()) {
-            throw new IllegalStateException("Cannot reserve item that is not available. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.RESERVED;
-        this.thoiGianDatTruoc = Instant.now();
-        this.kenhDatTruoc = channel;
-        this.donHangDatTruoc = orderId;
-    }
-
-    /**
-     * Mark this item as sold
-     */
-    public void markAsSold() {
-        if (!isReserved() && !isAvailable()) {
-            throw new IllegalStateException("Cannot sell item that is not available or reserved. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.SOLD;
-    }
-
-    /**
-     * Release reservation and make item available again
-     */
-    public void releaseReservation() {
-        if (!isReserved()) {
-            throw new IllegalStateException("Cannot release reservation for item that is not reserved. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.AVAILABLE;
-        this.thoiGianDatTruoc = null;
-        this.kenhDatTruoc = null;
-        this.donHangDatTruoc = null;
-    }
-
-    /**
-     * Check if reservation has expired based on timeout duration
-     * @param timeoutMinutes Timeout duration in minutes
-     * @return true if reservation has expired
-     */
-    public boolean isReservationExpired(long timeoutMinutes) {
-        if (!isReserved() || thoiGianDatTruoc == null) {
-            return false;
-        }
-        Instant expireTime = thoiGianDatTruoc.plusSeconds(timeoutMinutes * 60);
-        return Instant.now().isAfter(expireTime);
-    }
-
-    /**
-     * Check if this item is reserved by a specific channel
-     * @param channel Channel to check
-     * @return true if reserved by the specified channel
-     */
-    public boolean isReservedByChannel(String channel) {
-        return isReserved() && channel != null && channel.equals(kenhDatTruoc);
-    }
-
-    /**
-     * Check if this item is reserved for a specific order
-     * @param orderId Order ID to check
-     * @return true if reserved for the specified order
-     */
-    public boolean isReservedForOrder(String orderId) {
-        return isReserved() && orderId != null && orderId.equals(donHangDatTruoc);
-    }
-
-    /**
-     * Release item from sold status back to available (for refunds)
-     */
-    public void releaseFromSold() {
-        if (!isSold()) {
-            throw new IllegalStateException("Cannot release from sold status for item that was not sold. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.AVAILABLE;
-        // Clear any tracking information
-        this.thoiGianDatTruoc = null;
-        this.kenhDatTruoc = null;
-        this.donHangDatTruoc = null;
-    }
-
-    /**
-     * Mark item as returned
-     */
-    public void markAsReturned() {
-        if (!isSold()) {
-            throw new IllegalStateException("Cannot return item that was not sold. Current status: " + trangThai);
-        }
-        this.trangThai = TrangThaiSanPham.RETURNED;
-    }
-
-    /**
-     * Mark item as damaged
-     */
-    public void markAsDamaged() {
-        this.trangThai = TrangThaiSanPham.DAMAGED;
-    }
-
-    /**
-     * Mark item as unavailable
-     */
-    public void markAsUnavailable() {
-        this.trangThai = TrangThaiSanPham.UNAVAILABLE;
+    public void deactivate() {
+        this.trangThai = false;
     }
 
     /**
@@ -451,9 +284,6 @@ public class SanPhamChiTiet extends BaseAuditableEntity {
      * Common validation method for both persist and update
      */
     private void validateCommonFields() {
-        if (serialNumber == null || serialNumber.trim().isEmpty()) {
-            throw new IllegalArgumentException("Serial number cannot be null or empty");
-        }
         if (giaBan == null || giaBan.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Selling price must be non-negative");
         }

@@ -2,7 +2,7 @@ package com.lapxpert.backend.giohang.domain.entity;
 
 import com.lapxpert.backend.common.audit.BaseAuditableEntity;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -111,7 +111,7 @@ public class GioHangChiTiet extends BaseAuditableEntity {
      */
     public boolean isProductAvailable() {
         return sanPhamChiTiet != null &&
-               sanPhamChiTiet.getTrangThai() == TrangThaiSanPham.AVAILABLE;
+               Boolean.TRUE.equals(sanPhamChiTiet.getTrangThai());
     }
 
     /**
@@ -125,11 +125,29 @@ public class GioHangChiTiet extends BaseAuditableEntity {
     }
 
     /**
-     * Get product serial number for display
-     * @return product serial number or empty string if not available
+     * Get product variant name for display
+     * @return product variant name or empty string if not available
      */
-    public String getProductSerialNumber() {
-        return sanPhamChiTiet != null ? sanPhamChiTiet.getSerialNumber() : "";
+    public String getProductVariantName() {
+        if (sanPhamChiTiet == null) return "";
+
+        StringBuilder variantName = new StringBuilder();
+        if (sanPhamChiTiet.getSanPham() != null) {
+            variantName.append(sanPhamChiTiet.getSanPham().getTenSanPham());
+        }
+
+        // Add variant specifications
+        if (sanPhamChiTiet.getRam() != null) {
+            variantName.append(" - ").append(sanPhamChiTiet.getRam().getMoTaRam());
+        }
+        if (sanPhamChiTiet.getOCung() != null) {
+            variantName.append("/").append(sanPhamChiTiet.getOCung().getMoTaOCung());
+        }
+        if (sanPhamChiTiet.getMauSac() != null) {
+            variantName.append(" - ").append(sanPhamChiTiet.getMauSac().getMoTaMauSac());
+        }
+
+        return variantName.toString();
     }
 
     /**

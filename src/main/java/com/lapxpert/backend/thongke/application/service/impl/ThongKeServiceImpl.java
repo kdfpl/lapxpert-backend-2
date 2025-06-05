@@ -9,7 +9,8 @@ import com.lapxpert.backend.hoadon.domain.repository.HoaDonRepository;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSerialNumber;
+import com.lapxpert.backend.sanpham.domain.repository.SerialNumberRepository;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import com.lapxpert.backend.nguoidung.domain.entity.VaiTro;
 import com.lapxpert.backend.nguoidung.domain.entity.TrangThaiNguoiDung;
@@ -44,6 +45,7 @@ public class ThongKeServiceImpl implements ThongKeService {
     private final HoaDonChiTietRepository hoaDonChiTietRepository;
     private final SanPhamRepository sanPhamRepository;
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
+    private final SerialNumberRepository serialNumberRepository;
     private final NguoiDungRepository nguoiDungRepository;
 
     // ==================== DOANH THU (REVENUE) STATISTICS ====================
@@ -935,13 +937,13 @@ public class ThongKeServiceImpl implements ThongKeService {
         // Get total product count
         Long tongSoSanPham = sanPhamRepository.count();
 
-        // Get products with low stock using available methods
-        // Count products that are not available (approximation for low stock)
-        Long sapHetHang = sanPhamChiTietRepository.countByTrangThai(TrangThaiSanPham.RESERVED) +
-                         sanPhamChiTietRepository.countByTrangThai(TrangThaiSanPham.SOLD);
+        // Get products with low stock using SerialNumber status
+        // Count serial numbers that are reserved or sold (approximation for low stock)
+        Long sapHetHang = serialNumberRepository.countByTrangThai(TrangThaiSerialNumber.RESERVED) +
+                         serialNumberRepository.countByTrangThai(TrangThaiSerialNumber.SOLD);
 
-        // Get out of stock products (sold items)
-        Long hetHang = sanPhamChiTietRepository.countByTrangThai(TrangThaiSanPham.SOLD);
+        // Get out of stock products (sold serial numbers)
+        Long hetHang = serialNumberRepository.countByTrangThai(TrangThaiSerialNumber.SOLD);
 
         // Get top selling products from last 30 days using real data
         LocalDate tuNgay = LocalDate.now().minusDays(30);

@@ -1,7 +1,7 @@
 package com.lapxpert.backend.danhsachyeuthich.application.dto;
 
 import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.MauSac;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -38,7 +38,7 @@ public class SanPhamChiTietSummaryDto {
     /**
      * Product variant status
      */
-    private TrangThaiSanPham trangThai;
+    private Boolean trangThai;
 
     /**
      * Computed fields for business logic
@@ -82,7 +82,7 @@ public class SanPhamChiTietSummaryDto {
      * Check if variant is available for purchase
      */
     public boolean isAvailable() {
-        return trangThai == TrangThaiSanPham.AVAILABLE;
+        return Boolean.TRUE.equals(trangThai);
     }
 
     /**

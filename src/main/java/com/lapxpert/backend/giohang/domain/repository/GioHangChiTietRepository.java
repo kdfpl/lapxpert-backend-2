@@ -58,12 +58,6 @@ public interface GioHangChiTietRepository extends JpaRepository<GioHangChiTiet, 
     @Query("SELECT c FROM GioHangChiTiet c WHERE c.giaTaiThoiDiemThem != c.sanPhamChiTiet.giaBan")
     List<GioHangChiTiet> findItemsWithPriceChanges();
 
-    /**
-     * Find cart items for unavailable products
-     * @return list of cart items for unavailable products
-     */
-    @Query("SELECT c FROM GioHangChiTiet c WHERE c.sanPhamChiTiet.trangThai != com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham.AVAILABLE")
-    List<GioHangChiTiet> findItemsWithUnavailableProducts();
 
     /**
      * Find cart items older than specified date
@@ -123,13 +117,6 @@ public interface GioHangChiTietRepository extends JpaRepository<GioHangChiTiet, 
            "GROUP BY c.sanPhamChiTiet.id " +
            "ORDER BY totalQty DESC")
     Page<Object[]> findMostPopularProductsInCarts(Pageable pageable);
-
-    /**
-     * Delete cart items for unavailable products
-     * @return number of deleted items
-     */
-    @Query("DELETE FROM GioHangChiTiet c WHERE c.sanPhamChiTiet.trangThai != com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham.AVAILABLE")
-    int deleteItemsWithUnavailableProducts();
 
     /**
      * Delete cart items older than specified date

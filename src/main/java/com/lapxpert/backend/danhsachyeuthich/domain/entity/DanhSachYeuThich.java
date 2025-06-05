@@ -3,7 +3,7 @@ package com.lapxpert.backend.danhsachyeuthich.domain.entity;
 import com.lapxpert.backend.common.audit.BaseAuditableEntity;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPham;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,7 +59,6 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
     /**
      * Check if the product is still available
      * @return true if product is available
-     * TODO: Update to use TrangThaiSanPham enum when SanPham entity is migrated from Boolean
      */
     public boolean isProductAvailable() {
         return sanPham != null && Boolean.TRUE.equals(sanPham.getTrangThai());
@@ -89,7 +88,7 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
         return sanPham != null &&
                sanPham.getSanPhamChiTiets() != null &&
                sanPham.getSanPhamChiTiets().stream()
-                   .anyMatch(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE);
+                   .anyMatch(variant -> Boolean.TRUE.equals(variant.getTrangThai()));
     }
 
     /**
@@ -102,7 +101,7 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-            .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+            .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
             .map(variant -> variant.getGiaBan())
             .filter(price -> price != null)
             .min(java.math.BigDecimal::compareTo)
@@ -119,7 +118,7 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-            .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+            .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
             .map(variant -> variant.getGiaBan())
             .filter(price -> price != null)
             .max(java.math.BigDecimal::compareTo)
@@ -136,7 +135,7 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-            .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+            .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
             .anyMatch(variant -> variant.getGiaKhuyenMai() != null &&
                                variant.getGiaKhuyenMai().compareTo(variant.getGiaBan()) < 0);
     }
@@ -151,7 +150,7 @@ public class DanhSachYeuThich extends BaseAuditableEntity {
         }
 
         return sanPham.getSanPhamChiTiets().stream()
-            .filter(variant -> variant.getTrangThai() == TrangThaiSanPham.AVAILABLE)
+            .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
             .count();
     }
 

@@ -24,7 +24,7 @@ public interface GioHangChiTietMapper {
      */
     @Mapping(target = "sanPhamChiTietId", source = "sanPhamChiTiet.id")
     @Mapping(target = "tenSanPham", source = "sanPhamChiTiet.sanPham.tenSanPham")
-    @Mapping(target = "serialNumber", source = "sanPhamChiTiet.serialNumber")
+    @Mapping(target = "serialNumber", ignore = true)
     @Mapping(target = "hinhAnh", expression = "java(getFirstImage(gioHangChiTiet))")
     @Mapping(target = "mauSac", expression = "java(getMauSacDescription(gioHangChiTiet))")
     @Mapping(target = "giaHienTai", source = "sanPhamChiTiet.giaBan")
@@ -111,7 +111,7 @@ public interface GioHangChiTietMapper {
             return false;
         }
 
-        return gioHangChiTiet.getSanPhamChiTiet().isAvailable();
+        return Boolean.TRUE.equals(gioHangChiTiet.getSanPhamChiTiet().getTrangThai());
     }
 
     /**
@@ -156,7 +156,7 @@ public interface GioHangChiTietMapper {
             return "Không xác định";
         }
 
-        if (gioHangChiTiet.getSanPhamChiTiet().isAvailable()) {
+        if (Boolean.TRUE.equals(gioHangChiTiet.getSanPhamChiTiet().getTrangThai())) {
             return "Còn hàng";
         } else {
             return "Hết hàng";

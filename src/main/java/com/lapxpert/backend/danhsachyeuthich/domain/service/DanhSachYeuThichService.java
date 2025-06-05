@@ -108,7 +108,7 @@ public class DanhSachYeuThichService {
         // Validate product has available variants
         boolean hasAvailableVariants = sanPham.getSanPhamChiTiets() != null &&
                 sanPham.getSanPhamChiTiets().stream()
-                        .anyMatch(variant -> variant.getTrangThai() == com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham.AVAILABLE);
+                        .anyMatch(variant -> Boolean.TRUE.equals(variant.getTrangThai()));
 
         if (!hasAvailableVariants) {
             log.warn("Adding product {} to wishlist but no variants are available", request.getSanPhamId());
@@ -118,7 +118,7 @@ public class DanhSachYeuThichService {
         java.math.BigDecimal priceForTracking = request.getGiaKhiThem();
         if (priceForTracking == null || priceForTracking.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             priceForTracking = sanPham.getSanPhamChiTiets().stream()
-                    .filter(variant -> variant.getTrangThai() == com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham.AVAILABLE)
+                    .filter(variant -> Boolean.TRUE.equals(variant.getTrangThai()))
                     .map(variant -> variant.getGiaBan())
                     .filter(price -> price != null)
                     .min(java.math.BigDecimal::compareTo)

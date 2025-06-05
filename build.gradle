@@ -49,6 +49,8 @@ dependencies {
 	implementation 'io.hypersistence:hypersistence-utils-hibernate-60:3.9.4'
 	implementation 'org.springframework.boot:spring-boot-starter-mail:3.4.4'
 	implementation 'io.minio:minio:8.5.17'
+	implementation 'org.apache.poi:poi:5.4.1'
+	implementation 'org.apache.poi:poi-ooxml:5.4.1'
 }
 
 tasks.named('test') {

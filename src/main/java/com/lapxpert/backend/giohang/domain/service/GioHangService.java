@@ -429,7 +429,7 @@ public class GioHangService {
 
         for (GioHangChiTiet cartItem : gioHang.getChiTiets()) {
             // Check product availability
-            if (!cartItem.getSanPhamChiTiet().isAvailable()) {
+            if (!cartItem.getSanPhamChiTiet().getTrangThai()) {
                 result.addUnavailableItem(cartItem);
                 continue; // Skip price calculation for unavailable items
             }
@@ -513,7 +513,7 @@ public class GioHangService {
         List<HoaDonChiTietDto> orderItems = new ArrayList<>();
         for (GioHangChiTiet cartItem : gioHang.getChiTiets()) {
             // Skip unavailable items if force flag is not set
-            if (!cartItem.getSanPhamChiTiet().isAvailable() && !request.getForceConvertWithUnavailableItems()) {
+            if (!cartItem.getSanPhamChiTiet().getTrangThai() && !request.getForceConvertWithUnavailableItems()) {
                 continue;
             }
 
@@ -542,7 +542,7 @@ public class GioHangService {
 
         // Set snapshot information for order history
         orderItem.setTenSanPhamSnapshot(cartItem.getSanPhamChiTiet().getSanPham().getTenSanPham());
-        orderItem.setSkuSnapshot(cartItem.getSanPhamChiTiet().getSerialNumber());
+        orderItem.setSkuSnapshot(cartItem.getSanPhamChiTiet().getSku());
 
         // Set first image as snapshot
         if (cartItem.getSanPhamChiTiet().getSanPham().getHinhAnh() != null &&
@@ -614,8 +614,8 @@ public class GioHangService {
      * Validate product availability
      */
     private void validateProductAvailability(SanPhamChiTiet sanPhamChiTiet, Integer requestedQuantity) {
-        if (!sanPhamChiTiet.isAvailable()) {
-            throw new IllegalArgumentException("Product is not available: " + sanPhamChiTiet.getSerialNumber());
+        if (!sanPhamChiTiet.getTrangThai()) {
+            throw new IllegalArgumentException("Product is not available: " + sanPhamChiTiet.getSku());
         }
 
         // Additional inventory checks can be added here

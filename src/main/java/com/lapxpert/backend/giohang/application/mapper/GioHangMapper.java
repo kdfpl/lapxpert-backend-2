@@ -153,6 +153,6 @@ public interface GioHangMapper {
 
         return gioHang.getChiTiets().stream()
             .anyMatch(item -> item.getSanPhamChiTiet() != null &&
-                     !item.getSanPhamChiTiet().isAvailable());
+                     !Boolean.TRUE.equals(item.getSanPhamChiTiet().getTrangThai()));
     }
 }

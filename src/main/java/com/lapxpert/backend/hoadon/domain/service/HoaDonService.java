@@ -16,9 +16,10 @@ import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import com.lapxpert.backend.nguoidung.domain.repository.DiaChiRepository;
+import com.lapxpert.backend.sanpham.domain.entity.SerialNumber;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
-import com.lapxpert.backend.sanpham.domain.service.InventoryService;
+import com.lapxpert.backend.sanpham.domain.service.SerialNumberService;
 import com.lapxpert.backend.sanpham.domain.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,7 +41,7 @@ public class HoaDonService {
     private final NguoiDungRepository nguoiDungRepository;
     private final DiaChiRepository diaChiRepository;
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
-    private final InventoryService inventoryService;
+    private final SerialNumberService serialNumberService;
     private final PricingService pricingService;
     private final PhieuGiamGiaService phieuGiamGiaService;
     private final KiemTraTrangThaiHoaDonService kiemTraTrangThaiService;
@@ -52,7 +53,7 @@ public class HoaDonService {
                          NguoiDungRepository nguoiDungRepository,
                          DiaChiRepository diaChiRepository,
                          SanPhamChiTietRepository sanPhamChiTietRepository,
-                         InventoryService inventoryService,
+                         SerialNumberService serialNumberService,
                          PricingService pricingService,
                          PhieuGiamGiaService phieuGiamGiaService,
                          KiemTraTrangThaiHoaDonService kiemTraTrangThaiService,
@@ -63,7 +64,7 @@ public class HoaDonService {
         this.nguoiDungRepository = nguoiDungRepository;
         this.diaChiRepository = diaChiRepository;
         this.sanPhamChiTietRepository = sanPhamChiTietRepository;
-        this.inventoryService = inventoryService;
+        this.serialNumberService = serialNumberService;
         this.pricingService = pricingService;
         this.phieuGiamGiaService = phieuGiamGiaService;
         this.kiemTraTrangThaiService = kiemTraTrangThaiService;
@@ -89,17 +90,18 @@ public class HoaDonService {
     @Transactional
     public HoaDonDto createHoaDon(HoaDonDto hoaDonDto, NguoiDung currentUser) {
         // Step 1: Validate inventory availability before processing
-        if (!inventoryService.isInventoryAvailable(hoaDonDto.getChiTiet())) {
+        if (!serialNumberService.isInventoryAvailable(hoaDonDto.getChiTiet())) {
             throw new IllegalArgumentException("Insufficient inventory for one or more items in the order");
         }
 
         // Step 2: Reserve inventory items with order tracking (this will throw exception if insufficient)
         String orderChannel = hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY ? "POS" : "ONLINE";
         String tempOrderId = "TEMP-" + System.currentTimeMillis(); // Temporary ID until order is saved
-        List<Long> reservedItemIds = inventoryService.reserveItemsWithTracking(
+        List<Long> reservedItemIds = serialNumberService.reserveItemsWithTracking(
             hoaDonDto.getChiTiet(),
             orderChannel,
-            tempOrderId
+            tempOrderId,
+            "system" // user parameter
         );
 
         try {
@@ -157,7 +159,7 @@ public class HoaDonService {
             HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
 
             // Step 8: Update reserved items with actual order ID
-            inventoryService.updateReservationOrderId(reservedItemIds, tempOrderId, savedHoaDon.getId().toString());
+            serialNumberService.updateReservationOrderId(reservedItemIds, tempOrderId, savedHoaDon.getId().toString());
 
             // Step 8.5: Create audit entry for order creation
             String newValues = createAuditValues(savedHoaDon);
@@ -172,7 +174,7 @@ public class HoaDonService {
             // Step 9: For POS orders with immediate payment, confirm the sale
             if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY &&
                 hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
-                inventoryService.confirmSale(reservedItemIds);
+                serialNumberService.confirmSale(reservedItemIds, savedHoaDon.getId().toString(), "system");
                 log.info("POS order {} completed with immediate payment confirmation", savedHoaDon.getId());
             } else {
                 log.info("Order {} created with inventory reserved. Payment pending.", savedHoaDon.getId());
@@ -188,12 +190,12 @@ public class HoaDonService {
             log.error("Order creation failed, releasing reserved inventory: {}", e.getMessage());
             try {
                 // Find items reserved with the temporary order ID and release them
-                List<Long> tempReservedItems = inventoryService.getReservedItemsForOrder(tempOrderId);
+                List<Long> tempReservedItems = serialNumberService.getReservedSerialNumberIdsForOrder(tempOrderId);
                 if (!tempReservedItems.isEmpty()) {
-                    inventoryService.releaseReservationSafely(tempReservedItems);
+                    serialNumberService.releaseReservationsSafely(tempReservedItems);
                 } else {
                     // Fallback to the original list if temp order ID tracking fails
-                    inventoryService.releaseReservationSafely(reservedItemIds);
+                    serialNumberService.releaseReservationsSafely(reservedItemIds);
                 }
             } catch (Exception releaseException) {
                 log.error("Failed to release inventory reservations after order creation failure: {}", releaseException.getMessage());
@@ -261,7 +263,7 @@ public class HoaDonService {
                 if (sanPhamChiTiet.getSanPham() != null) {
                     mappedChiTiet.setTenSanPhamSnapshot(sanPhamChiTiet.getSanPham().getTenSanPham());
                 }
-                mappedChiTiet.setSkuSnapshot(sanPhamChiTiet.getSerialNumber());
+                mappedChiTiet.setSkuSnapshot(sanPhamChiTiet.getSku());
                 if (sanPhamChiTiet.getHinhAnh() != null && !sanPhamChiTiet.getHinhAnh().isEmpty()) {
                     mappedChiTiet.setHinhAnhSnapshot(sanPhamChiTiet.getHinhAnh().get(0));
                 }
@@ -600,11 +602,11 @@ public class HoaDonService {
 
         // Release inventory for all items in the order
         // Find items that are actually reserved for this order
-        List<Long> itemIdsToRelease = inventoryService.getReservedItemsForOrder(hoaDon.getId().toString());
+        List<Long> itemIdsToRelease = serialNumberService.getReservedSerialNumberIdsForOrder(hoaDon.getId().toString());
 
         if (!itemIdsToRelease.isEmpty()) {
             // Use safe release method to avoid exceptions for items that aren't actually reserved
-            inventoryService.releaseReservationSafely(itemIdsToRelease);
+            serialNumberService.releaseReservationsSafely(itemIdsToRelease);
             log.info("Released {} reserved items for cancelled order {}", itemIdsToRelease.size(), hoaDon.getId());
         } else {
             log.info("No reserved items found to release for cancelled order {}", hoaDon.getId());
@@ -766,22 +768,22 @@ public class HoaDonService {
      * Release inventory back to available when refund is processed.
      */
     private void releaseInventoryForRefund(HoaDon hoaDon) {
-        List<Long> itemIdsToRelease = new ArrayList<>();
+        List<Long> serialNumberIdsToRelease = new ArrayList<>();
 
         for (HoaDonChiTiet chiTiet : hoaDon.getHoaDonChiTiets()) {
-            // Get sold items for this product variant
-            List<SanPhamChiTiet> soldItems = inventoryService.getSoldItems(
+            // Get sold serial numbers for this product variant
+            List<SerialNumber> soldSerialNumbers = serialNumberService.getSoldSerialNumbers(
                 chiTiet.getSanPhamChiTiet().getId(), chiTiet.getSoLuong());
 
-            for (SanPhamChiTiet item : soldItems) {
-                itemIdsToRelease.add(item.getId());
+            for (SerialNumber serialNumber : soldSerialNumbers) {
+                serialNumberIdsToRelease.add(serialNumber.getId());
             }
         }
 
-        if (!itemIdsToRelease.isEmpty()) {
-            inventoryService.releaseFromSold(itemIdsToRelease);
-            log.info("Released {} items back to inventory for refunded order {}",
-                    itemIdsToRelease.size(), hoaDon.getId());
+        if (!serialNumberIdsToRelease.isEmpty()) {
+            serialNumberService.releaseFromSold(serialNumberIdsToRelease, "system", "Hoàn trả đơn hàng");
+            log.info("Released {} serial numbers back to inventory for refunded order {}",
+                    serialNumberIdsToRelease.size(), hoaDon.getId());
         }
     }
 
@@ -868,20 +870,19 @@ public class HoaDonService {
         List<Long> itemIdsToConfirm = new ArrayList<>();
 
         for (HoaDonChiTiet chiTiet : hoaDon.getHoaDonChiTiets()) {
-            // In a more sophisticated system, we'd track which specific items were reserved
-            // For now, we'll get available items and confirm the sale
-            List<SanPhamChiTiet> availableItems = inventoryService.getAvailableItems(
+            // Get available serial numbers for this product variant
+            List<SerialNumber> availableSerialNumbers = serialNumberService.getAvailableSerialNumbers(
                 chiTiet.getSanPhamChiTiet().getId());
 
-            // Take the first N items that match the quantity ordered
-            int itemsToConfirm = Math.min(chiTiet.getSoLuong(), availableItems.size());
+            // Take the first N serial numbers that match the quantity ordered
+            int itemsToConfirm = Math.min(chiTiet.getSoLuong(), availableSerialNumbers.size());
             for (int i = 0; i < itemsToConfirm; i++) {
-                itemIdsToConfirm.add(availableItems.get(i).getId());
+                itemIdsToConfirm.add(availableSerialNumbers.get(i).getId());
             }
         }
 
         if (!itemIdsToConfirm.isEmpty()) {
-            inventoryService.confirmSale(itemIdsToConfirm);
+            serialNumberService.confirmSale(itemIdsToConfirm, hoaDon.getId().toString(), "system");
             log.info("Confirmed sale of {} items for order {}", itemIdsToConfirm.size(), hoaDon.getId());
         }
     }
@@ -1070,7 +1071,7 @@ public class HoaDonService {
                         int quantityDiff = newItem.getSoLuong() - currentItem.getSoLuong();
                         if (quantityDiff > 0) {
                             // Need to reserve more items - check availability first
-                            int availableQuantity = inventoryService.getAvailableQuantity(currentItem.getSanPhamChiTiet().getId());
+                            int availableQuantity = serialNumberService.getAvailableQuantityByVariant(currentItem.getSanPhamChiTiet().getId());
                             if (availableQuantity < quantityDiff) {
                                 throw new IllegalArgumentException("Insufficient inventory to increase quantity for product: " +
                                     currentItem.getSanPhamChiTiet().getId() + ". Requested: " + quantityDiff + ", Available: " + availableQuantity);
@@ -1079,10 +1080,10 @@ public class HoaDonService {
                         } else if (quantityDiff < 0) {
                             // Need to release some items
                             int itemsToReleaseCount = Math.abs(quantityDiff);
-                            List<SanPhamChiTiet> availableItems = inventoryService.getAvailableItems(
+                            List<SerialNumber> availableSerialNumbers = serialNumberService.getAvailableSerialNumbers(
                                 currentItem.getSanPhamChiTiet().getId());
-                            for (int i = 0; i < Math.min(itemsToReleaseCount, availableItems.size()); i++) {
-                                itemsToRelease.add(availableItems.get(i).getId());
+                            for (int i = 0; i < Math.min(itemsToReleaseCount, availableSerialNumbers.size()); i++) {
+                                itemsToRelease.add(availableSerialNumbers.get(i).getId());
                             }
                         }
 
@@ -1097,10 +1098,10 @@ public class HoaDonService {
 
             if (!found) {
                 // Item was removed, release its inventory
-                List<SanPhamChiTiet> availableItems = inventoryService.getAvailableItems(
+                List<SerialNumber> availableSerialNumbers = serialNumberService.getAvailableSerialNumbers(
                     currentItem.getSanPhamChiTiet().getId());
-                for (int i = 0; i < Math.min(currentItem.getSoLuong(), availableItems.size()); i++) {
-                    itemsToRelease.add(availableItems.get(i).getId());
+                for (int i = 0; i < Math.min(currentItem.getSoLuong(), availableSerialNumbers.size()); i++) {
+                    itemsToRelease.add(availableSerialNumbers.get(i).getId());
                 }
                 existingHoaDon.getHoaDonChiTiets().remove(currentItem);
             }
@@ -1108,7 +1109,7 @@ public class HoaDonService {
 
         // Apply inventory releases
         if (!itemsToRelease.isEmpty()) {
-            inventoryService.releaseReservation(itemsToRelease);
+            serialNumberService.releaseReservations(itemsToRelease, "system", "Order update");
             log.info("Released {} items during order update", itemsToRelease.size());
         }
 

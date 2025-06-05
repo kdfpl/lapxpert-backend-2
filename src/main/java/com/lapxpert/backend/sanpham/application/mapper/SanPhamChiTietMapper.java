@@ -14,7 +14,13 @@ public interface SanPhamChiTietMapper {
 
     @Mapping(target = "sanPham", ignore = true)
     @Mapping(target = "dotGiamGias", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "cpu", ignore = true)
+    @Mapping(target = "ram", ignore = true)
+    @Mapping(target = "gpu", ignore = true)
     @Mapping(target = "oCung", ignore = true)
+    @Mapping(target = "manHinh", ignore = true)
+    @Mapping(target = "mauSac", ignore = true)
     SanPhamChiTiet toEntity(SanPhamChiTietDto dto);
 
     List<SanPhamChiTietDto> toDtos(List<SanPhamChiTiet> entities);

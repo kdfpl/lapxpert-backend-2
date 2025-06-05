@@ -3,7 +3,7 @@ package com.lapxpert.backend.sanpham.domain.service;
 import com.lapxpert.backend.sanpham.application.dto.SanPhamChiTietDto;
 import com.lapxpert.backend.sanpham.application.mapper.SanPhamChiTietMapper;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
-import com.lapxpert.backend.sanpham.domain.enums.TrangThaiSanPham;
+
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,14 +25,14 @@ public class SanPhamChiTietService {
     // Lấy danh sách sản phẩm có trạng thái AVAILABLE
     @Transactional(readOnly = true)
     public List<SanPhamChiTietDto> getActiveProducts() {
-        List<SanPhamChiTiet> entities = sanPhamChiTietRepository.findAllAvailable();
+        List<SanPhamChiTiet> entities = sanPhamChiTietRepository.findAllActive();
         return sanPhamChiTietMapper.toDtos(entities);
     }
 
     // Lấy danh sách sản phẩm có trạng thái AVAILABLE với giá động
     @Transactional(readOnly = true)
     public List<SanPhamChiTietDto> getActiveProductsWithDynamicPricing() {
-        List<SanPhamChiTiet> entities = sanPhamChiTietRepository.findAllAvailable();
+        List<SanPhamChiTiet> entities = sanPhamChiTietRepository.findAllActive();
         List<SanPhamChiTietDto> dtos = sanPhamChiTietMapper.toDtos(entities);
 
         // Apply dynamic pricing to each product
@@ -80,42 +80,36 @@ public class SanPhamChiTietService {
     public SanPhamChiTiet updateProduct(Long id, SanPhamChiTiet sanPham) {
         return sanPhamChiTietRepository.findById(id).map(existing -> {
             existing.setSanPham(sanPham.getSanPham());
-            existing.setSerialNumber(sanPham.getSerialNumber());
-            existing.setMauSac(sanPham.getMauSac());
+            existing.setSku(sanPham.getSku());
             existing.setGiaBan(sanPham.getGiaBan());
             existing.setGiaKhuyenMai(sanPham.getGiaKhuyenMai());
             existing.setHinhAnh(sanPham.getHinhAnh());
             existing.setTrangThai(sanPham.getTrangThai());
+
+            // === 6 CORE ATTRIBUTES (as per requirements) ===
+            existing.setMauSac(sanPham.getMauSac());
             existing.setCpu(sanPham.getCpu());
             existing.setRam(sanPham.getRam());
             existing.setOCung(sanPham.getOCung());
             existing.setGpu(sanPham.getGpu());
             existing.setManHinh(sanPham.getManHinh());
-            existing.setCongGiaoTiep(sanPham.getCongGiaoTiep());
-            existing.setBanPhim(sanPham.getBanPhim());
-            existing.setKetNoiMang(sanPham.getKetNoiMang());
-            existing.setAmThanh(sanPham.getAmThanh());
-            existing.setWebcam(sanPham.getWebcam());
-            existing.setBaoMat(sanPham.getBaoMat());
-            existing.setHeDieuHanh(sanPham.getHeDieuHanh());
-            existing.setPin(sanPham.getPin());
-            existing.setThietKe(sanPham.getThietKe());
+
             return sanPhamChiTietRepository.save(existing);
         }).orElseThrow(() -> new RuntimeException("Sản phẩm chi tiết không tồn tại"));
     }
 
-    // Xóa mềm sản phẩm (đặt trạng thái thành UNAVAILABLE)
+    // Xóa mềm sản phẩm (đặt trạng thái thành inactive)
     @Transactional
     public void softDeleteProduct(Long id) {
         sanPhamChiTietRepository.findById(id).ifPresent(sanPham -> {
-            sanPham.setTrangThai(TrangThaiSanPham.UNAVAILABLE);
+            sanPham.setTrangThai(false);
             sanPhamChiTietRepository.save(sanPham);
         });
     }
 
     // Cập nhật trạng thái sản phẩm chi tiết với audit trail
     @Transactional
-    public SanPhamChiTiet updateStatusWithAudit(Long id, TrangThaiSanPham newStatus, String reason, String ipAddress, String userAgent) {
+    public SanPhamChiTiet updateStatusWithAudit(Long id, Boolean newStatus, String reason, String ipAddress, String userAgent) {
         SanPhamChiTiet existingProduct = sanPhamChiTietRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sản phẩm chi tiết không tồn tại"));
 

@@ -22,6 +22,8 @@ import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.service.SerialNumberService;
 import com.lapxpert.backend.sanpham.domain.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
+import com.lapxpert.backend.vnpay.domain.VNPayService;
+import com.lapxpert.backend.payment.domain.service.PaymentServiceFactory;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,8 @@ public class HoaDonService {
     private final PhieuGiamGiaService phieuGiamGiaService;
     private final KiemTraTrangThaiHoaDonService kiemTraTrangThaiService;
     private final PaymentMethodValidationService paymentValidationService;
+    private final VNPayService vnPayService;
+    private final PaymentServiceFactory paymentServiceFactory;
 
     public HoaDonService(HoaDonRepository hoaDonRepository,
                          HoaDonAuditHistoryRepository auditHistoryRepository,
@@ -57,7 +61,9 @@ public class HoaDonService {
                          PricingService pricingService,
                          PhieuGiamGiaService phieuGiamGiaService,
                          KiemTraTrangThaiHoaDonService kiemTraTrangThaiService,
-                         PaymentMethodValidationService paymentValidationService) {
+                         PaymentMethodValidationService paymentValidationService,
+                         VNPayService vnPayService,
+                         PaymentServiceFactory paymentServiceFactory) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.hoaDonMapper = hoaDonMapper;
@@ -69,6 +75,8 @@ public class HoaDonService {
         this.phieuGiamGiaService = phieuGiamGiaService;
         this.kiemTraTrangThaiService = kiemTraTrangThaiService;
         this.paymentValidationService = paymentValidationService;
+        this.vnPayService = vnPayService;
+        this.paymentServiceFactory = paymentServiceFactory;
     }
 
     @Transactional(readOnly = true)
@@ -1159,5 +1167,37 @@ public class HoaDonService {
     @Transactional(readOnly = true)
     public List<HoaDonAuditHistory> getAuditHistory(Long hoaDonId) {
         return auditHistoryRepository.findByHoaDonIdOrderByThoiGianThayDoiDesc(hoaDonId);
+    }
+
+    /**
+     * Create VNPay payment URL for a specific order.
+     * This method integrates VNPay payment with order management.
+     */
+    @Transactional
+    public String createVNPayPayment(Long orderId, int amount, String orderInfo, String baseUrl, String clientIp) {
+        // Validate order exists and is in correct state
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+            .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        // Validate order can be paid
+        if (hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Order has already been paid");
+        }
+
+        // Create VNPay payment URL using order ID as transaction reference
+        String vnpayUrl = vnPayService.createOrderWithOrderId(amount, orderInfo, baseUrl, orderId.toString(), clientIp);
+
+        // Create audit entry for payment attempt
+        String auditMessage = String.format("VNPay payment initiated - Amount: %d, OrderInfo: %s", amount, orderInfo);
+        HoaDonAuditHistory auditEntry = HoaDonAuditHistory.createEntry(
+            orderId,
+            createAuditValues(hoaDon),
+            hoaDon.getNguoiTao(),
+            auditMessage
+        );
+        auditHistoryRepository.save(auditEntry);
+
+        log.info("VNPay payment URL created for order {} with amount {}", orderId, amount);
+        return vnpayUrl;
     }
 }

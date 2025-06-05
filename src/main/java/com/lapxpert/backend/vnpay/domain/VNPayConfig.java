@@ -1,11 +1,13 @@
 package com.lapxpert.backend.vnpay.domain;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -13,11 +15,37 @@ import java.util.*;
 
 @Component
 public class VNPayConfig {
-    public static String vnp_PayUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    public static String vnp_Returnurl = "/api/payment/vnpay-payment";
-    public static String vnp_TmnCode = "4FWARVVC";
-    public static String vnp_HashSecret = "7UG6NK3YS9C59FYCM1F7UHOT8H2INKAP";
-    public static String vnp_apiUrl = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction";
+    public static String vnp_PayUrl;
+    public static String vnp_Returnurl;
+    public static String vnp_TmnCode;
+    public static String vnp_HashSecret;
+    public static String vnp_apiUrl;
+
+    // Use setter injection for static fields
+    @Value("${vnpay.pay-url}")
+    public void setVnpPayUrl(String vnpPayUrl) {
+        VNPayConfig.vnp_PayUrl = vnpPayUrl;
+    }
+
+    @Value("${vnpay.return-url}")
+    public void setVnpReturnurl(String vnpReturnurl) {
+        VNPayConfig.vnp_Returnurl = vnpReturnurl;
+    }
+
+    @Value("${vnpay.tmn-code}")
+    public void setVnpTmnCode(String vnpTmnCode) {
+        VNPayConfig.vnp_TmnCode = vnpTmnCode;
+    }
+
+    @Value("${vnpay.hash-secret}")
+    public void setVnpHashSecret(String vnpHashSecret) {
+        VNPayConfig.vnp_HashSecret = vnpHashSecret;
+    }
+
+    @Value("${vnpay.api-url}")
+    public void setVnpApiUrl(String vnpApiUrl) {
+        VNPayConfig.vnp_apiUrl = vnpApiUrl;
+    }
 
     public static String md5(String message) {
         String digest = null;
@@ -56,18 +84,24 @@ public class VNPayConfig {
     }
 
     //Util for VNPAY
-    public static String hashAllFields(Map fields) {
-        List fieldNames = new ArrayList(fields.keySet());
+    public static String hashAllFields(Map<String, String> fields) {
+        List<String> fieldNames = new ArrayList<>(fields.keySet());
         Collections.sort(fieldNames);
         StringBuilder sb = new StringBuilder();
-        Iterator itr = fieldNames.iterator();
+        Iterator<String> itr = fieldNames.iterator();
         while (itr.hasNext()) {
-            String fieldName = (String) itr.next();
-            String fieldValue = (String) fields.get(fieldName);
+            String fieldName = itr.next();
+            String fieldValue = fields.get(fieldName);
             if ((fieldValue != null) && (fieldValue.length() > 0)) {
                 sb.append(fieldName);
                 sb.append("=");
-                sb.append(fieldValue);
+                try {
+                    // URL encode the field value to match VNPayService.createOrder() behavior
+                    sb.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                } catch (UnsupportedEncodingException e) {
+                    // Fallback to original value if encoding fails
+                    sb.append(fieldValue);
+                }
             }
             if (itr.hasNext()) {
                 sb.append("&");

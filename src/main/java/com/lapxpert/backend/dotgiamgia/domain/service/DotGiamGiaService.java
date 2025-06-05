@@ -17,6 +17,7 @@ import com.lapxpert.backend.sanpham.application.mapper.SanPhamChiTietMapper;
 import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class DotGiamGiaService {
     private final DotGiamGiaRepository dotGiamGiaRepository;
@@ -470,8 +472,8 @@ public class DotGiamGiaService {
             vietnamEndTime
         );
 
-        // Log notification (can be extended to send actual notifications)
-        System.out.println("Status change notification: " + text);
+        // Log notification using proper logging framework
+        log.info("[CAMPAIGN NOTIFICATION] {}: {}", subject, text);
 
         // TODO: Implement actual notification sending (email, SMS, etc.)
         // emailService.sendNotification(subject, text);
@@ -506,17 +508,17 @@ public class DotGiamGiaService {
                     campaign -> {
                         // Capture old values for audit
                         String oldValues = buildAuditJson(campaign);
-                        com.lapxpert.backend.common.enums.TrangThaiCampaign oldStatus = campaign.getTrangThai();
 
                         // Update status
                         campaign.setTrangThai(trangThai);
                         DotGiamGia savedCampaign = dotGiamGiaRepository.save(campaign);
 
                         // Create audit trail entry for batch status change
-                        DotGiamGiaAuditHistory auditEntry = DotGiamGiaAuditHistory.statusChangeEntry(
+                        String newValues = buildAuditJson(savedCampaign);
+                        DotGiamGiaAuditHistory auditEntry = DotGiamGiaAuditHistory.updateEntry(
                             savedCampaign.getId(),
-                            oldStatus.toString(),
-                            trangThai.toString(),
+                            oldValues,
+                            newValues,
                             savedCampaign.getNguoiCapNhat(),
                             lyDoThayDoi != null ? lyDoThayDoi : "Cập nhật trạng thái hàng loạt"
                         );

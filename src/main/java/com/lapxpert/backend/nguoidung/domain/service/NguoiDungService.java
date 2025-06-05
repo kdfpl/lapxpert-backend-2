@@ -451,10 +451,9 @@ public class NguoiDungService {
         NguoiDung savedNguoiDung = nguoiDungRepository.save(existingNguoiDung);
 
         // Create audit entry for deactivation
-        NguoiDungAuditHistory auditEntry = NguoiDungAuditHistory.statusChangeEntry(
+        NguoiDungAuditHistory auditEntry = NguoiDungAuditHistory.deleteEntry(
             savedNguoiDung.getId(),
-            "HOAT_DONG",
-            savedNguoiDung.getTrangThai().toString(),
+            oldValues,
             savedNguoiDung.getNguoiCapNhat(),
             "Vô hiệu hóa khách hàng"
         );
@@ -473,10 +472,9 @@ public class NguoiDungService {
         NguoiDung savedNguoiDung = nguoiDungRepository.save(existingNguoiDung);
 
         // Create audit entry for deactivation
-        NguoiDungAuditHistory auditEntry = NguoiDungAuditHistory.statusChangeEntry(
+        NguoiDungAuditHistory auditEntry = NguoiDungAuditHistory.deleteEntry(
             savedNguoiDung.getId(),
-            "HOAT_DONG",
-            savedNguoiDung.getTrangThai().toString(),
+            oldValues,
             savedNguoiDung.getNguoiCapNhat(),
             "Vô hiệu hóa nhân viên"
         );

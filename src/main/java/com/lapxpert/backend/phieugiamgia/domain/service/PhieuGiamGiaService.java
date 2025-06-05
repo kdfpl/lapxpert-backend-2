@@ -120,7 +120,13 @@ public class PhieuGiamGiaService {
                     +"Phiếu sẽ được áp dụng với hóa đơn từ"+phieu.getGiaTriDonHangToiThieu()+".\n\n"
                     + "Hãy nhanh tay sử dụng để không bỏ lỡ nhé!\n\n"
                     + "Trân trọng,\nLapXpert Team";
-//            emailService.sendBulkEmail(selectedCustomerEmails, subject, text);
+            // Log notification for selected customers
+            log.info("[VOUCHER NOTIFICATION] Sending to {} selected customers: {}",
+                selectedCustomerEmails.size(), subject);
+            log.debug("[VOUCHER NOTIFICATION] Email content: {}", text);
+
+            // TODO: Implement actual email sending
+            // emailService.sendBulkEmail(selectedCustomerEmails, subject, text);
 
         } else {
             // Nếu phiếu giảm giá công khai
@@ -134,7 +140,14 @@ public class PhieuGiamGiaService {
                     + "có hiệu lực từ ngày " + phieu.getNgayBatDau() + " đến " + phieu.getNgayKetThuc() + ".\n\n"
                     + "Nhanh tay sử dụng để nhận ưu đãi hấp dẫn!\n\n"
                     + "Trân trọng,\nLapXpert Team";
-//            emailService.sendBulkEmail(allCustomerEmails, subject, text);
+
+            // Log notification for all customers
+            log.info("[VOUCHER NOTIFICATION] Sending to {} all customers: {}",
+                allCustomerEmails.size(), subject);
+            log.debug("[VOUCHER NOTIFICATION] Email content: {}", text);
+
+            // TODO: Implement actual email sending
+            // emailService.sendBulkEmail(allCustomerEmails, subject, text);
         }
 
         // Return the created voucher as DTO
@@ -224,8 +237,12 @@ public class PhieuGiamGiaService {
                 return;
             }
 
-            // Gửi email
-//            emailService.sendBulkEmail(emails, subject, text);
+            // Log status change notification
+            log.info("[VOUCHER STATUS CHANGE] Sending to {} users: {}", emails.size(), subject);
+            log.debug("[VOUCHER STATUS CHANGE] Email content: {}", text);
+
+            // TODO: Implement actual email sending
+            // emailService.sendBulkEmail(emails, subject, text);
         }
 
         // Validate private voucher requirements
@@ -278,7 +295,14 @@ public class PhieuGiamGiaService {
                         + "Phiếu giảm giá này có hiệu lực từ ngày " + phieu.getNgayBatDau() + " đến " + phieu.getNgayKetThuc() + ".\n\n"
                         + "Hãy nhanh tay sử dụng để không bỏ lỡ nhé!\n\n"
                         + "Trân trọng,\nLapXpert Team";
-//                emailService.sendBulkEmail(selectedCustomerEmails, subject, text);
+
+                // Log update notification for selected customers
+                log.info("[VOUCHER UPDATE] Sending to {} selected customers: {}",
+                    selectedCustomerEmails.size(), subject);
+                log.debug("[VOUCHER UPDATE] Email content: {}", text);
+
+                // TODO: Implement actual email sending
+                // emailService.sendBulkEmail(selectedCustomerEmails, subject, text);
             }
         } else {
             // Nếu phiếu giảm giá không phải là phiếu riêng tư, xóa tất cả khách hàng đã gán
@@ -547,6 +571,10 @@ public class PhieuGiamGiaService {
             vietnamStartTime,
             vietnamEndTime
         );
+
+        // Log status change notification
+        log.info("[VOUCHER STATUS CHANGE] {} -> {}: {}", oldStatus, newStatus, subject);
+        log.debug("[VOUCHER STATUS CHANGE] Email content: {}", text);
 
         if (phieu.isPrivateVoucher()) {
             // Send email to assigned users only (filter active users)

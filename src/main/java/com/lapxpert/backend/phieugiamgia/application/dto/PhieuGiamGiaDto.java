@@ -16,7 +16,6 @@ import java.util.List;
  * DTO for {@link com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGia}
  * Uses TrangThaiCampaign for voucher campaign lifecycle tracking
  * Enhanced with builder pattern for better construction
- * TODO: Add Bean Validation annotations when dependency is available
  */
 @Data
 @Builder

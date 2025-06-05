@@ -7,12 +7,16 @@ import com.lapxpert.backend.hoadon.domain.enums.TrangThaiThanhToan;
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
 import com.lapxpert.backend.hoadon.domain.service.ReceiptPreviewService;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
+import com.lapxpert.backend.vnpay.domain.VNPayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -21,10 +25,12 @@ public class HoaDonController {
 
     private final HoaDonService hoaDonService;
     private final ReceiptPreviewService receiptPreviewService;
+    private final VNPayService vnPayService;
 
-    public HoaDonController(HoaDonService hoaDonService, ReceiptPreviewService receiptPreviewService) {
+    public HoaDonController(HoaDonService hoaDonService, ReceiptPreviewService receiptPreviewService, VNPayService vnPayService) {
         this.hoaDonService = hoaDonService;
         this.receiptPreviewService = receiptPreviewService;
+        this.vnPayService = vnPayService;
     }
 
     // Lấy tất cả hóa đơn hoặc lọc theo trạng thái giao hàng
@@ -113,6 +119,51 @@ public class HoaDonController {
         return ResponseEntity.ok(preview);
     }
 
+    // Endpoint để xử lý thanh toán VNPay cho đơn hàng cụ thể
+    @PostMapping("/{orderId}/vnpay-payment")
+    public ResponseEntity<Map<String, String>> processVNPayPayment(
+            @PathVariable Long orderId,
+            @RequestBody VNPayPaymentRequest vnpayRequest,
+            @AuthenticationPrincipal NguoiDung currentUser,
+            HttpServletRequest request) {
+
+        // Security check: user can only process payment for their own orders
+        HoaDonDto order = hoaDonService.getHoaDonByIdSecure(orderId, currentUser);
+
+        // Validate order can be paid
+        if (order.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Đơn hàng đã được thanh toán");
+        }
+
+        // Create VNPay payment URL with order correlation
+        String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+        String clientIp = getClientIpAddress(request);
+        String vnpayUrl = hoaDonService.createVNPayPayment(orderId, vnpayRequest.getAmount(),
+                                                          vnpayRequest.getOrderInfo(), baseUrl, clientIp);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("paymentUrl", vnpayUrl);
+        response.put("orderId", orderId.toString());
+        return ResponseEntity.ok(response);
+    }
+
+    // DTO class for VNPay payment request
+    public static class VNPayPaymentRequest {
+        private int amount;
+        private String orderInfo;
+        private String returnUrl;
+
+        // Getters and setters
+        public int getAmount() { return amount; }
+        public void setAmount(int amount) { this.amount = amount; }
+
+        public String getOrderInfo() { return orderInfo; }
+        public void setOrderInfo(String orderInfo) { this.orderInfo = orderInfo; }
+
+        public String getReturnUrl() { return returnUrl; }
+        public void setReturnUrl(String returnUrl) { this.returnUrl = returnUrl; }
+    }
+
     // Endpoint để lấy HTML preview hóa đơn
     @GetMapping("/{orderId}/receipt-preview-html")
     public ResponseEntity<String> getReceiptPreviewHtml(
@@ -136,5 +187,28 @@ public class HoaDonController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+    }
+
+    /**
+     * Get client IP address from request, handling proxy headers
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("Proxy-Client-IP");
+        }
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getRemoteAddr();
+        }
+
+        // Handle multiple IPs in X-Forwarded-For header
+        if (ipAddress != null && ipAddress.contains(",")) {
+            ipAddress = ipAddress.split(",")[0].trim();
+        }
+
+        return ipAddress != null ? ipAddress : "127.0.0.1";
     }
 }

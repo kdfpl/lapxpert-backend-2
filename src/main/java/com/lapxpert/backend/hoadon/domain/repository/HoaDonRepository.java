@@ -3,6 +3,7 @@ package com.lapxpert.backend.hoadon.domain.repository;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
 import com.lapxpert.backend.hoadon.domain.enums.LoaiHoaDon;
+import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -99,4 +100,36 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long> {
     Long countRepeatCustomers(@Param("tuNgay") Instant tuNgay,
                              @Param("denNgay") Instant denNgay,
                              @Param("trangThai") TrangThaiDonHang trangThai);
+
+    // ==================== PAYMENT MONITORING METHODS ====================
+
+    /**
+     * Find orders with payment timeout
+     */
+    @Query("SELECT h FROM HoaDon h WHERE h.trangThaiThanhToan = 'CHUA_THANH_TOAN' AND h.ngayTao < :timeoutThreshold")
+    List<HoaDon> findOrdersWithPaymentTimeout(@Param("timeoutThreshold") Instant timeoutThreshold);
+
+    /**
+     * Count orders in period
+     */
+    @Query("SELECT COUNT(h) FROM HoaDon h WHERE h.ngayTao >= :since")
+    long countOrdersInPeriod(@Param("since") Instant since);
+
+    /**
+     * Count paid orders in period
+     */
+    @Query("SELECT COUNT(h) FROM HoaDon h WHERE h.trangThaiThanhToan = 'DA_THANH_TOAN' AND h.ngayTao >= :since")
+    long countPaidOrdersInPeriod(@Param("since") Instant since);
+
+    /**
+     * Count pending payment orders in period
+     */
+    @Query("SELECT COUNT(h) FROM HoaDon h WHERE h.trangThaiThanhToan = 'CHUA_THANH_TOAN' AND h.ngayTao >= :since")
+    long countPendingPaymentOrdersInPeriod(@Param("since") Instant since);
+
+    /**
+     * Count orders by payment method in period
+     */
+    @Query("SELECT COUNT(h) FROM HoaDon h WHERE h.phuongThucThanhToan = :paymentMethod AND h.ngayTao >= :since")
+    long countOrdersByPaymentMethodInPeriod(@Param("paymentMethod") PhuongThucThanhToan paymentMethod, @Param("since") Instant since);
 }

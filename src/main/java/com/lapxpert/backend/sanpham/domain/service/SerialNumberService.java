@@ -470,12 +470,12 @@ public class SerialNumberService {
     @Scheduled(fixedRate = 300000) // 5 minutes
     public void cleanupExpiredReservations() {
         Instant expiredBefore = Instant.now().minus(15, ChronoUnit.MINUTES);
-        
+
         List<SerialNumber> expiredReservations = serialNumberRepository.findExpiredReservations(expiredBefore);
-        
+
         if (!expiredReservations.isEmpty()) {
             int releasedCount = serialNumberRepository.releaseExpiredReservations(expiredBefore);
-            
+
             // Create audit entries for released reservations
             for (SerialNumber serialNumber : expiredReservations) {
                 SerialNumberAuditHistory auditEntry = SerialNumberAuditHistory.releaseEntry(
@@ -485,8 +485,48 @@ public class SerialNumberService {
                 );
                 auditHistoryRepository.save(auditEntry);
             }
-            
+
             log.info("Released {} expired reservations", releasedCount);
+        }
+
+        // Also clean up temporary order IDs that are older than 30 minutes
+        cleanupTemporaryOrderIds();
+    }
+
+    /**
+     * Clean up reservations with temporary order IDs that are older than 30 minutes.
+     * This prevents inventory deadlocks from failed order creation processes.
+     */
+    @Transactional
+    public void cleanupTemporaryOrderIds() {
+        Instant expiredBefore = Instant.now().minus(30, ChronoUnit.MINUTES);
+
+        // Find reservations with temporary order IDs that are older than 30 minutes
+        List<SerialNumber> tempReservations = serialNumberRepository.findByDonHangDatTruocStartingWith("TEMP-");
+
+        List<SerialNumber> expiredTempReservations = tempReservations.stream()
+            .filter(sn -> sn.getThoiGianDatTruoc() != null && sn.getThoiGianDatTruoc().isBefore(expiredBefore))
+            .collect(Collectors.toList());
+
+        if (!expiredTempReservations.isEmpty()) {
+            for (SerialNumber serialNumber : expiredTempReservations) {
+                String tempOrderId = serialNumber.getDonHangDatTruoc();
+                serialNumber.releaseReservation();
+                serialNumberRepository.save(serialNumber);
+
+                // Create audit entry
+                SerialNumberAuditHistory auditEntry = SerialNumberAuditHistory.releaseEntry(
+                    serialNumber.getId(),
+                    "SYSTEM",
+                    String.format("Cleanup temporary order ID: %s", tempOrderId)
+                );
+                auditHistoryRepository.save(auditEntry);
+
+                log.debug("Released expired temporary reservation for serial number {} with temp order ID {}",
+                         serialNumber.getSerialNumberValue(), tempOrderId);
+            }
+
+            log.info("Cleaned up {} expired temporary order reservations", expiredTempReservations.size());
         }
     }
 

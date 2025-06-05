@@ -10,6 +10,12 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface DotGiamGiaMapper {
 
+    @Mapping(target = "businessTimezone", ignore = true)
+    @Mapping(target = "lyDoThayDoi", ignore = true)
+    @Mapping(target = "ngayBatDauVietnam", ignore = true)
+    @Mapping(target = "ngayCapNhatVietnam", ignore = true)
+    @Mapping(target = "ngayKetThucVietnam", ignore = true)
+    @Mapping(target = "ngayTaoVietnam", ignore = true)
     DotGiamGiaDto toDto(DotGiamGia entity);
 
     List<DotGiamGiaDto> toDtos(List<DotGiamGia> entities);

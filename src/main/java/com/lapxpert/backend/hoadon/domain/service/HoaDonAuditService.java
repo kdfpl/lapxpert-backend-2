@@ -3,7 +3,6 @@ package com.lapxpert.backend.hoadon.domain.service;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDonAuditHistory;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonAuditHistoryRepository;
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

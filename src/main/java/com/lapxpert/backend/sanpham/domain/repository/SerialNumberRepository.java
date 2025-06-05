@@ -134,6 +134,11 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
     List<SerialNumber> findByDonHangDatTruoc(String orderId);
 
     /**
+     * Find reservations by order ID pattern (for temporary order cleanup)
+     */
+    List<SerialNumber> findByDonHangDatTruocStartingWith(String orderIdPrefix);
+
+    /**
      * Release expired reservations (bulk update)
      */
     @Modifying

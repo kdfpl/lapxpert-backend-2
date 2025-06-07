@@ -1,0 +1,19 @@
+package com.lapxpert.backend.sanpham.application.mapper;
+
+import com.lapxpert.backend.sanpham.application.dto.thuoctinh.RamDto;
+import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.Ram;
+import org.mapstruct.Mapper;
+
+import java.util.List;
+import java.util.Set;
+
+@Mapper(componentModel = "spring")
+public interface RamMapper {
+    RamDto toDto(Ram ram);
+
+    List<RamDto> toDtos(List<Ram> entities);
+
+    Set<RamDto> toDtoSet(Set<Ram> entities);
+
+    Ram toEntity(RamDto dto);
+}

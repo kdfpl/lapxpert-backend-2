@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll() // Add v1 auth endpoints
                         .requestMatchers("/api/payment/**").permitAll()
+                        .requestMatchers("/error").permitAll() // Cho phép tất cả truy cập /error
                         .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers("/api/v1/hoa-don/**").hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers("/api/v1/products/**").hasAnyRole("ADMIN", "STAFF")
@@ -53,9 +54,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         // Allow specific origins for development
         configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:3000"
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:3000"
         ));
         // Also allow origin patterns for flexibility
         configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*"));

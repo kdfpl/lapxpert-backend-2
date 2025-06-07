@@ -1,896 +1,3 @@
-<template>
-  <div class="order-create-container">
-    <Toast />
-
-    <!-- Page Header -->
-    <div class="card mb-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <i class="pi pi-shop text-lg text-primary"></i>
-          </div>
-          <div>
-            <h1 class="font-semibold text-xl text-surface-900 m-0">
-              Bán hàng tại quầy
-            </h1>
-            <p class="text-surface-500 text-sm mt-1 mb-0">
-              Quản lý nhiều đơn hàng đồng thời với giao diện tab
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <Button
-            label="Quay lại"
-            icon="pi pi-arrow-left"
-            outlined
-            @click="$router.push('/orders')"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Order Tabs Navigation -->
-    <div class="card mb-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 flex-1 overflow-x-auto">
-          <!-- Order Tabs -->
-          <div
-            v-for="tab in orderTabs"
-            :key="tab.id"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all min-w-fit"
-            :class="{
-              'bg-primary text-white': activeTabId === tab.id,
-              'bg-surface-100 hover:bg-surface-200 text-surface-700': activeTabId !== tab.id
-            }"
-            @click="switchToTab(tab.id)"
-          >
-            <i class="pi pi-file text-sm"></i>
-            <span class="font-medium text-sm">{{ tab.maHoaDon }}</span>
-            <Badge
-              v-if="tab.sanPhamList.length > 0"
-              :value="tab.sanPhamList.length"
-              severity="info"
-              size="small"
-            />
-            <Button
-              icon="pi pi-times"
-              text
-              rounded
-              size="small"
-              class="w-5 h-5 ml-1"
-              :class="activeTabId === tab.id ? 'text-white hover:bg-white/20' : 'text-surface-500 hover:bg-surface-300'"
-              @click.stop="closeTabWithConfirmation(tab.id)"
-            />
-          </div>
-
-          <!-- Add New Tab Button -->
-          <Button
-            v-if="canCreateNewTab"
-            icon="pi pi-plus"
-            outlined
-            rounded
-            size="small"
-            class="min-w-fit"
-            @click="createNewOrderTab"
-            v-tooltip.top="'Tạo đơn hàng mới'"
-          />
-        </div>
-
-        <!-- Tab Actions -->
-        <div v-if="hasActiveTabs" class="flex items-center gap-2 ml-4">
-          <Button
-            icon="pi pi-refresh"
-            outlined
-            rounded
-            size="small"
-            @click="calculateTabTotals(activeTabId)"
-            v-tooltip.top="'Tính lại tổng tiền'"
-          />
-          <Button
-            icon="pi pi-trash"
-            outlined
-            rounded
-            size="small"
-            severity="danger"
-            @click="closeTabWithConfirmation(activeTabId)"
-            v-tooltip.top="'Đóng tab hiện tại'"
-          />
-        </div>
-      </div>
-    </div>
-
-
-
-    <!-- Main Order Creation Interface -->
-    <div v-if="!hasActiveTabs" class="card">
-      <div class="text-center py-12">
-        <i class="pi pi-shopping-cart text-6xl text-surface-300 mb-4"></i>
-        <h3 class="text-xl font-semibold text-surface-600 mb-2">Chưa có đơn hàng nào</h3>
-        <p class="text-surface-500 mb-6">Nhấn nút "+" để tạo đơn hàng mới</p>
-        <Button
-          label="Tạo đơn hàng đầu tiên"
-          icon="pi pi-plus"
-          @click="createNewOrderTab"
-          size="large"
-        />
-      </div>
-    </div>
-
-    <!-- Active Order Tab Content -->
-    <div v-else-if="activeTab" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Column: Product Selection & Order Items -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Product Search -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-search text-primary"></i>
-            Tìm kiếm sản phẩm
-          </div>
-
-          <div class="mb-4">
-            <InputGroup>
-              <InputGroupAddon v-if="productSearchQuery">
-                <Button
-                  icon="pi pi-times"
-                  text
-                  size="small"
-                  @click="productSearchQuery = ''; availableProducts = []"
-                  class="text-surface-400 hover:text-red-500"
-                />
-              </InputGroupAddon>
-              <InputText
-                v-model="productSearchQuery"
-                placeholder="Nhập tên sản phẩm, mã sản phẩm..."
-                @input="searchProducts"
-              />
-              <Button
-                icon="pi pi-search"
-                @click="() => searchProducts(true)"
-                outlined
-              />
-            </InputGroup>
-          </div>
-
-          <!-- Loading State -->
-          <div v-if="loadingProducts" class="text-center py-8 text-surface-500">
-            <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-            <p>Đang tải sản phẩm...</p>
-          </div>
-
-          <!-- Product DataTable -->
-          <div v-else class="max-h-96 overflow-y-auto">
-            <DataTable
-              :value="availableProducts"
-              :paginator="false"
-              :rows="10"
-              dataKey="id"
-              class="p-datatable-sm"
-              :scrollable="true"
-              scrollHeight="350px"
-            >
-              <Column field="hinhAnh" header="Ảnh" style="width: 80px">
-                <template #body="{ data }">
-                  <img
-                    :src="getProductImage(data) || '/placeholder-product.png'"
-                    :alt="data.tenSanPham"
-                    class="w-12 h-12 object-cover rounded"
-                  />
-                </template>
-              </Column>
-
-              <Column field="maSanPham" header="Mã sản phẩm" style="width: 120px">
-                <template #body="{ data }">
-                  <span class="font-mono text-sm bg-surface-100 px-2 py-1 rounded">
-                    {{ data.maSanPham }}
-                  </span>
-                </template>
-              </Column>
-
-              <Column field="tenSanPham" header="Tên sản phẩm" style="min-width: 200px">
-                <template #body="{ data }">
-                  <div class="font-medium text-sm">{{ data.tenSanPham }}</div>
-                </template>
-              </Column>
-
-              <Column field="thuongHieu" header="Thương hiệu" style="width: 120px">
-                <template #body="{ data }">
-                  <span v-if="data.thuongHieu" class="text-sm">
-                    {{ data.thuongHieu.moTaThuongHieu }}
-                  </span>
-                  <span v-else class="text-xs text-surface-400 italic">N/A</span>
-                </template>
-              </Column>
-
-              <Column field="price" header="Giá" style="width: 120px">
-                <template #body="{ data }">
-                  <div class="text-sm">
-                    <div v-if="hasPromotionalPrice(data)" class="space-y-1">
-                      <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(data)) }}</div>
-                      <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(data)) }}</div>
-                      <Badge :value="`-${getDiscountPercentage(data)}%`" severity="danger" size="small" />
-                    </div>
-                    <div v-else class="text-primary font-semibold">
-                      {{ formatCurrency(getProductPrice(data)) }}
-                    </div>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="actions" header="Thao tác" style="width: 100px">
-                <template #body="{ data }">
-                  <Button
-                    label="Chọn"
-                    icon="pi pi-plus"
-                    size="small"
-                    @click="showVariantSelectionDialog(data)"
-                    :disabled="getAvailableVariantsCount(data) === 0"
-                  />
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-
-          <!-- Empty State -->
-          <div v-if="!loadingProducts && !availableProducts.length" class="text-center py-8 text-surface-500">
-            <i class="pi pi-search text-2xl mb-2"></i>
-            <p>Không tìm thấy sản phẩm nào</p>
-          </div>
-        </div>
-
-        <!-- Order Items -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-shopping-cart text-primary"></i>
-              Sản phẩm trong đơn hàng
-            </div>
-            <div class="flex items-center gap-2">
-              <Button
-                label="Quét QR Serial"
-                icon="pi pi-qrcode"
-                severity="info"
-                outlined
-                size="small"
-                @click="showQRScanner = true"
-                v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
-              />
-              <Badge
-                v-if="activeTab?.sanPhamList?.length > 0"
-                :value="activeTab.sanPhamList.length"
-                severity="info"
-              />
-            </div>
-          </div>
-
-          <!-- Order Items List -->
-          <div v-if="activeTab?.sanPhamList?.length" class="space-y-3 mb-4">
-            <div
-              v-for="(item, index) in activeTab.sanPhamList"
-              :key="index"
-              class="flex items-center gap-3 p-3 border rounded-lg"
-            >
-              <img
-                :src="getCartItemImage(item) || '/placeholder-product.png'"
-                :alt="getCartItemName(item)"
-                class="w-12 h-12 object-cover rounded"
-              />
-              <div class="flex-1">
-                <div class="font-medium text-sm">{{ getCartItemName(item) }}</div>
-                <div class="text-xs text-surface-500">{{ getCartItemCode(item) }}</div>
-                <div class="text-xs text-surface-600 mb-1">
-                  {{ getVariantDisplayInfo(item) }}
-                </div>
-                <div class="text-sm text-primary font-semibold">{{ formatCurrency(item.donGia) }}</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <Button
-                  icon="pi pi-minus"
-                  text
-                  rounded
-                  size="small"
-                  @click="decreaseQuantity(index)"
-                  :disabled="item.soLuong <= 1"
-                />
-                <span class="text-sm font-medium w-8 text-center">{{ item.soLuong }}</span>
-                <Button
-                  icon="pi pi-plus"
-                  text
-                  rounded
-                  size="small"
-                  @click="increaseQuantity(index)"
-                  :disabled="!canIncreaseQuantity(item)"
-                />
-              </div>
-              <div class="text-right">
-                <div class="font-semibold text-primary">{{ formatCurrency(item.thanhTien) }}</div>
-              </div>
-              <Button
-                icon="pi pi-trash"
-                text
-                rounded
-                size="small"
-                severity="danger"
-                @click="removeFromActiveTab(index)"
-              />
-            </div>
-          </div>
-
-          <!-- Empty Cart -->
-          <div v-else class="text-center py-8 text-surface-500">
-            <i class="pi pi-shopping-cart text-2xl mb-2"></i>
-            <p class="text-sm">Chưa có sản phẩm nào trong đơn hàng</p>
-            <p class="text-xs">Tìm kiếm và thêm sản phẩm ở phía trên</p>
-          </div>
-        </div>
-
-        <!-- Product Recommendations Section -->
-        <div v-if="recommendedProducts.length > 0" class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-heart text-primary"></i>
-            Sản phẩm bạn có thể quan tâm
-          </div>
-
-          <!-- Horizontal Product Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-              v-for="product in recommendedProducts.slice(0, 6)"
-              :key="product.id"
-              class="border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
-              @click="showVariantSelectionDialog(product)"
-            >
-              <!-- Product Image -->
-              <div class="aspect-square mb-3 bg-surface-100 rounded-lg overflow-hidden">
-                <img
-                  :src="getRecommendationProductImage(product) || '/placeholder-product.png'"
-                  :alt="product.tenSanPham"
-                  class="w-full h-full object-cover"
-                  @error="onRecommendationImageError"
-                />
-              </div>
-
-              <!-- Product Info -->
-              <div class="space-y-2">
-                <h4 class="font-medium text-sm line-clamp-2">{{ product.tenSanPham }}</h4>
-
-                <div class="text-xs text-surface-500">
-                  {{ product.maSanPham }}
-                </div>
-
-                <div v-if="product.thuongHieu" class="text-xs text-surface-600">
-                  {{ product.thuongHieu.moTaThuongHieu }}
-                </div>
-
-                <!-- Price -->
-                <div class="text-sm">
-                  <div v-if="hasPromotionalPrice(product)" class="space-y-1">
-                    <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(product)) }}</div>
-                    <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(product)) }}</div>
-                  </div>
-                  <div v-else class="text-primary font-semibold">
-                    {{ formatCurrency(getProductPrice(product)) }}
-                  </div>
-                </div>
-
-                <!-- Available Variants -->
-                <div class="flex items-center justify-between">
-                  <div class="text-xs text-surface-500">
-                    {{ getAvailableVariantsCount(product) }} phiên bản
-                  </div>
-                  <Button
-                    icon="pi pi-plus"
-                    size="small"
-                    rounded
-                    :disabled="getAvailableVariantsCount(product) === 0"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Show More Button -->
-          <div v-if="allRecommendedProducts.length > 6" class="text-center mt-4">
-            <Button
-              :label="showAllRecommendations ? 'Thu gọn' : `Xem thêm ${allRecommendedProducts.length - 6} sản phẩm`"
-              icon="pi pi-angle-down"
-              :iconPos="showAllRecommendations ? 'right' : 'right'"
-              text
-              @click="toggleRecommendations"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column: Order Summary & Actions -->
-      <div class="lg:col-span-1 space-y-6">
-        <!-- Customer Selection -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-user text-primary"></i>
-              Khách hàng
-            </div>
-            <Button
-              label="Thêm nhanh"
-              icon="pi pi-user-plus"
-              size="small"
-              severity="success"
-              outlined
-              @click="showFastCustomerDialog"
-            />
-          </div>
-
-          <!-- Customer Search -->
-          <div class="mb-4">
-            <AutoComplete
-              v-model="selectedCustomer"
-              :suggestions="customerSuggestions"
-              @complete="searchCustomers"
-              @item-select="onCustomerSelect"
-              optionLabel="hoTen"
-              placeholder="Tìm kiếm khách hàng..."
-              fluid
-            >
-              <template #item="{ item }">
-                <div class="flex items-center gap-2 p-2">
-                  <Avatar :label="item.hoTen?.charAt(0)" size="small" />
-                  <div>
-                    <div class="font-medium">{{ item.hoTen }}</div>
-                    <div class="text-sm text-surface-500">{{ item.soDienThoai }}</div>
-                  </div>
-                </div>
-              </template>
-            </AutoComplete>
-          </div>
-
-          <!-- Selected Customer Display -->
-          <div v-if="activeTab?.khachHang" class="p-3 border rounded-lg bg-surface-50">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <Avatar :label="activeTab.khachHang.hoTen?.charAt(0)" size="small" />
-                <div>
-                  <div class="font-semibold text-sm">{{ activeTab.khachHang.hoTen }}</div>
-                  <div class="text-xs text-surface-500">{{ activeTab.khachHang.soDienThoai }}</div>
-                </div>
-              </div>
-              <Button
-                icon="pi pi-times"
-                text
-                rounded
-                size="small"
-                @click="clearCustomerFromTab"
-                class="text-surface-400 hover:text-red-500"
-              />
-            </div>
-          </div>
-
-          <!-- Walk-in Customer Note -->
-          <div v-else class="text-center py-3 text-surface-500">
-            <i class="pi pi-user-plus text-lg mb-1"></i>
-            <p class="text-xs">Khách hàng vãng lai</p>
-          </div>
-        </div>
-
-        <!-- Staff Member Section -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-user-check text-primary"></i>
-            Nhân viên phụ trách
-          </div>
-
-          <!-- Staff Member Search -->
-          <div class="mb-4">
-            <AutoComplete
-              v-model="selectedStaffMember"
-              :suggestions="staffSuggestions"
-              @complete="searchStaffMembers"
-              @item-select="onStaffMemberSelect"
-              optionLabel="hoTen"
-              placeholder="Tìm kiếm nhân viên..."
-              fluid
-            >
-              <template #item="{ item }">
-                <div class="flex items-center gap-2 p-2">
-                  <Avatar :label="item.hoTen?.charAt(0)" size="small" />
-                  <div>
-                    <div class="font-medium">{{ item.hoTen }}</div>
-                    <div class="text-sm text-surface-500">{{ item.soDienThoai }}</div>
-                  </div>
-                </div>
-              </template>
-            </AutoComplete>
-          </div>
-
-          <!-- Selected Staff Member Display -->
-          <div v-if="activeTab?.nhanVien" class="p-3 border rounded-lg bg-surface-50">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <Avatar :label="activeTab.nhanVien.hoTen?.charAt(0)" size="small" />
-                <div>
-                  <div class="font-semibold text-sm">{{ activeTab.nhanVien.hoTen }}</div>
-                  <div class="text-xs text-surface-500">{{ activeTab.nhanVien.soDienThoai }}</div>
-                </div>
-              </div>
-              <Button
-                icon="pi pi-times"
-                text
-                rounded
-                size="small"
-                @click="clearStaffMemberFromTab"
-                class="text-surface-400 hover:text-red-500"
-              />
-            </div>
-          </div>
-
-          <!-- Current User Note -->
-          <div v-else-if="currentStaffMember" class="text-center py-3 text-surface-500">
-            <i class="pi pi-user text-lg mb-1"></i>
-            <p class="text-xs">Sử dụng nhân viên hiện tại: {{ currentStaffMember.hoTen }}</p>
-          </div>
-
-          <!-- No Staff Member Note -->
-          <div v-else class="text-center py-3 text-surface-500">
-            <i class="pi pi-exclamation-triangle text-lg mb-1"></i>
-            <p class="text-xs">Chưa có nhân viên phụ trách</p>
-          </div>
-        </div>
-
-        <!-- Delivery Options -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-truck text-primary"></i>
-            Giao hàng
-          </div>
-
-          <div class="flex items-center justify-between mb-4">
-            <label class="font-medium">Giao hàng tận nơi</label>
-            <ToggleButton
-              v-model="activeTab.giaohang"
-              onLabel="Có"
-              offLabel="Không"
-              @change="onDeliveryToggle"
-              :disabled="!activeTab"
-            />
-          </div>
-
-          <!-- Delivery Address (when delivery is enabled) -->
-          <div v-if="activeTab?.giaohang" class="space-y-3">
-            <div v-if="activeTab?.khachHang?.diaChis?.length" class="space-y-2">
-              <label class="text-sm font-medium">Chọn địa chỉ giao hàng:</label>
-              <div
-                v-for="address in activeTab.khachHang.diaChis"
-                :key="address.id"
-                class="border rounded-lg p-2 cursor-pointer transition-all"
-                :class="{
-                  'border-primary bg-primary/5': activeTab?.diaChiGiaoHang?.id === address.id,
-                  'border-surface-200 hover:border-primary/50': activeTab?.diaChiGiaoHang?.id !== address.id
-                }"
-                @click="selectDeliveryAddress(address)"
-              >
-                <div class="text-sm font-medium">{{ address.loaiDiaChi }}</div>
-                <div class="text-xs text-surface-500">
-                  {{ address.duong }}, {{ address.phuongXa }}, {{ address.quanHuyen }}
-                </div>
-                <div class="text-xs text-surface-500">{{ address.tinhThanh }}</div>
-              </div>
-            </div>
-            <div v-else-if="activeTab?.khachHang" class="text-center py-4 text-surface-500">
-              <i class="pi pi-map-marker text-lg mb-2"></i>
-              <p class="text-xs mb-3">Khách hàng chưa có địa chỉ giao hàng</p>
-              <Button
-                label="Thêm địa chỉ giao hàng"
-                icon="pi pi-plus"
-                size="small"
-                severity="info"
-                outlined
-                @click="showFastAddressDialog"
-              />
-            </div>
-            <div v-else class="text-center py-3 text-surface-500">
-              <p class="text-xs">Vui lòng chọn khách hàng trước</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Voucher Section -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-tag text-primary"></i>
-            Voucher giảm giá
-          </div>
-
-          <!-- Voucher Input -->
-          <div class="mb-4">
-            <InputGroup>
-              <InputGroupAddon v-if="voucherCode">
-                <Button
-                  icon="pi pi-times"
-                  text
-                  size="small"
-                  @click="voucherCode = ''"
-                  class="text-surface-400 hover:text-red-500"
-                />
-              </InputGroupAddon>
-              <InputText
-                v-model="voucherCode"
-                placeholder="Nhập mã voucher..."
-                @keyup.enter="applyVoucher"
-              />
-              <Button
-                label="Áp dụng"
-                @click="applyVoucher"
-                :loading="applyingVoucher"
-                :disabled="!voucherCode.trim()"
-              />
-            </InputGroup>
-          </div>
-
-
-
-
-
-          <!-- Applied Vouchers -->
-          <div v-if="activeTab?.voucherList?.length" class="space-y-2 mb-4">
-            <div
-              v-for="(voucher, index) in activeTab.voucherList"
-              :key="index"
-              class="flex items-center justify-between p-3 border rounded-lg bg-green-50"
-            >
-              <div>
-                <div class="font-medium text-green-800 text-sm">{{ voucher.maPhieuGiamGia }}</div>
-                <div class="text-xs text-green-600">
-                  Giảm {{ formatCurrency(voucher.giaTriGiam) }}
-                </div>
-              </div>
-              <Button
-                icon="pi pi-times"
-                text
-                rounded
-                size="small"
-                severity="danger"
-                @click="removeVoucherFromTab(index)"
-              />
-            </div>
-          </div>
-
-          <!-- Available Vouchers -->
-          <div v-if="availableVouchers.length" class="mb-4">
-            <div class="font-medium mb-2 text-sm">Voucher khả dụng</div>
-            <div class="space-y-2 max-h-32 overflow-y-auto">
-              <div
-                v-for="voucher in availableVouchers"
-                :key="voucher.id"
-                class="flex items-center justify-between p-2 border rounded-lg hover:bg-surface-50 cursor-pointer"
-                @click="selectVoucher(voucher)"
-              >
-                <div>
-                  <div class="font-medium text-sm">{{ voucher.tenPhieuGiamGia }}</div>
-                  <div class="text-xs text-surface-500">{{ voucher.maPhieuGiamGia }}</div>
-                  <div class="text-xs text-primary">
-                    Giảm {{ formatCurrency(calculateVoucherDiscount(voucher)) }}
-                  </div>
-                </div>
-                <Button
-                  icon="pi pi-plus"
-                  text
-                  rounded
-                  size="small"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Payment Section -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-credit-card text-primary"></i>
-            Thanh toán
-          </div>
-
-          <!-- Payment Methods -->
-          <div v-if="paymentMethods.length === 0" class="text-center py-4 text-surface-500 mb-4">
-            <i class="pi pi-info-circle text-2xl mb-2"></i>
-            <p>Không có phương thức thanh toán khả dụng</p>
-            <p class="text-sm">Vui lòng kiểm tra lại tùy chọn giao hàng</p>
-          </div>
-          <div v-else class="space-y-3 mb-4">
-            <div
-              v-for="method in paymentMethods"
-              :key="method.value"
-              class="border rounded-lg p-3 cursor-pointer transition-all"
-              :class="{
-                'border-primary bg-primary/5': activeTab?.phuongThucThanhToan === method.value,
-                'border-surface-200 hover:border-primary/50': activeTab?.phuongThucThanhToan !== method.value,
-                'opacity-50 cursor-not-allowed': !method.available
-              }"
-              @click="method.available && selectPaymentMethod(method.value)"
-            >
-              <div class="flex items-center gap-3">
-                <i :class="method.icon" class="text-lg text-primary"></i>
-                <div>
-                  <div class="font-semibold text-sm">{{ method.label }}</div>
-                  <div class="text-xs text-surface-500">{{ method.description }}</div>
-                  <div v-if="!method.available" class="text-xs text-red-500 mt-1">
-                    Không khả dụng
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Order Summary -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-calculator text-primary"></i>
-            Tổng kết đơn hàng
-          </div>
-
-          <div v-if="activeTab" class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span>Tạm tính:</span>
-              <span>{{ formatCurrency(activeTab.tongTienHang || 0) }}</span>
-            </div>
-            <div v-if="activeTab.giaTriGiamGiaVoucher > 0" class="flex justify-between text-green-600">
-              <span>Giảm giá voucher:</span>
-              <span>-{{ formatCurrency(activeTab.giaTriGiamGiaVoucher) }}</span>
-            </div>
-            <div v-if="activeTab.giaohang" class="flex justify-between">
-              <span>Phí giao hàng:</span>
-              <span>{{ formatCurrency(activeTab.phiVanChuyen || 0) }}</span>
-            </div>
-            <hr class="my-2">
-            <div class="flex justify-between font-semibold text-lg">
-              <span>Tổng cộng:</span>
-              <span class="text-primary">{{ formatCurrency(activeTab.tongThanhToan || 0) }}</span>
-            </div>
-
-            <!-- Customer Payment Section (for cash payments) -->
-            <div v-if="activeTab?.phuongThucThanhToan === 'TIEN_MAT'" class="mt-4 pt-4 border-t border-surface-200">
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm font-medium mb-1">Khách hàng đưa:</label>
-                  <InputText
-                    v-model.number="customerPayment"
-                    type="number"
-                    placeholder="Nhập số tiền khách đưa..."
-                    class="w-full"
-                    :min="activeTab?.tongThanhToan || 0"
-                    @input="calculateChange"
-                  />
-                </div>
-                <div v-if="customerPayment >= (activeTab?.tongThanhToan || 0)" class="flex justify-between font-semibold text-lg">
-                  <span>Tiền trả lại:</span>
-                  <span class="text-green-600">{{ formatCurrency(changeAmount) }}</span>
-                </div>
-                <div v-else-if="customerPayment > 0" class="text-red-500 text-sm">
-                  Số tiền không đủ (thiếu {{ formatCurrency((activeTab?.tongThanhToan || 0) - customerPayment) }})
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Create Order Button -->
-          <div class="mt-6 pt-4 border-t border-surface-200">
-            <Button
-              label="Tạo đơn hàng"
-              icon="pi pi-check"
-              severity="success"
-              size="large"
-              class="w-full"
-              @click="createOrderFromActiveTab"
-              :loading="creating"
-              :disabled="!canCreateActiveOrder || creating"
-            />
-            <div v-if="!canCreateActiveOrder" class="text-center mt-2">
-              <small class="text-surface-500">
-                <span v-if="!activeTab?.sanPhamList?.length">Vui lòng thêm sản phẩm vào đơn hàng</span>
-                <span v-else-if="!activeTab?.phuongThucThanhToan">Vui lòng chọn phương thức thanh toán</span>
-                <span v-else-if="activeTab?.giaohang && (!activeTab?.khachHang || !activeTab?.diaChiGiaoHang)">
-                  Vui lòng chọn khách hàng và địa chỉ giao hàng
-                </span>
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-
-  <!-- Product Variant Selection Dialog -->
-  <ProductVariantDialog
-    v-model:visible="variantDialogVisible"
-    :product="selectedProductForVariants"
-    @variant-selected="addVariantToActiveTab"
-  />
-
-  <!-- Fast Customer Creation Dialog -->
-  <FastCustomerCreate
-    v-model:visible="fastCustomerDialogVisible"
-    @customer-created="onCustomerCreated"
-  />
-
-  <!-- Fast Address Creation Dialog -->
-  <FastAddressCreate
-    v-model:visible="fastAddressDialogVisible"
-    :customer="activeTab?.khachHang"
-    @address-created="onAddressCreated"
-  />
-
-  <!-- QR Scanner Dialog -->
-  <Dialog
-    v-model:visible="showQRScanner"
-    modal
-    header="Quét QR Serial Number"
-    :style="{ width: '500px' }"
-    @hide="stopQRScanner"
-    :closable="true"
-  >
-    <div class="text-center">
-      <p class="mb-4">Quét mã QR chứa serial number để tự động thêm vào giỏ hàng</p>
-      <div class="border-2 border-primary border-dashed rounded-lg p-4 mb-4">
-        <!-- QR Scanner component -->
-        <div class="flex flex-col items-center justify-center">
-          <div v-if="!qrScanResult" class="w-full">
-            <div v-if="!cameraError">
-              <qrcode-stream
-                @detect="onQRDetect"
-                @init="onQRInit"
-                :track="paintBoundingBox"
-                class="w-full h-64 rounded-lg overflow-hidden"
-              />
-              <p class="text-surface-600 mt-2">Đưa mã QR chứa serial number vào khung hình</p>
-            </div>
-            <div v-else class="p-4 bg-red-50 rounded-lg">
-              <i class="pi pi-exclamation-triangle text-red-500 text-xl"></i>
-              <p class="text-red-700 font-medium mt-2">Lỗi khi truy cập camera</p>
-              <p class="mt-2">{{ cameraError }}</p>
-              <Button
-                label="Cấp quyền camera"
-                icon="pi pi-camera"
-                severity="info"
-                @click="requestCameraPermission"
-                class="mt-3"
-              />
-            </div>
-          </div>
-          <div v-else class="p-4 bg-green-50 rounded-lg w-full">
-            <p class="text-green-700 font-medium">Quét thành công!</p>
-            <p class="mt-2 font-mono">{{ qrScanResult }}</p>
-            <div v-if="qrProcessingResult" class="mt-3">
-              <div v-if="qrProcessingResult.success" class="text-green-600">
-                <i class="pi pi-check-circle mr-2"></i>
-                {{ qrProcessingResult.message }}
-              </div>
-              <div v-else class="text-red-600">
-                <i class="pi pi-times-circle mr-2"></i>
-                {{ qrProcessingResult.message }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-center gap-2">
-        <Button
-          label="Đóng"
-          icon="pi pi-times"
-          severity="secondary"
-          @click="showQRScanner = false"
-        />
-        <Button
-          v-if="qrScanResult && qrProcessingResult?.success"
-          label="Quét tiếp"
-          icon="pi pi-refresh"
-          severity="info"
-          @click="resetQRScanner"
-        />
-      </div>
-    </div>
-  </Dialog>
-</template>
-
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -2779,6 +1886,899 @@ watch(() => productStore.activeProducts, () => {
 }, { deep: true })
 </script>
 
+<template>
+  <div class="order-create-container">
+    <Toast />
+
+    <!-- Page Header -->
+    <div class="card mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+            <i class="pi pi-shop text-lg text-primary"></i>
+          </div>
+          <div>
+            <h1 class="font-semibold text-xl text-surface-900 m-0">
+              Bán hàng tại quầy
+            </h1>
+            <p class="text-surface-500 text-sm mt-1 mb-0">
+              Quản lý nhiều đơn hàng đồng thời với giao diện tab
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <Button
+            label="Quay lại"
+            icon="pi pi-arrow-left"
+            outlined
+            @click="$router.push('/orders')"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Tabs Navigation -->
+    <div class="card mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 flex-1 overflow-x-auto">
+          <!-- Order Tabs -->
+          <div
+            v-for="tab in orderTabs"
+            :key="tab.id"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all min-w-fit"
+            :class="{
+              'bg-primary text-white': activeTabId === tab.id,
+              'bg-surface-100 hover:bg-surface-200 text-surface-700': activeTabId !== tab.id
+            }"
+            @click="switchToTab(tab.id)"
+          >
+            <i class="pi pi-file text-sm"></i>
+            <span class="font-medium text-sm">{{ tab.maHoaDon }}</span>
+            <Badge
+              v-if="tab.sanPhamList.length > 0"
+              :value="tab.sanPhamList.length"
+              severity="info"
+              size="small"
+            />
+            <Button
+              icon="pi pi-times"
+              text
+              rounded
+              size="small"
+              class="w-5 h-5 ml-1"
+              :class="activeTabId === tab.id ? 'text-white hover:bg-white/20' : 'text-surface-500 hover:bg-surface-300'"
+              @click.stop="closeTabWithConfirmation(tab.id)"
+            />
+          </div>
+
+          <!-- Add New Tab Button -->
+          <Button
+            v-if="canCreateNewTab"
+            icon="pi pi-plus"
+            outlined
+            rounded
+            size="small"
+            class="min-w-fit"
+            @click="createNewOrderTab"
+            v-tooltip.top="'Tạo đơn hàng mới'"
+          />
+        </div>
+
+        <!-- Tab Actions -->
+        <div v-if="hasActiveTabs" class="flex items-center gap-2 ml-4">
+          <Button
+            icon="pi pi-refresh"
+            outlined
+            rounded
+            size="small"
+            @click="calculateTabTotals(activeTabId)"
+            v-tooltip.top="'Tính lại tổng tiền'"
+          />
+          <Button
+            icon="pi pi-trash"
+            outlined
+            rounded
+            size="small"
+            severity="danger"
+            @click="closeTabWithConfirmation(activeTabId)"
+            v-tooltip.top="'Đóng tab hiện tại'"
+          />
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Main Order Creation Interface -->
+    <div v-if="!hasActiveTabs" class="card">
+      <div class="text-center py-12">
+        <i class="pi pi-shopping-cart text-6xl text-surface-300 mb-4"></i>
+        <h3 class="text-xl font-semibold text-surface-600 mb-2">Chưa có đơn hàng nào</h3>
+        <p class="text-surface-500 mb-6">Nhấn nút "+" để tạo đơn hàng mới</p>
+        <Button
+          label="Tạo đơn hàng đầu tiên"
+          icon="pi pi-plus"
+          @click="createNewOrderTab"
+          size="large"
+        />
+      </div>
+    </div>
+
+    <!-- Active Order Tab Content -->
+    <div v-else-if="activeTab" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left Column: Product Selection & Order Items -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Product Search -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-search text-primary"></i>
+            Tìm kiếm sản phẩm
+          </div>
+
+          <div class="mb-4">
+            <InputGroup>
+              <InputGroupAddon v-if="productSearchQuery">
+                <Button
+                  icon="pi pi-times"
+                  text
+                  size="small"
+                  @click="productSearchQuery = ''; availableProducts = []"
+                  class="text-surface-400 hover:text-red-500"
+                />
+              </InputGroupAddon>
+              <InputText
+                v-model="productSearchQuery"
+                placeholder="Nhập tên sản phẩm, mã sản phẩm..."
+                @input="searchProducts"
+              />
+              <Button
+                icon="pi pi-search"
+                @click="() => searchProducts(true)"
+                outlined
+              />
+            </InputGroup>
+          </div>
+
+          <!-- Loading State -->
+          <div v-if="loadingProducts" class="text-center py-8 text-surface-500">
+            <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+            <p>Đang tải sản phẩm...</p>
+          </div>
+
+          <!-- Product DataTable -->
+          <div v-else class="max-h-96 overflow-y-auto">
+            <DataTable
+              :value="availableProducts"
+              :paginator="false"
+              :rows="10"
+              dataKey="id"
+              class="p-datatable-sm"
+              :scrollable="true"
+              scrollHeight="350px"
+            >
+              <Column field="hinhAnh" header="Ảnh" style="width: 80px">
+                <template #body="{ data }">
+                  <img
+                    :src="getProductImage(data) || '/placeholder-product.png'"
+                    :alt="data.tenSanPham"
+                    class="w-12 h-12 object-cover rounded"
+                  />
+                </template>
+              </Column>
+
+              <Column field="maSanPham" header="Mã sản phẩm" style="width: 120px">
+                <template #body="{ data }">
+                  <span class="font-mono text-sm bg-surface-100 px-2 py-1 rounded">
+                    {{ data.maSanPham }}
+                  </span>
+                </template>
+              </Column>
+
+              <Column field="tenSanPham" header="Tên sản phẩm" style="min-width: 200px">
+                <template #body="{ data }">
+                  <div class="font-medium text-sm">{{ data.tenSanPham }}</div>
+                </template>
+              </Column>
+
+              <Column field="thuongHieu" header="Thương hiệu" style="width: 120px">
+                <template #body="{ data }">
+                  <span v-if="data.thuongHieu" class="text-sm">
+                    {{ data.thuongHieu.moTaThuongHieu }}
+                  </span>
+                  <span v-else class="text-xs text-surface-400 italic">N/A</span>
+                </template>
+              </Column>
+
+              <Column field="price" header="Giá" style="width: 120px">
+                <template #body="{ data }">
+                  <div class="text-sm">
+                    <div v-if="hasPromotionalPrice(data)" class="space-y-1">
+                      <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(data)) }}</div>
+                      <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(data)) }}</div>
+                      <Badge :value="`-${getDiscountPercentage(data)}%`" severity="danger" size="small" />
+                    </div>
+                    <div v-else class="text-primary font-semibold">
+                      {{ formatCurrency(getProductPrice(data)) }}
+                    </div>
+                  </div>
+                </template>
+              </Column>
+
+              <Column field="actions" header="Thao tác" style="width: 100px">
+                <template #body="{ data }">
+                  <Button
+                    label="Chọn"
+                    icon="pi pi-plus"
+                    size="small"
+                    @click="showVariantSelectionDialog(data)"
+                    :disabled="getAvailableVariantsCount(data) === 0"
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="!loadingProducts && !availableProducts.length" class="text-center py-8 text-surface-500">
+            <i class="pi pi-search text-2xl mb-2"></i>
+            <p>Không tìm thấy sản phẩm nào</p>
+          </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-shopping-cart text-primary"></i>
+              Sản phẩm trong đơn hàng
+            </div>
+            <div class="flex items-center gap-2">
+              <Button
+                label="Quét QR Serial"
+                icon="pi pi-qrcode"
+                severity="info"
+                outlined
+                size="small"
+                @click="showQRScanner = true"
+                v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
+              />
+              <Badge
+                v-if="activeTab?.sanPhamList?.length > 0"
+                :value="activeTab.sanPhamList.length"
+                severity="info"
+              />
+            </div>
+          </div>
+
+          <!-- Order Items List -->
+          <div v-if="activeTab?.sanPhamList?.length" class="space-y-3 mb-4">
+            <div
+              v-for="(item, index) in activeTab.sanPhamList"
+              :key="index"
+              class="flex items-center gap-3 p-3 border rounded-lg"
+            >
+              <img
+                :src="getCartItemImage(item) || '/placeholder-product.png'"
+                :alt="getCartItemName(item)"
+                class="w-12 h-12 object-cover rounded"
+              />
+              <div class="flex-1">
+                <div class="font-medium text-sm">{{ getCartItemName(item) }}</div>
+                <div class="text-xs text-surface-500">{{ getCartItemCode(item) }}</div>
+                <div class="text-xs text-surface-600 mb-1">
+                  {{ getVariantDisplayInfo(item) }}
+                </div>
+                <div class="text-sm text-primary font-semibold">{{ formatCurrency(item.donGia) }}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button
+                  icon="pi pi-minus"
+                  text
+                  rounded
+                  size="small"
+                  @click="decreaseQuantity(index)"
+                  :disabled="item.soLuong <= 1"
+                />
+                <span class="text-sm font-medium w-8 text-center">{{ item.soLuong }}</span>
+                <Button
+                  icon="pi pi-plus"
+                  text
+                  rounded
+                  size="small"
+                  @click="increaseQuantity(index)"
+                  :disabled="!canIncreaseQuantity(item)"
+                />
+              </div>
+              <div class="text-right">
+                <div class="font-semibold text-primary">{{ formatCurrency(item.thanhTien) }}</div>
+              </div>
+              <Button
+                icon="pi pi-trash"
+                text
+                rounded
+                size="small"
+                severity="danger"
+                @click="removeFromActiveTab(index)"
+              />
+            </div>
+          </div>
+
+          <!-- Empty Cart -->
+          <div v-else class="text-center py-8 text-surface-500">
+            <i class="pi pi-shopping-cart text-2xl mb-2"></i>
+            <p class="text-sm">Chưa có sản phẩm nào trong đơn hàng</p>
+            <p class="text-xs">Tìm kiếm và thêm sản phẩm ở phía trên</p>
+          </div>
+        </div>
+
+        <!-- Product Recommendations Section -->
+        <div v-if="recommendedProducts.length > 0" class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-heart text-primary"></i>
+            Sản phẩm liên quan
+          </div>
+
+          <!-- Horizontal Product Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              v-for="product in recommendedProducts.slice(0, 6)"
+              :key="product.id"
+              class="border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
+              @click="showVariantSelectionDialog(product)"
+            >
+              <!-- Product Image -->
+              <div class="aspect-square mb-3 bg-surface-100 rounded-lg overflow-hidden">
+                <img
+                  :src="getRecommendationProductImage(product) || '/placeholder-product.png'"
+                  :alt="product.tenSanPham"
+                  class="w-full h-full object-cover"
+                  @error="onRecommendationImageError"
+                />
+              </div>
+
+              <!-- Product Info -->
+              <div class="space-y-2">
+                <h4 class="font-medium text-sm line-clamp-2">{{ product.tenSanPham }}</h4>
+
+                <div class="text-xs text-surface-500">
+                  {{ product.maSanPham }}
+                </div>
+
+                <div v-if="product.thuongHieu" class="text-xs text-surface-600">
+                  {{ product.thuongHieu.moTaThuongHieu }}
+                </div>
+
+                <!-- Price -->
+                <div class="text-sm">
+                  <div v-if="hasPromotionalPrice(product)" class="space-y-1">
+                    <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(product)) }}</div>
+                    <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(product)) }}</div>
+                  </div>
+                  <div v-else class="text-primary font-semibold">
+                    {{ formatCurrency(getProductPrice(product)) }}
+                  </div>
+                </div>
+
+                <!-- Available Variants -->
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-surface-500">
+                    {{ getAvailableVariantsCount(product) }} phiên bản
+                  </div>
+                  <Button
+                    icon="pi pi-plus"
+                    size="small"
+                    rounded
+                    :disabled="getAvailableVariantsCount(product) === 0"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Show More Button -->
+          <div v-if="allRecommendedProducts.length > 6" class="text-center mt-4">
+            <Button
+              :label="showAllRecommendations ? 'Thu gọn' : `Xem thêm ${allRecommendedProducts.length - 6} sản phẩm`"
+              icon="pi pi-angle-down"
+              :iconPos="showAllRecommendations ? 'right' : 'right'"
+              text
+              @click="toggleRecommendations"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Order Summary & Actions -->
+      <div class="lg:col-span-1 space-y-6">
+        <!-- Customer Selection -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-user text-primary"></i>
+              Khách hàng
+            </div>
+            <Button
+              label="Thêm nhanh"
+              icon="pi pi-user-plus"
+              size="small"
+              severity="success"
+              outlined
+              @click="showFastCustomerDialog"
+            />
+          </div>
+
+          <!-- Customer Search -->
+          <div class="mb-4">
+            <AutoComplete
+              v-model="selectedCustomer"
+              :suggestions="customerSuggestions"
+              @complete="searchCustomers"
+              @item-select="onCustomerSelect"
+              optionLabel="hoTen"
+              placeholder="Tìm kiếm khách hàng..."
+              fluid
+            >
+              <template #item="{ item }">
+                <div class="flex items-center gap-2 p-2">
+                  <Avatar :label="item.hoTen?.charAt(0)" size="small" />
+                  <div>
+                    <div class="font-medium">{{ item.hoTen }}</div>
+                    <div class="text-sm text-surface-500">{{ item.soDienThoai }}</div>
+                  </div>
+                </div>
+              </template>
+            </AutoComplete>
+          </div>
+
+          <!-- Selected Customer Display -->
+          <div v-if="activeTab?.khachHang" class="p-3 border rounded-lg bg-surface-50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <Avatar :label="activeTab.khachHang.hoTen?.charAt(0)" size="small" />
+                <div>
+                  <div class="font-semibold text-sm">{{ activeTab.khachHang.hoTen }}</div>
+                  <div class="text-xs text-surface-500">{{ activeTab.khachHang.soDienThoai }}</div>
+                </div>
+              </div>
+              <Button
+                icon="pi pi-times"
+                text
+                rounded
+                size="small"
+                @click="clearCustomerFromTab"
+                class="text-surface-400 hover:text-red-500"
+              />
+            </div>
+          </div>
+
+          <!-- Walk-in Customer Note -->
+          <div v-else class="text-center py-3 text-surface-500">
+            <i class="pi pi-user-plus text-lg mb-1"></i>
+            <p class="text-xs">Khách hàng vãng lai</p>
+          </div>
+        </div>
+
+        <!-- Staff Member Section -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-user-check text-primary"></i>
+            Nhân viên phụ trách
+          </div>
+
+          <!-- Staff Member Search -->
+          <div class="mb-4">
+            <AutoComplete
+              v-model="selectedStaffMember"
+              :suggestions="staffSuggestions"
+              @complete="searchStaffMembers"
+              @item-select="onStaffMemberSelect"
+              optionLabel="hoTen"
+              placeholder="Tìm kiếm nhân viên..."
+              fluid
+            >
+              <template #item="{ item }">
+                <div class="flex items-center gap-2 p-2">
+                  <Avatar :label="item.hoTen?.charAt(0)" size="small" />
+                  <div>
+                    <div class="font-medium">{{ item.hoTen }}</div>
+                    <div class="text-sm text-surface-500">{{ item.soDienThoai }}</div>
+                  </div>
+                </div>
+              </template>
+            </AutoComplete>
+          </div>
+
+          <!-- Selected Staff Member Display -->
+          <div v-if="activeTab?.nhanVien" class="p-3 border rounded-lg ">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <Avatar :label="activeTab.nhanVien.hoTen?.charAt(0)" size="small" />
+                <div>
+                  <div class="font-semibold text-sm">{{ activeTab.nhanVien.hoTen }}</div>
+                  <div class="text-xs ">{{ activeTab.nhanVien.soDienThoai }}</div>
+                </div>
+              </div>
+              <Button
+                icon="pi pi-times"
+                text
+                rounded
+                size="small"
+                @click="clearStaffMemberFromTab"
+                class="text-surface-400 hover:text-red-500"
+              />
+            </div>
+          </div>
+
+          <!-- Current User Note -->
+          <div v-else-if="currentStaffMember" class="text-center py-3 text-surface-500">
+            <i class="pi pi-user text-lg mb-1"></i>
+            <p class="text-xs">Sử dụng nhân viên hiện tại: {{ currentStaffMember.hoTen }}</p>
+          </div>
+
+          <!-- No Staff Member Note -->
+          <div v-else class="text-center py-3 text-surface-500">
+            <i class="pi pi-exclamation-triangle text-lg mb-1"></i>
+            <p class="text-xs">Chưa có nhân viên phụ trách</p>
+          </div>
+        </div>
+
+        <!-- Delivery Options -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-truck text-primary"></i>
+            Giao hàng
+          </div>
+
+          <div class="flex items-center justify-between mb-4">
+            <label class="font-medium">Giao hàng tận nơi</label>
+            <ToggleButton
+              v-model="activeTab.giaohang"
+              onLabel="Có"
+              offLabel="Không"
+              @change="onDeliveryToggle"
+              :disabled="!activeTab"
+            />
+          </div>
+
+          <!-- Delivery Address (when delivery is enabled) -->
+          <div v-if="activeTab?.giaohang" class="space-y-3">
+            <div v-if="activeTab?.khachHang?.diaChis?.length" class="space-y-2">
+              <label class="text-sm font-medium">Chọn địa chỉ giao hàng:</label>
+              <div
+                v-for="address in activeTab.khachHang.diaChis"
+                :key="address.id"
+                class="border rounded-lg p-2 cursor-pointer transition-all"
+                :class="{
+                  'border-primary bg-primary/5': activeTab?.diaChiGiaoHang?.id === address.id,
+                  'border-surface-200 hover:border-primary/50': activeTab?.diaChiGiaoHang?.id !== address.id
+                }"
+                @click="selectDeliveryAddress(address)"
+              >
+                <div class="text-sm font-medium">{{ address.loaiDiaChi }}</div>
+                <div class="text-xs text-surface-500">
+                  {{ address.duong }}, {{ address.phuongXa }}, {{ address.quanHuyen }}
+                </div>
+                <div class="text-xs text-surface-500">{{ address.tinhThanh }}</div>
+              </div>
+            </div>
+            <div v-else-if="activeTab?.khachHang" class="text-center py-4 text-surface-500">
+              <i class="pi pi-map-marker text-lg mb-2"></i>
+              <p class="text-xs mb-3">Khách hàng chưa có địa chỉ giao hàng</p>
+              <Button
+                label="Thêm địa chỉ giao hàng"
+                icon="pi pi-plus"
+                size="small"
+                severity="info"
+                outlined
+                @click="showFastAddressDialog"
+              />
+            </div>
+            <div v-else class="text-center py-3 text-surface-500">
+              <p class="text-xs">Vui lòng chọn khách hàng trước</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Voucher Section -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-tag text-primary"></i>
+            Voucher giảm giá
+          </div>
+
+          <!-- Voucher Input -->
+          <div class="mb-4">
+            <InputGroup>
+              <InputGroupAddon v-if="voucherCode">
+                <Button
+                  icon="pi pi-times"
+                  text
+                  size="small"
+                  @click="voucherCode = ''"
+                  class="text-surface-400 hover:text-red-500"
+                />
+              </InputGroupAddon>
+              <InputText
+                v-model="voucherCode"
+                placeholder="Nhập mã voucher..."
+                @keyup.enter="applyVoucher"
+              />
+              <Button
+                label="Áp dụng"
+                @click="applyVoucher"
+                :loading="applyingVoucher"
+                :disabled="!voucherCode.trim()"
+              />
+            </InputGroup>
+          </div>
+
+
+
+
+
+          <!-- Applied Vouchers -->
+          <div v-if="activeTab?.voucherList?.length" class="space-y-2 mb-4">
+            <div
+              v-for="(voucher, index) in activeTab.voucherList"
+              :key="index"
+              class="flex items-center justify-between p-3 border rounded-lg bg-green-50"
+            >
+              <div>
+                <div class="font-medium text-green-800 text-sm">{{ voucher.maPhieuGiamGia }}</div>
+                <div class="text-xs text-green-600">
+                  Giảm {{ formatCurrency(voucher.giaTriGiam) }}
+                </div>
+              </div>
+              <Button
+                icon="pi pi-times"
+                text
+                rounded
+                size="small"
+                severity="danger"
+                @click="removeVoucherFromTab(index)"
+              />
+            </div>
+          </div>
+
+          <!-- Available Vouchers -->
+          <div v-if="availableVouchers.length" class="mb-4">
+            <div class="font-medium mb-2 text-sm">Voucher khả dụng</div>
+            <div class="space-y-2 max-h-32 overflow-y-auto">
+              <div
+                v-for="voucher in availableVouchers"
+                :key="voucher.id"
+                class="flex items-center justify-between p-2 border rounded-lg hover:bg-surface-50 cursor-pointer"
+                @click="selectVoucher(voucher)"
+              >
+                <div>
+                  <div class="font-medium text-sm">{{ voucher.tenPhieuGiamGia }}</div>
+                  <div class="text-xs text-surface-500">{{ voucher.maPhieuGiamGia }}</div>
+                  <div class="text-xs text-primary">
+                    Giảm {{ formatCurrency(calculateVoucherDiscount(voucher)) }}
+                  </div>
+                </div>
+                <Button
+                  icon="pi pi-plus"
+                  text
+                  rounded
+                  size="small"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-credit-card text-primary"></i>
+            Thanh toán
+          </div>
+
+          <!-- Payment Methods -->
+          <div v-if="paymentMethods.length === 0" class="text-center py-4 text-surface-500 mb-4">
+            <i class="pi pi-info-circle text-2xl mb-2"></i>
+            <p>Không có phương thức thanh toán khả dụng</p>
+            <p class="text-sm">Vui lòng kiểm tra lại tùy chọn giao hàng</p>
+          </div>
+          <div v-else class="space-y-3 mb-4">
+            <div
+              v-for="method in paymentMethods"
+              :key="method.value"
+              class="border rounded-lg p-3 cursor-pointer transition-all"
+              :class="{
+                'border-primary bg-primary/5': activeTab?.phuongThucThanhToan === method.value,
+                'border-surface-200 hover:border-primary/50': activeTab?.phuongThucThanhToan !== method.value,
+                'opacity-50 cursor-not-allowed': !method.available
+              }"
+              @click="method.available && selectPaymentMethod(method.value)"
+            >
+              <div class="flex items-center gap-3">
+                <i :class="method.icon" class="text-lg text-primary"></i>
+                <div>
+                  <div class="font-semibold text-sm">{{ method.label }}</div>
+                  <div class="text-xs text-surface-500">{{ method.description }}</div>
+                  <div v-if="!method.available" class="text-xs text-red-500 mt-1">
+                    Không khả dụng
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="card border border-surface-200">
+          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
+            <i class="pi pi-calculator text-primary"></i>
+            Tổng kết đơn hàng
+          </div>
+
+          <div v-if="activeTab" class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span>Tạm tính:</span>
+              <span>{{ formatCurrency(activeTab.tongTienHang || 0) }}</span>
+            </div>
+            <div v-if="activeTab.giaTriGiamGiaVoucher > 0" class="flex justify-between text-green-600">
+              <span>Giảm giá voucher:</span>
+              <span>-{{ formatCurrency(activeTab.giaTriGiamGiaVoucher) }}</span>
+            </div>
+            <div v-if="activeTab.giaohang" class="flex justify-between">
+              <span>Phí giao hàng:</span>
+              <span>{{ formatCurrency(activeTab.phiVanChuyen || 0) }}</span>
+            </div>
+            <hr class="my-2">
+            <div class="flex justify-between font-semibold text-lg">
+              <span>Tổng cộng:</span>
+              <span class="text-primary">{{ formatCurrency(activeTab.tongThanhToan || 0) }}</span>
+            </div>
+
+            <!-- Customer Payment Section (for cash payments) -->
+            <div v-if="activeTab?.phuongThucThanhToan === 'TIEN_MAT'" class="mt-4 pt-4 border-t border-surface-200">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm font-medium mb-1">Khách hàng đưa:</label>
+                  <InputText
+                    v-model.number="customerPayment"
+                    type="number"
+                    placeholder="Nhập số tiền khách đưa..."
+                    class="w-full"
+                    :min="activeTab?.tongThanhToan || 0"
+                    @input="calculateChange"
+                  />
+                </div>
+                <div v-if="customerPayment >= (activeTab?.tongThanhToan || 0)" class="flex justify-between font-semibold text-lg">
+                  <span>Tiền trả lại:</span>
+                  <span class="text-green-600">{{ formatCurrency(changeAmount) }}</span>
+                </div>
+                <div v-else-if="customerPayment > 0" class="text-red-500 text-sm">
+                  Số tiền không đủ (thiếu {{ formatCurrency((activeTab?.tongThanhToan || 0) - customerPayment) }})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create Order Button -->
+          <div class="mt-6 pt-4 border-t border-surface-200">
+            <Button
+              label="Tạo đơn hàng"
+              icon="pi pi-check"
+              severity="success"
+              size="large"
+              class="w-full"
+              @click="createOrderFromActiveTab"
+              :loading="creating"
+              :disabled="!canCreateActiveOrder || creating"
+            />
+            <div v-if="!canCreateActiveOrder" class="text-center mt-2">
+              <small class="text-surface-500">
+                <span v-if="!activeTab?.sanPhamList?.length">Vui lòng thêm sản phẩm vào đơn hàng</span>
+                <span v-else-if="!activeTab?.phuongThucThanhToan">Vui lòng chọn phương thức thanh toán</span>
+                <span v-else-if="activeTab?.giaohang && (!activeTab?.khachHang || !activeTab?.diaChiGiaoHang)">
+                  Vui lòng chọn khách hàng và địa chỉ giao hàng
+                </span>
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Product Variant Selection Dialog -->
+  <ProductVariantDialog
+    v-model:visible="variantDialogVisible"
+    :product="selectedProductForVariants"
+    @variant-selected="addVariantToActiveTab"
+  />
+
+  <!-- Fast Customer Creation Dialog -->
+  <FastCustomerCreate
+    v-model:visible="fastCustomerDialogVisible"
+    @customer-created="onCustomerCreated"
+  />
+
+  <!-- Fast Address Creation Dialog -->
+  <FastAddressCreate
+    v-model:visible="fastAddressDialogVisible"
+    :customer="activeTab?.khachHang"
+    @address-created="onAddressCreated"
+  />
+
+  <!-- QR Scanner Dialog -->
+  <Dialog
+    v-model:visible="showQRScanner"
+    modal
+    header="Quét QR Serial Number"
+    :style="{ width: '500px' }"
+    @hide="stopQRScanner"
+    :closable="true"
+  >
+    <div class="text-center">
+      <p class="mb-4">Quét mã QR chứa serial number để tự động thêm vào giỏ hàng</p>
+      <div class="border-2 border-primary border-dashed rounded-lg p-4 mb-4">
+        <!-- QR Scanner component -->
+        <div class="flex flex-col items-center justify-center">
+          <div v-if="!qrScanResult" class="w-full">
+            <div v-if="!cameraError">
+              <qrcode-stream
+                @detect="onQRDetect"
+                @init="onQRInit"
+                :track="paintBoundingBox"
+                class="w-full h-64 rounded-lg overflow-hidden"
+              />
+              <p class="text-surface-600 mt-2">Đưa mã QR chứa serial number vào khung hình</p>
+            </div>
+            <div v-else class="p-4 bg-red-50 rounded-lg">
+              <i class="pi pi-exclamation-triangle text-red-500 text-xl"></i>
+              <p class="text-red-700 font-medium mt-2">Lỗi khi truy cập camera</p>
+              <p class="mt-2">{{ cameraError }}</p>
+              <Button
+                label="Cấp quyền camera"
+                icon="pi pi-camera"
+                severity="info"
+                @click="requestCameraPermission"
+                class="mt-3"
+              />
+            </div>
+          </div>
+          <div v-else class="p-4 bg-green-50 rounded-lg w-full">
+            <p class="text-green-700 font-medium">Quét thành công!</p>
+            <p class="mt-2 font-mono">{{ qrScanResult }}</p>
+            <div v-if="qrProcessingResult" class="mt-3">
+              <div v-if="qrProcessingResult.success" class="text-green-600">
+                <i class="pi pi-check-circle mr-2"></i>
+                {{ qrProcessingResult.message }}
+              </div>
+              <div v-else class="text-red-600">
+                <i class="pi pi-times-circle mr-2"></i>
+                {{ qrProcessingResult.message }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-center gap-2">
+        <Button
+          label="Đóng"
+          icon="pi pi-times"
+          severity="secondary"
+          @click="showQRScanner = false"
+        />
+        <Button
+          v-if="qrScanResult && qrProcessingResult?.success"
+          label="Quét tiếp"
+          icon="pi pi-refresh"
+          severity="info"
+          @click="resetQRScanner"
+        />
+      </div>
+    </div>
+  </Dialog>
+</template>
+
 <style scoped>
 .line-clamp-2 {
   display: -webkit-box;
@@ -2788,3 +2788,5 @@ watch(() => productStore.activeProducts, () => {
   overflow: hidden;
 }
 </style>
+
+

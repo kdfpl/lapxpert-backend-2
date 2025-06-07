@@ -1373,7 +1373,7 @@ const handleSubmit = async () => {
       router.push({ name: 'employees' })
     }
   } catch (error) {
-    const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi xử lý yêu cầu'
+    const errorMessage = error.message || 'Có lỗi xảy ra khi xử lý yêu cầu'
     toast.add({
       severity: 'error',
       summary: 'Lỗi',

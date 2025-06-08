@@ -520,18 +520,17 @@
                 v-tooltip.top="'Xem chi tiết'"
               />
               <Button
-                v-if="data.trangThaiDonHang !== 'DA_HUY'"
+                v-if="shouldShowEditButton(data)"
                 icon="pi pi-pencil"
                 text
                 rounded
                 size="small"
                 @click="editOrder(data)"
                 class="!w-8 !h-8 !text-green-500 hover:!bg-green-50"
-                v-tooltip.top="'Cập nhật trạng thái'"
-                :disabled="!canEditOrder(data)"
+                v-tooltip.top="'Chỉnh sửa đơn hàng'"
               />
               <Button
-                v-if="data.trangThaiDonHang !== 'DA_HUY'"
+                v-if="shouldShowDeleteButton(data)"
                 icon="pi pi-times"
                 text
                 rounded
@@ -547,13 +546,6 @@
         </Column>
       </DataTable>
     </div>
-
-    <!-- Order Status Update Dialog -->
-    <OrderStatusDialog
-      v-model:visible="statusDialogVisible"
-      :order="selectedOrder"
-      @updated="onOrderUpdated"
-    />
 
     <!-- Order Cancel Dialog -->
     <OrderCancelDialog
@@ -637,7 +629,6 @@ import Toast from 'primevue/toast'
 import Textarea from 'primevue/textarea'
 
 // Order Components
-import OrderStatusDialog from '@/components/orders/OrderStatusDialog.vue'
 import OrderCancelDialog from '@/components/orders/OrderCancelDialog.vue'
 
 // --- 1. Store Access ---
@@ -651,7 +642,6 @@ const selectedOrder = ref({}) // Holds the order being edited
 const selectedOrders = ref([]) // For multi-select in the main table
 
 // Component State - UI Control (Dialogs, Table, Form)
-const statusDialogVisible = ref(false)
 const cancelDialogVisible = ref(false)
 const batchCancelDialogVisible = ref(false)
 
@@ -851,27 +841,31 @@ const setQuickDateFilter = (period) => {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
   switch (period) {
-    case 'today':
+    case 'today': {
       filters.value.ngayTaoTu.constraints[0].value = startOfToday
       filters.value.ngayTaoDen.constraints[0].value = startOfToday
       break
-    case 'week':
+    }
+    case 'week': {
       const weekAgo = new Date(startOfToday)
       weekAgo.setDate(weekAgo.getDate() - 7)
       filters.value.ngayTaoTu.constraints[0].value = weekAgo
       filters.value.ngayTaoDen.constraints[0].value = startOfToday
       break
-    case 'month':
+    }
+    case 'month': {
       const monthAgo = new Date(startOfToday)
       monthAgo.setDate(monthAgo.getDate() - 30)
       filters.value.ngayTaoTu.constraints[0].value = monthAgo
       filters.value.ngayTaoDen.constraints[0].value = startOfToday
       break
-    case 'thisMonth':
+    }
+    case 'thisMonth': {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
       filters.value.ngayTaoTu.constraints[0].value = startOfMonth
       filters.value.ngayTaoDen.constraints[0].value = startOfToday
       break
+    }
   }
 }
 
@@ -900,8 +894,7 @@ const viewOrder = (order) => {
 }
 
 const editOrder = (order) => {
-  selectedOrder.value = order
-  statusDialogVisible.value = true
+  router.push(`/orders/${order.id}/edit`)
 }
 
 const cancelOrder = (order) => {
@@ -909,13 +902,30 @@ const cancelOrder = (order) => {
   cancelDialogVisible.value = true
 }
 
-const canEditOrder = (order) => {
-  return !['DA_HUY', 'HOAN_THANH', 'TRA_HANG'].includes(order.trangThaiDonHang)
-}
-
 const canCancelOrder = (order) => {
   return !['DA_HUY', 'HOAN_THANH', 'TRA_HANG'].includes(order.trangThaiDonHang)
 }
+
+// Conditional button visibility methods
+const shouldShowEditButton = (order) => {
+  // Hide edit button when payment status is DA_THANH_TOAN (Paid)
+  if (order.trangThaiThanhToan === 'DA_THANH_TOAN') {
+    return false
+  }
+  // Show edit button only when order status is CHO_XAC_NHAN (Pending Confirmation)
+  return order.trangThaiDonHang === 'CHO_XAC_NHAN'
+}
+
+const shouldShowDeleteButton = (order) => {
+  // Hide delete button when payment status is DA_THANH_TOAN (Paid)
+  if (order.trangThaiThanhToan === 'DA_THANH_TOAN') {
+    return false
+  }
+  // Show delete button for orders that can be cancelled
+  return canCancelOrder(order)
+}
+
+
 
 // Batch Operations
 const confirmCancelMultipleOrders = () => {
@@ -1014,17 +1024,6 @@ const exportOrders = async () => {
 }
 
 // Event Handlers
-const onOrderUpdated = () => {
-  statusDialogVisible.value = false
-  refreshData()
-  toast.add({
-    severity: 'success',
-    summary: 'Thành công',
-    detail: 'Cập nhật trạng thái đơn hàng thành công',
-    life: 3000
-  })
-}
-
 const onOrderCancelled = () => {
   cancelDialogVisible.value = false
   refreshData()
@@ -1057,6 +1056,11 @@ const formatDateTime = (date) => {
 
 // --- 5. Lifecycle ---
 onBeforeMount(async () => {
+  // Auto-populate "Ngày tạo từ" with today's date
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  filters.value.ngayTaoTu.constraints[0].value = startOfToday
+
   await refreshData()
 })
 </script>

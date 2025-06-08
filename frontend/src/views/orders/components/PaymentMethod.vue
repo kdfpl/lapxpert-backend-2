@@ -10,30 +10,30 @@
 
     <!-- Payment Method Selection -->
     <div class="space-y-4">
-      <div 
-        v-for="method in availablePaymentMethods" 
+      <div
+        v-for="method in availablePaymentMethods"
         :key="method.value"
         class="payment-method-option"
-        :class="{ 
+        :class="{
           'selected': selectedMethod === method.value,
-          'disabled': !method.available 
+          'disabled': !method.available
         }"
         @click="selectPaymentMethod(method)"
       >
         <div class="flex items-center gap-4">
           <!-- Radio Button -->
-          <RadioButton 
-            v-model="selectedMethod" 
-            :value="method.value" 
+          <RadioButton
+            v-model="selectedMethod"
+            :value="method.value"
             :disabled="!method.available"
             :input-id="method.value"
           />
-          
+
           <!-- Method Icon -->
           <div class="payment-icon">
             <i :class="method.icon" class="text-2xl"></i>
           </div>
-          
+
           <!-- Method Details -->
           <div class="flex-1">
             <label :for="method.value" class="payment-label">
@@ -42,20 +42,20 @@
             <p class="payment-description">
               {{ method.description }}
             </p>
-            
+
             <!-- Additional Info -->
             <div v-if="method.additionalInfo" class="payment-additional-info">
               <i class="pi pi-info-circle text-blue-500 mr-1"></i>
               {{ method.additionalInfo }}
             </div>
-            
+
             <!-- Unavailable Reason -->
             <div v-if="!method.available && method.unavailableReason" class="payment-unavailable">
               <i class="pi pi-exclamation-triangle text-orange-500 mr-1"></i>
               {{ method.unavailableReason }}
             </div>
           </div>
-          
+
           <!-- Method Badge -->
           <div v-if="method.badge" class="payment-badge">
             <Badge :value="method.badge.text" :severity="method.badge.severity" />
@@ -70,14 +70,14 @@
         <i class="pi pi-info-circle text-primary"></i>
         <span class="font-semibold">Hướng dẫn thanh toán</span>
       </div>
-      
+
       <div class="space-y-3">
         <div v-for="instruction in selectedMethodInfo.instructions" :key="instruction" class="flex items-start gap-2">
           <i class="pi pi-check-circle text-green-500 mt-1 text-sm"></i>
           <span class="text-sm text-surface-600 dark:text-surface-400">{{ instruction }}</span>
         </div>
       </div>
-      
+
       <!-- Processing Time -->
       <div v-if="selectedMethodInfo.processingTime" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <div class="flex items-center gap-2">
@@ -98,17 +98,17 @@
 
     <!-- Action Buttons -->
     <div v-if="showActions" class="flex justify-between items-center mt-6">
-      <Button 
-        label="Quay lại" 
-        icon="pi pi-arrow-left" 
-        severity="secondary" 
+      <Button
+        label="Quay lại"
+        icon="pi pi-arrow-left"
+        severity="secondary"
         outlined
         @click="$emit('back')"
       />
-      
-      <Button 
-        label="Xác nhận thanh toán" 
-        icon="pi pi-check" 
+
+      <Button
+        label="Xác nhận thanh toán"
+        icon="pi pi-check"
         :disabled="!selectedMethod || !isValidSelection"
         :loading="processing"
         @click="confirmPayment"
@@ -162,7 +162,7 @@ const validationError = ref('')
 // Computed properties
 const availablePaymentMethods = computed(() => {
   const methods = []
-  
+
   // TIEN_MAT - Only for TAI_QUAY orders
   if (props.orderType === 'TAI_QUAY') {
     methods.push({
@@ -175,7 +175,7 @@ const availablePaymentMethods = computed(() => {
       additionalInfo: 'Thanh toán ngay lập tức, đơn hàng hoàn thành'
     })
   }
-  
+
   // COD - Available when delivery is enabled
   if (props.hasDelivery) {
     methods.push({
@@ -197,24 +197,24 @@ const availablePaymentMethods = computed(() => {
       unavailableReason: 'Cần bật giao hàng để sử dụng COD'
     })
   }
-  
+
   // VNPAY - Available for both order types
   methods.push({
     value: 'VNPAY',
-    label: 'VNPay',
+    label: 'Chuyển khoản',
     description: 'Thanh toán qua ví điện tử VNPay',
     icon: 'pi pi-credit-card',
     available: true,
     badge: { text: 'Trực tuyến', severity: 'primary' },
     additionalInfo: 'Hỗ trợ thẻ ATM, Internet Banking, QR Code'
   })
-  
+
   return methods
 })
 
 const selectedMethodInfo = computed(() => {
   if (!selectedMethod.value) return null
-  
+
   const methodDetails = {
     'TIEN_MAT': {
       instructions: [
@@ -244,7 +244,7 @@ const selectedMethodInfo = computed(() => {
       processingTime: '1-5 phút'
     }
   }
-  
+
   return methodDetails[selectedMethod.value]
 })
 
@@ -273,7 +273,7 @@ const selectPaymentMethod = (method) => {
     })
     return
   }
-  
+
   selectedMethod.value = method.value
 }
 
@@ -282,12 +282,12 @@ const confirmPayment = () => {
     validationError.value = 'Vui lòng chọn phương thức thanh toán'
     return
   }
-  
+
   if (!isValidSelection.value) {
     validationError.value = 'Phương thức thanh toán đã chọn không khả dụng'
     return
   }
-  
+
   emit('confirm', selectedMethod.value)
 }
 </script>

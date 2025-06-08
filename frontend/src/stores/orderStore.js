@@ -570,6 +570,47 @@ export const useOrderStore = defineStore('order', () => {
     }
   }
 
+  const updateOrder = async (id, updateData) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      console.log('OrderStore: updateOrder called with id:', id)
+      console.log('OrderStore: updateData:', updateData)
+
+      const response = await orderApi.updateOrder(id, updateData)
+      console.log('OrderStore: API response:', response)
+
+      if (response.success) {
+        // Update the order in the local state
+        const orderIndex = orders.value.findIndex(order => order.id === id)
+        if (orderIndex !== -1) {
+          orders.value[orderIndex] = response.data
+        }
+
+        // Update current order if it's the same
+        if (currentOrder.value?.id === id) {
+          currentOrder.value = response.data
+        }
+
+        // Invalidate order caches since we updated an order
+        orderCache.invalidateByPattern('^orderList:')
+        orderCache.invalidateByPattern(`^orderDetail:${id}`)
+
+        console.log('OrderStore: Order updated successfully:', response.data)
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to update order')
+      }
+    } catch (err) {
+      console.error('OrderStore: Error updating order:', err)
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const cancelOrder = async (orderId, reason) => {
     loading.value = true
     error.value = null
@@ -982,6 +1023,7 @@ export const useOrderStore = defineStore('order', () => {
     fetchOrders,
     fetchOrderById,
     createOrder,
+    updateOrder,
     createOrderFromTab,
     updateOrderStatus,
     cancelOrder,

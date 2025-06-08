@@ -99,7 +99,30 @@
       </div>
     </div>
 
+    <!-- Product Selection Section -->
+    <div v-if="hasActiveTabs" class="card mb-6">
 
+      <div class="flex items-center justify-end gap-3">
+        <!-- QR Scanner Button (moved from Order Items section) -->
+        <Button
+          label="Quét QR Serial"
+          icon="pi pi-qrcode"
+          severity="info"
+          outlined
+          @click="showQRScanner = true"
+          v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
+        />
+
+        <!-- Product Selection Button -->
+        <Button
+          label="Chọn sản phẩm"
+          icon="pi pi-plus"
+          severity="primary"
+          @click="showProductSelectionDialog"
+          v-tooltip.top="'Chọn sản phẩm từ danh sách'"
+        />
+      </div>
+    </div>
 
     <!-- Main Order Creation Interface -->
     <div v-if="!hasActiveTabs" class="card">
@@ -120,122 +143,7 @@
     <div v-else-if="activeTab" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left Column: Product Selection & Order Items -->
       <div class="lg:col-span-2 space-y-6">
-        <!-- Product Search -->
-        <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-search text-primary"></i>
-            Tìm kiếm sản phẩm
-          </div>
 
-          <div class="mb-4">
-            <InputGroup>
-              <InputGroupAddon v-if="productSearchQuery">
-                <Button
-                  icon="pi pi-times"
-                  text
-                  size="small"
-                  @click="productSearchQuery = ''; availableProducts = []"
-                  class="text-surface-400 hover:text-red-500"
-                />
-              </InputGroupAddon>
-              <InputText
-                v-model="productSearchQuery"
-                placeholder="Nhập tên sản phẩm, mã sản phẩm..."
-                @input="searchProducts"
-              />
-              <Button
-                icon="pi pi-search"
-                @click="() => searchProducts(true)"
-                outlined
-              />
-            </InputGroup>
-          </div>
-
-          <!-- Loading State -->
-          <div v-if="loadingProducts" class="text-center py-8 text-surface-500">
-            <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
-            <p>Đang tải sản phẩm...</p>
-          </div>
-
-          <!-- Product DataTable -->
-          <div v-else class="max-h-96 overflow-y-auto">
-            <DataTable
-              :value="availableProducts"
-              :paginator="false"
-              :rows="10"
-              dataKey="id"
-              class="p-datatable-sm"
-              :scrollable="true"
-              scrollHeight="350px"
-            >
-              <Column field="hinhAnh" header="Ảnh" style="width: 80px">
-                <template #body="{ data }">
-                  <img
-                    :src="getProductImage(data) || '/placeholder-product.png'"
-                    :alt="data.tenSanPham"
-                    class="w-12 h-12 object-cover rounded"
-                  />
-                </template>
-              </Column>
-
-              <Column field="maSanPham" header="Mã sản phẩm" style="width: 120px">
-                <template #body="{ data }">
-                  <span class="font-mono text-sm bg-surface-100 px-2 py-1 rounded">
-                    {{ data.maSanPham }}
-                  </span>
-                </template>
-              </Column>
-
-              <Column field="tenSanPham" header="Tên sản phẩm" style="min-width: 200px">
-                <template #body="{ data }">
-                  <div class="font-medium text-sm">{{ data.tenSanPham }}</div>
-                </template>
-              </Column>
-
-              <Column field="thuongHieu" header="Thương hiệu" style="width: 120px">
-                <template #body="{ data }">
-                  <span v-if="data.thuongHieu" class="text-sm">
-                    {{ data.thuongHieu.moTaThuongHieu }}
-                  </span>
-                  <span v-else class="text-xs text-surface-400 italic">N/A</span>
-                </template>
-              </Column>
-
-              <Column field="price" header="Giá" style="width: 120px">
-                <template #body="{ data }">
-                  <div class="text-sm">
-                    <div v-if="hasPromotionalPrice(data)" class="space-y-1">
-                      <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(data)) }}</div>
-                      <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(data)) }}</div>
-                      <Badge :value="`-${getDiscountPercentage(data)}%`" severity="danger" size="small" />
-                    </div>
-                    <div v-else class="text-primary font-semibold">
-                      {{ formatCurrency(getProductPrice(data)) }}
-                    </div>
-                  </div>
-                </template>
-              </Column>
-
-              <Column field="actions" header="Thao tác" style="width: 100px">
-                <template #body="{ data }">
-                  <Button
-                    label="Chọn"
-                    icon="pi pi-plus"
-                    size="small"
-                    @click="showVariantSelectionDialog(data)"
-                    :disabled="getAvailableVariantsCount(data) === 0"
-                  />
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-
-          <!-- Empty State -->
-          <div v-if="!loadingProducts && !availableProducts.length" class="text-center py-8 text-surface-500">
-            <i class="pi pi-search text-2xl mb-2"></i>
-            <p>Không tìm thấy sản phẩm nào</p>
-          </div>
-        </div>
 
         <!-- Order Items -->
         <div class="card border border-surface-200">
@@ -245,15 +153,6 @@
               Sản phẩm trong đơn hàng
             </div>
             <div class="flex items-center gap-2">
-              <Button
-                label="Quét QR Serial"
-                icon="pi pi-qrcode"
-                severity="info"
-                outlined
-                size="small"
-                @click="showQRScanner = true"
-                v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
-              />
               <Badge
                 v-if="activeTab?.sanPhamList?.length > 0"
                 :value="activeTab.sanPhamList.length"
@@ -267,42 +166,34 @@
             <div
               v-for="(item, index) in activeTab.sanPhamList"
               :key="index"
-              class="flex items-center gap-3 p-3 border rounded-lg"
+              class="flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow"
             >
               <img
                 :src="getCartItemImage(item) || '/placeholder-product.png'"
                 :alt="getCartItemName(item)"
-                class="w-12 h-12 object-cover rounded"
+                class="w-14 h-14 object-cover rounded-lg"
               />
-              <div class="flex-1">
-                <div class="font-medium text-sm">{{ getCartItemName(item) }}</div>
-                <div class="text-xs text-surface-500">{{ getCartItemCode(item) }}</div>
-                <div class="text-xs text-surface-600 mb-1">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm mb-1">{{ getCartItemName(item) }}</div>
+                <div class="text-xs text-surface-500 mb-1">{{ getCartItemCode(item) }}</div>
+                <div class="text-xs text-surface-600 mb-2">
                   {{ getVariantDisplayInfo(item) }}
                 </div>
                 <div class="text-sm text-primary font-semibold">{{ formatCurrency(item.donGia) }}</div>
               </div>
-              <div class="flex items-center gap-2">
-                <Button
-                  icon="pi pi-minus"
-                  text
-                  rounded
-                  size="small"
-                  @click="decreaseQuantity(index)"
-                  :disabled="item.soLuong <= 1"
-                />
-                <span class="text-sm font-medium w-8 text-center">{{ item.soLuong }}</span>
-                <Button
-                  icon="pi pi-plus"
-                  text
-                  rounded
-                  size="small"
-                  @click="increaseQuantity(index)"
-                  :disabled="!canIncreaseQuantity(item)"
-                />
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg shadow-sm">
+                  <i class="pi pi-barcode text-primary text-lg"></i>
+                  <div class="flex flex-col">
+                    <span class="text-xs text-surface-500 uppercase tracking-wide font-medium">Serial</span>
+                    <span class="text-sm font-bold font-mono text-primary">
+                      {{ item.sanPhamChiTiet?.serialNumber || 'N/A' }}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div class="text-right">
-                <div class="font-semibold text-primary">{{ formatCurrency(item.thanhTien) }}</div>
+              <div class="text-right min-w-0">
+                <div class="font-semibold text-lg text-primary">{{ formatCurrency(item.thanhTien) }}</div>
               </div>
               <Button
                 icon="pi pi-trash"
@@ -311,6 +202,7 @@
                 size="small"
                 severity="danger"
                 @click="removeFromActiveTab(index)"
+                v-tooltip.top="'Xóa khỏi giỏ hàng'"
               />
             </div>
           </div>
@@ -323,81 +215,7 @@
           </div>
         </div>
 
-        <!-- Product Recommendations Section -->
-        <div v-if="recommendedProducts.length > 0" class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-heart text-primary"></i>
-            Sản phẩm bạn có thể quan tâm
-          </div>
 
-          <!-- Horizontal Product Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-              v-for="product in recommendedProducts.slice(0, 6)"
-              :key="product.id"
-              class="border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
-              @click="showVariantSelectionDialog(product)"
-            >
-              <!-- Product Image -->
-              <div class="aspect-square mb-3 bg-surface-100 rounded-lg overflow-hidden">
-                <img
-                  :src="getRecommendationProductImage(product) || '/placeholder-product.png'"
-                  :alt="product.tenSanPham"
-                  class="w-full h-full object-cover"
-                  @error="onRecommendationImageError"
-                />
-              </div>
-
-              <!-- Product Info -->
-              <div class="space-y-2">
-                <h4 class="font-medium text-sm line-clamp-2">{{ product.tenSanPham }}</h4>
-
-                <div class="text-xs text-surface-500">
-                  {{ product.maSanPham }}
-                </div>
-
-                <div v-if="product.thuongHieu" class="text-xs text-surface-600">
-                  {{ product.thuongHieu.moTaThuongHieu }}
-                </div>
-
-                <!-- Price -->
-                <div class="text-sm">
-                  <div v-if="hasPromotionalPrice(product)" class="space-y-1">
-                    <div class="text-red-500 font-semibold">{{ formatCurrency(getProductPrice(product)) }}</div>
-                    <div class="text-xs text-surface-500 line-through">{{ formatCurrency(getOriginalPrice(product)) }}</div>
-                  </div>
-                  <div v-else class="text-primary font-semibold">
-                    {{ formatCurrency(getProductPrice(product)) }}
-                  </div>
-                </div>
-
-                <!-- Available Variants -->
-                <div class="flex items-center justify-between">
-                  <div class="text-xs text-surface-500">
-                    {{ getAvailableVariantsCount(product) }} phiên bản
-                  </div>
-                  <Button
-                    icon="pi pi-plus"
-                    size="small"
-                    rounded
-                    :disabled="getAvailableVariantsCount(product) === 0"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Show More Button -->
-          <div v-if="allRecommendedProducts.length > 6" class="text-center mt-4">
-            <Button
-              :label="showAllRecommendations ? 'Thu gọn' : `Xem thêm ${allRecommendedProducts.length - 6} sản phẩm`"
-              icon="pi pi-angle-down"
-              :iconPos="showAllRecommendations ? 'right' : 'right'"
-              text
-              @click="toggleRecommendations"
-            />
-          </div>
-        </div>
       </div>
 
       <!-- Right Column: Order Summary & Actions -->
@@ -426,16 +244,16 @@
               :suggestions="customerSuggestions"
               @complete="searchCustomers"
               @item-select="onCustomerSelect"
-              optionLabel="hoTen"
-              placeholder="Tìm kiếm khách hàng..."
+              :optionLabel="getCustomerDisplayLabel"
+              placeholder="Tìm kiếm khách hàng (tên hoặc số điện thoại)..."
               fluid
             >
               <template #item="{ item }">
                 <div class="flex items-center gap-2 p-2">
                   <Avatar :label="item.hoTen?.charAt(0)" size="small" />
                   <div>
-                    <div class="font-medium">{{ item.hoTen }}</div>
-                    <div class="text-sm text-surface-500">{{ item.soDienThoai }}</div>
+                    <div class="font-medium">{{ item.hoTen }} - {{ item.soDienThoai }}</div>
+                    <div class="text-sm text-surface-500">{{ item.email || 'Không có email' }}</div>
                   </div>
                 </div>
               </template>
@@ -521,12 +339,6 @@
             </div>
           </div>
 
-          <!-- Current User Note -->
-          <div v-else-if="currentStaffMember" class="text-center py-3 text-surface-500">
-            <i class="pi pi-user text-lg mb-1"></i>
-            <p class="text-xs">Sử dụng nhân viên hiện tại: {{ currentStaffMember.hoTen }}</p>
-          </div>
-
           <!-- No Staff Member Note -->
           <div v-else class="text-center py-3 text-surface-500">
             <i class="pi pi-exclamation-triangle text-lg mb-1"></i>
@@ -598,46 +410,27 @@
             Voucher giảm giá
           </div>
 
-          <!-- Voucher Input -->
-          <div class="mb-4">
-            <InputGroup>
-              <InputGroupAddon v-if="voucherCode">
-                <Button
-                  icon="pi pi-times"
-                  text
-                  size="small"
-                  @click="voucherCode = ''"
-                  class="text-surface-400 hover:text-red-500"
-                />
-              </InputGroupAddon>
-              <InputText
-                v-model="voucherCode"
-                placeholder="Nhập mã voucher..."
-                @keyup.enter="applyVoucher"
-              />
-              <Button
-                label="Áp dụng"
-                @click="applyVoucher"
-                :loading="applyingVoucher"
-                :disabled="!voucherCode.trim()"
-              />
-            </InputGroup>
-          </div>
-
-
-
 
 
           <!-- Applied Vouchers -->
           <div v-if="activeTab?.voucherList?.length" class="space-y-2 mb-4">
+            <div class="font-medium mb-3 text-sm flex items-center gap-2">
+              <i class="pi pi-sparkles text-primary"></i>
+              Voucher tự động áp dụng
+            </div>
             <div
               v-for="(voucher, index) in activeTab.voucherList"
               :key="index"
-              class="flex items-center justify-between p-3 border rounded-lg bg-green-50"
+              class="relative flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200"
             >
-              <div>
+              <!-- Best Overall Voucher Indicator (only for applied vouchers that are best overall) -->
+              <div v-if="isBestVoucher(voucher)" class="absolute -top-2 -right-2">
+                <Badge value="Lựa chọn tốt nhất" severity="success" size="small" />
+              </div>
+
+              <div class="flex-1">
                 <div class="font-medium text-green-800 text-sm">{{ voucher.maPhieuGiamGia }}</div>
-                <div class="text-xs text-green-600">
+                <div class="text-xs text-green-600 mt-1">
                   Giảm {{ formatCurrency(voucher.giaTriGiam) }}
                 </div>
               </div>
@@ -652,31 +445,105 @@
             </div>
           </div>
 
-          <!-- Available Vouchers -->
-          <div v-if="availableVouchers.length" class="mb-4">
-            <div class="font-medium mb-2 text-sm">Voucher khả dụng</div>
-            <div class="space-y-2 max-h-32 overflow-y-auto">
+          <!-- Available Vouchers Display -->
+          <div v-if="displayedAvailableVouchers.length" class="mb-4">
+            <div class="font-medium mb-3 text-sm flex items-center gap-2">
+              <i class="pi pi-sparkles text-primary"></i>
+              Voucher khả dụng
+            </div>
+
+            <!-- Voucher Cards Container (No Scrollbar) -->
+            <div class="space-y-3">
               <div
-                v-for="voucher in availableVouchers"
+                v-for="voucher in displayedAvailableVouchers"
                 :key="voucher.id"
-                class="flex items-center justify-between p-2 border rounded-lg hover:bg-surface-50 cursor-pointer"
+                class="relative p-3 border rounded-lg transition-all cursor-pointer hover:shadow-md"
+                :class="{
+                  'border-green-500 bg-green-50': isBestAvailableVoucher(voucher),
+                  'border-surface-200 bg-surface-50': !isBestAvailableVoucher(voucher)
+                }"
                 @click="selectVoucher(voucher)"
               >
-                <div>
-                  <div class="font-medium text-sm">{{ voucher.tenPhieuGiamGia }}</div>
-                  <div class="text-xs text-surface-500">{{ voucher.maPhieuGiamGia }}</div>
-                  <div class="text-xs text-primary">
-                    Giảm {{ formatCurrency(calculateVoucherDiscount(voucher)) }}
-                  </div>
+                <!-- Best Overall Voucher Indicator (only for available vouchers that are best overall) -->
+                <div v-if="isBestAvailableVoucher(voucher)" class="absolute -top-2 -right-2">
+                  <Badge value="Lựa chọn tốt nhất" severity="success" size="small" />
                 </div>
-                <Button
-                  icon="pi pi-plus"
-                  text
-                  rounded
-                  size="small"
-                />
+
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="font-semibold text-sm mb-1" :class="isBestAvailableVoucher(voucher) ? 'text-green-800' : 'text-surface-900'">
+                      {{ voucher.tenPhieuGiamGia || voucher.maPhieuGiamGia }}
+                    </div>
+                    <div class="text-xs text-surface-500 mb-2">{{ voucher.maPhieuGiamGia }}</div>
+
+                    <!-- Voucher Details -->
+                    <div class="space-y-1">
+                      <div class="text-sm font-medium" :class="isBestAvailableVoucher(voucher) ? 'text-green-700' : 'text-primary'">
+                        Giảm {{ formatCurrency(calculateVoucherDiscount(voucher)) }}
+                      </div>
+
+                      <!-- Conditions -->
+                      <div class="text-xs text-surface-600">
+                        <span v-if="voucher.giaTriDonHangToiThieu">
+                          Đơn tối thiểu: {{ formatCurrency(voucher.giaTriDonHangToiThieu) }}
+                        </span>
+                        <span v-if="voucher.giaTriGiamToiDa && voucher.loaiGiamGia === 'PHAN_TRAM'">
+                          • Giảm tối đa: {{ formatCurrency(voucher.giaTriGiamToiDa) }}
+                        </span>
+                      </div>
+
+                      <!-- Expiry -->
+                      <div class="text-xs text-surface-500">
+                        <i class="pi pi-calendar text-xs mr-1"></i>
+                        Hết hạn: {{ formatDate(voucher.ngayKetThuc) }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    icon="pi pi-plus"
+                    text
+                    rounded
+                    size="small"
+                    :class="isBestAvailableVoucher(voucher) ? 'text-green-600 hover:bg-green-100' : 'text-primary hover:bg-primary/10'"
+                  />
+                </div>
               </div>
             </div>
+
+            <!-- Show More/Less Button -->
+            <div v-if="availableVouchers.length > voucherDisplayLimit" class="text-center mt-3">
+              <Button
+                :label="showAllVouchers ? 'Thu gọn' : `Xem thêm ${availableVouchers.length - voucherDisplayLimit} voucher`"
+                :icon="showAllVouchers ? 'pi pi-angle-up' : 'pi pi-angle-down'"
+                text
+                size="small"
+                @click="toggleVoucherDisplay"
+              />
+            </div>
+          </div>
+
+          <!-- Smart Voucher Recommendations -->
+          <div v-if="voucherRecommendation && activeTab?.khachHang" class="mb-4 p-3 border border-blue-200 bg-blue-50 rounded-lg">
+            <div class="flex items-start gap-3">
+              <i class="pi pi-lightbulb text-blue-600 text-lg mt-0.5"></i>
+              <div class="flex-1">
+                <div class="font-medium text-blue-800 text-sm mb-1">Gợi ý tiết kiệm</div>
+                <div class="text-sm text-blue-700">
+                  {{ voucherRecommendation.message }}
+                </div>
+                <div v-if="voucherRecommendation.nextVoucher" class="text-xs text-blue-600 mt-1">
+                  Voucher tiếp theo: {{ voucherRecommendation.nextVoucher.tenPhieuGiamGia }}
+                  (Giảm {{ formatCurrency(calculateVoucherDiscount(voucherRecommendation.nextVoucher, voucherRecommendation.targetAmount)) }})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Vouchers Available -->
+          <div v-if="!activeTab?.voucherList?.length && !availableVouchers.length && activeTab?.khachHang" class="mb-4 p-3 border border-dashed border-surface-300 rounded-lg text-center">
+            <i class="pi pi-info-circle text-surface-400 text-lg mb-2"></i>
+            <p class="text-sm text-surface-500">Không có voucher khả dụng cho đơn hàng này</p>
           </div>
         </div>
 
@@ -773,12 +640,12 @@
           <!-- Create Order Button -->
           <div class="mt-6 pt-4 border-t border-surface-200">
             <Button
-              label="Tạo đơn hàng"
+              label="Thanh toán"
               icon="pi pi-check"
               severity="success"
               size="large"
               class="w-full"
-              @click="createOrderFromActiveTab"
+              @click="showOrderConfirmation"
               :loading="creating"
               :disabled="!canCreateActiveOrder || creating"
             />
@@ -801,9 +668,10 @@
 
   <!-- Product Variant Selection Dialog -->
   <ProductVariantDialog
+    ref="productVariantDialogRef"
     v-model:visible="variantDialogVisible"
-    :product="selectedProductForVariants"
     @variant-selected="addVariantToActiveTab"
+    @request-cart-sync="syncCartWithDialog"
   />
 
   <!-- Fast Customer Creation Dialog -->
@@ -889,6 +757,160 @@
       </div>
     </div>
   </Dialog>
+
+  <!-- Order Confirmation Dialog -->
+  <Dialog
+    v-model:visible="orderConfirmationVisible"
+    modal
+    header="Xác nhận đơn hàng"
+    :style="{ width: '600px' }"
+    :closable="!creating"
+    :dismissableMask="!creating"
+  >
+    <div v-if="activeTab" class="space-y-6">
+      <!-- Customer Information -->
+      <div class="border rounded-lg p-4 bg-surface-50">
+        <h4 class="font-semibold text-lg mb-3 flex items-center gap-2">
+          <i class="pi pi-user text-primary"></i>
+          Thông tin khách hàng
+        </h4>
+        <div v-if="activeTab.khachHang" class="space-y-2">
+          <div class="flex items-center gap-3">
+            <Avatar :label="activeTab.khachHang.hoTen?.charAt(0)" size="small" />
+            <div>
+              <div class="font-medium">{{ activeTab.khachHang.hoTen }}</div>
+              <div class="text-sm text-surface-500">{{ activeTab.khachHang.soDienThoai }}</div>
+            </div>
+          </div>
+          <div v-if="activeTab.giaohang && activeTab.diaChiGiaoHang" class="mt-3 p-3 border rounded-lg bg-white">
+            <div class="font-medium text-sm mb-1">Địa chỉ giao hàng:</div>
+            <div class="text-sm text-surface-600">
+              {{ activeTab.diaChiGiaoHang.duong }}, {{ activeTab.diaChiGiaoHang.phuongXa }},
+              {{ activeTab.diaChiGiaoHang.quanHuyen }}, {{ activeTab.diaChiGiaoHang.tinhThanh }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-surface-500 italic">
+          Khách hàng vãng lai
+        </div>
+      </div>
+
+      <!-- Staff Information -->
+      <div v-if="activeTab.nhanVien" class="border rounded-lg p-4 bg-surface-50">
+        <h4 class="font-semibold text-lg mb-3 flex items-center gap-2">
+          <i class="pi pi-user-check text-primary"></i>
+          Nhân viên phụ trách
+        </h4>
+        <div class="flex items-center gap-3">
+          <Avatar :label="activeTab.nhanVien.hoTen?.charAt(0)" size="small" />
+          <div>
+            <div class="font-medium">{{ activeTab.nhanVien.hoTen }}</div>
+            <div class="text-sm text-surface-500">{{ activeTab.nhanVien.soDienThoai }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Summary -->
+      <div class="border rounded-lg p-4 bg-surface-50">
+        <h4 class="font-semibold text-lg mb-3 flex items-center gap-2">
+          <i class="pi pi-shopping-cart text-primary"></i>
+          Sản phẩm ({{ activeTab.sanPhamList.length }} sản phẩm)
+        </h4>
+        <div class="space-y-3 max-h-40 overflow-y-auto">
+          <div
+            v-for="(item, index) in activeTab.sanPhamList"
+            :key="index"
+            class="flex items-center gap-3 p-2 border rounded bg-white"
+          >
+            <img
+              :src="getCartItemImage(item) || '/placeholder-product.png'"
+              :alt="getCartItemName(item)"
+              class="w-10 h-10 object-cover rounded"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm">{{ getCartItemName(item) }}</div>
+              <div class="text-xs text-surface-500">{{ getCartItemCode(item) }}</div>
+              <div v-if="item.sanPhamChiTiet?.serialNumber" class="text-xs text-primary">
+                Serial: {{ item.sanPhamChiTiet.serialNumber }}
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-semibold text-primary">{{ formatCurrency(item.thanhTien) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment and Delivery Information -->
+      <div class="border rounded-lg p-4 bg-surface-50">
+        <h4 class="font-semibold text-lg mb-3 flex items-center gap-2">
+          <i class="pi pi-credit-card text-primary"></i>
+          Thanh toán & Giao hàng
+        </h4>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span>Phương thức thanh toán:</span>
+            <span class="font-medium">
+              {{ paymentMethods.find(m => m.value === activeTab.phuongThucThanhToan)?.label || activeTab.phuongThucThanhToan }}
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span>Hình thức:</span>
+            <span class="font-medium">
+              {{ activeTab.giaohang ? 'Giao hàng tận nơi' : 'Lấy tại cửa hàng' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="border rounded-lg p-4 bg-primary/5">
+        <h4 class="font-semibold text-lg mb-3 flex items-center gap-2">
+          <i class="pi pi-calculator text-primary"></i>
+          Tổng kết đơn hàng
+        </h4>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span>Tạm tính:</span>
+            <span>{{ formatCurrency(activeTab.tongTienHang || 0) }}</span>
+          </div>
+          <div v-if="activeTab.giaTriGiamGiaVoucher > 0" class="flex justify-between text-green-600">
+            <span>Giảm giá voucher:</span>
+            <span>-{{ formatCurrency(activeTab.giaTriGiamGiaVoucher) }}</span>
+          </div>
+          <div v-if="activeTab.giaohang" class="flex justify-between">
+            <span>Phí giao hàng:</span>
+            <span>{{ formatCurrency(activeTab.phiVanChuyen || 0) }}</span>
+          </div>
+          <hr class="my-2">
+          <div class="flex justify-between font-semibold text-lg">
+            <span>Tổng cộng:</span>
+            <span class="text-primary">{{ formatCurrency(activeTab.tongThanhToan || 0) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <Button
+          label="Hủy"
+          icon="pi pi-times"
+          severity="secondary"
+          outlined
+          @click="orderConfirmationVisible = false"
+          :disabled="creating"
+        />
+        <Button
+          label="Xác nhận thanh toán"
+          icon="pi pi-check"
+          severity="success"
+          @click="confirmAndCreateOrder"
+          :loading="creating"
+        />
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -899,8 +921,9 @@ import { useOrderStore } from '@/stores/orderStore'
 import { useCustomerStore } from '@/stores/customerstore'
 import { useProductStore } from '@/stores/productstore'
 import { useStaffStore } from '@/stores/staffstore'
+import { useCartReservations } from '@/composables/useCartReservations'
 import voucherApi from '@/apis/voucherApi'
-import orderApi from '@/apis/orderApi'
+
 import { useOrderAudit } from '@/composables/useOrderAudit'
 import { useOrderValidation } from '@/composables/useOrderValidation'
 import storageApi from '@/apis/storage'
@@ -914,10 +937,7 @@ import InputText from 'primevue/inputtext'
 import AutoComplete from 'primevue/autocomplete'
 import Avatar from 'primevue/avatar'
 import ToggleButton from 'primevue/togglebutton'
-import InputGroup from 'primevue/inputgroup'
-import InputGroupAddon from 'primevue/inputgroupaddon'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
+
 
 // Custom Components
 import ProductVariantDialog from '@/components/orders/ProductVariantDialog.vue'
@@ -933,6 +953,13 @@ const orderStore = useOrderStore()
 const customerStore = useCustomerStore()
 const productStore = useProductStore()
 const staffStore = useStaffStore()
+
+// Cart reservations
+const {
+  reserveForCart,
+  releaseCartReservations,
+  releaseSpecificItems
+} = useCartReservations()
 
 // Destructure store state and actions using storeToRefs for reactive properties
 const {
@@ -954,9 +981,6 @@ const {
 
 // Local state
 const creating = ref(false)
-const productSearchQuery = ref('')
-const availableProducts = ref([])
-const loadingProducts = ref(false)
 const selectedCustomer = ref(null)
 const customerSuggestions = ref([])
 
@@ -965,27 +989,27 @@ const currentStaffMember = ref(null)
 const selectedStaffMember = ref(null)
 const staffSuggestions = ref([])
 
-const voucherCode = ref('')
 const availableVouchers = ref([])
-const applyingVoucher = ref(false)
-const searchTimeout = ref(null)
+
+// Smart voucher recommendation state
+const voucherRecommendation = ref(null)
+
+// Voucher display state
+const showAllVouchers = ref(false)
+const voucherDisplayLimit = ref(3)
 
 // New state for enhanced features
 const bestVoucherResult = ref(null)
 const loadingBestVoucher = ref(false)
-const topVouchers = ref([])
-const loadingTopVouchers = ref(false)
 
 // Image URL cache for performance
 const imageUrlCache = ref(new Map())
 
 // Product variant dialog state
 const variantDialogVisible = ref(false)
-const selectedProductForVariants = ref(null)
+const productVariantDialogRef = ref(null)
 
-// Product recommendations state
-const showAllRecommendations = ref(false)
-const allRecommendedProducts = ref([])
+
 
 // Fast customer creation dialog state
 const fastCustomerDialogVisible = ref(false)
@@ -998,6 +1022,9 @@ const showQRScanner = ref(false)
 const qrScanResult = ref(null)
 const qrProcessingResult = ref(null)
 const cameraError = ref(null)
+
+// Order confirmation dialog state
+const orderConfirmationVisible = ref(false)
 
 // Local state
 const hasUnsavedChanges = ref(false)
@@ -1053,7 +1080,7 @@ const paymentMethods = computed(() => {
   // VNPAY - Available for both order types
   methods.push({
     value: 'VNPAY',
-    label: 'VNPay',
+    label: 'Chuyển khoản',
     description: 'Thanh toán qua ví điện tử VNPay',
     icon: 'pi pi-credit-card',
     available: true
@@ -1062,13 +1089,15 @@ const paymentMethods = computed(() => {
   return methods
 })
 
-// Product recommendations computed property
-const recommendedProducts = computed(() => {
-  if (showAllRecommendations.value) {
-    return allRecommendedProducts.value
+// Computed property for displayed available vouchers
+const displayedAvailableVouchers = computed(() => {
+  if (showAllVouchers.value) {
+    return availableVouchers.value
   }
-  return allRecommendedProducts.value.slice(0, 6)
+  return availableVouchers.value.slice(0, voucherDisplayLimit.value)
 })
+
+
 
 // Methods
 const formatCurrency = (amount) => {
@@ -1076,6 +1105,76 @@ const formatCurrency = (amount) => {
     style: 'currency',
     currency: 'VND'
   }).format(amount)
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+// Voucher display methods
+const toggleVoucherDisplay = () => {
+  showAllVouchers.value = !showAllVouchers.value
+}
+
+// Method to find the overall best voucher across all vouchers (applied + available)
+const getBestOverallVoucher = () => {
+  const allVouchers = []
+
+  // Add applied vouchers with their actual discount amounts
+  if (activeTab.value?.voucherList?.length) {
+    activeTab.value.voucherList.forEach(voucher => {
+      allVouchers.push({
+        ...voucher,
+        discountAmount: voucher.giaTriGiam || 0,
+        isApplied: true
+      })
+    })
+  }
+
+  // Add available vouchers with their calculated discount amounts
+  if (availableVouchers.value.length) {
+    availableVouchers.value.forEach(voucher => {
+      allVouchers.push({
+        ...voucher,
+        discountAmount: calculateVoucherDiscount(voucher),
+        isApplied: false
+      })
+    })
+  }
+
+  if (!allVouchers.length) return null
+
+  // Find the voucher with the highest discount amount
+  return allVouchers.reduce((best, current) => {
+    return current.discountAmount > best.discountAmount ? current : best
+  }, allVouchers[0])
+}
+
+// Method to determine if a voucher is the best overall voucher
+const isBestVoucher = (voucher) => {
+  const bestVoucher = getBestOverallVoucher()
+  if (!bestVoucher) return false
+
+  return voucher.id === bestVoucher.id || voucher.maPhieuGiamGia === bestVoucher.maPhieuGiamGia
+}
+
+// Method to determine if a voucher is the best among available vouchers (for styling only)
+const isBestAvailableVoucher = (voucher) => {
+  const bestVoucher = getBestOverallVoucher()
+  if (!bestVoucher) return false
+
+  // Only return true if this voucher is the best overall AND it's not applied
+  const isOverallBest = voucher.id === bestVoucher.id || voucher.maPhieuGiamGia === bestVoucher.maPhieuGiamGia
+  const isNotApplied = !activeTab.value?.voucherList?.some(applied =>
+    applied.id === voucher.id || applied.maPhieuGiamGia === voucher.maPhieuGiamGia
+  )
+
+  return isOverallBest && isNotApplied
 }
 
 // Calculate actual discount amount for a voucher based on current order total
@@ -1098,183 +1197,16 @@ const calculateVoucherDiscount = (voucher, orderTotal = null) => {
   }
 }
 
-// Get the effective price of the first available variant (promotional price if available, otherwise regular price)
-const getProductPrice = (product) => {
-  if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-    return 0
-  }
-  const availableVariant = product.sanPhamChiTiets.find(variant => variant.active === true)
-  const variant = availableVariant || product.sanPhamChiTiets[0]
 
-  // Check for promotional price first (from DotGiamGia campaigns)
-  if (variant.giaKhuyenMai && variant.giaKhuyenMai > 0 && variant.giaKhuyenMai < variant.giaBan) {
-    return variant.giaKhuyenMai
-  }
-  return variant.giaBan
-}
 
-// Get the original price (before any discounts)
-const getOriginalPrice = (product) => {
-  if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-    return 0
-  }
-  const availableVariant = product.sanPhamChiTiets.find(variant => variant.active === true)
-  const variant = availableVariant || product.sanPhamChiTiets[0]
-  return variant.giaBan
-}
 
-// Check if product has promotional pricing from DotGiamGia campaigns
-const hasPromotionalPrice = (product) => {
-  if (!product.sanPhamChiTiets) return false
-  return product.sanPhamChiTiets.some(variant =>
-    variant.giaKhuyenMai && variant.giaKhuyenMai > 0 && variant.giaKhuyenMai < variant.giaBan
-  )
-}
 
-// Calculate discount percentage
-const getDiscountPercentage = (product) => {
-  if (!hasPromotionalPrice(product)) return 0
-  const originalPrice = getOriginalPrice(product)
-  const promotionalPrice = getProductPrice(product)
-  if (originalPrice <= 0) return 0
-  return Math.round(((originalPrice - promotionalPrice) / originalPrice) * 100)
-}
 
-// Get count of available variants
-const getAvailableVariantsCount = (product) => {
-  if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-    return 0
-  }
-  return product.sanPhamChiTiets.filter(variant => variant.active === true).length
-}
 
-// Product prefetching functionality
-const prefetchProducts = async () => {
-  try {
-    loadingProducts.value = true
-    // Load initial set of active products (first 50-100 most popular/recent)
-    await productStore.fetchActiveProducts()
-    console.log('Raw products from store:', productStore.activeProducts)
 
-    // Filter products that have available variants (sanPhamChiTiets with available status)
-    const filteredProducts = productStore.activeProducts.filter(product => {
-      // Check if product has variants
-      if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-        console.log(`Product ${product.tenSanPham} has no variants`)
-        return false
-      }
-
-      // Check if any variant is available
-      const hasAvailableVariants = product.sanPhamChiTiets.some(variant => variant.active === true)
-      if (!hasAvailableVariants) {
-        console.log(`Product ${product.tenSanPham} has no available variants`)
-      }
-
-      return hasAvailableVariants
-    }).slice(0, 100)
-
-    console.log('Filtered available products:', filteredProducts)
-    console.log(`Found ${filteredProducts.length} products with available variants`)
-    availableProducts.value = filteredProducts
-  } catch (error) {
-    console.error('Error prefetching products:', error)
-    toast.add({
-      severity: 'warn',
-      summary: 'Cảnh báo',
-      detail: 'Không thể tải danh sách sản phẩm ban đầu',
-      life: 3000
-    })
-  } finally {
-    loadingProducts.value = false
-  }
-}
-
-const searchProducts = async (immediate = false) => {
-  // Clear existing timeout
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value)
-  }
-
-  if (!productSearchQuery.value.trim()) {
-    // If no search query, show prefetched products
-    await prefetchProducts()
-    return
-  }
-
-  const performSearch = async () => {
-    try {
-      loadingProducts.value = true
-      // Format search query as object for backend
-      const searchFilters = {
-        tenSanPham: productSearchQuery.value
-      }
-      const products = await productStore.searchProducts(searchFilters)
-      console.log('Search results:', products)
-
-      // Filter products that have available variants (sanPhamChiTiets with available status)
-      const filteredSearchResults = products.filter(product => {
-        // Check if product has variants
-        if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-          console.log(`Search result ${product.tenSanPham} has no variants`)
-          return false
-        }
-
-        // Check if any variant is available
-        const hasAvailableVariants = product.sanPhamChiTiets.some(variant => variant.active === true)
-        if (!hasAvailableVariants) {
-          console.log(`Search result ${product.tenSanPham} has no available variants`)
-        }
-
-        return hasAvailableVariants
-      })
-
-      console.log('Filtered search results:', filteredSearchResults)
-      console.log(`Found ${filteredSearchResults.length} search results with available variants`)
-      availableProducts.value = filteredSearchResults
-    } catch (error) {
-      console.error('Error searching products:', error)
-      toast.add({
-        severity: 'error',
-        summary: 'Lỗi',
-        detail: 'Không thể tìm kiếm sản phẩm',
-        life: 3000
-      })
-    } finally {
-      loadingProducts.value = false
-    }
-  }
-
-  if (immediate) {
-    await performSearch()
-  } else {
-    // Debounce search with 300ms delay
-    searchTimeout.value = setTimeout(performSearch, 300)
-  }
-}
-
-// Show variant selection dialog for a product
-const showVariantSelectionDialog = (product) => {
-  if (!product.sanPhamChiTiets || product.sanPhamChiTiets.length === 0) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Cảnh báo',
-      detail: 'Sản phẩm này không có phiên bản nào có sẵn',
-      life: 3000
-    })
-    return
-  }
-
-  selectedProductForVariants.value = product
-  variantDialogVisible.value = true
-}
-
-// Legacy method for backward compatibility
-const showVariantDialog = (product) => {
-  showVariantSelectionDialog(product)
-}
 
 // Add selected variant to active tab (handles frontend-selected variants)
-const addVariantToActiveTab = (variantData) => {
+const addVariantToActiveTab = async (variantData) => {
   if (!activeTab.value) return
 
   const { sanPhamChiTiet, soLuong, donGia, thanhTien, groupInfo } = variantData
@@ -1317,16 +1249,40 @@ const addVariantToActiveTab = (variantData) => {
     return
   }
 
-  // Add new variant to cart
-  activeTab.value.sanPhamList.push({
-    sanPhamChiTiet: sanPhamChiTiet,
-    soLuong: soLuong,
-    donGia: donGia,
-    thanhTien: thanhTien,
-    groupInfo: groupInfo // Store group info for display purposes
-  })
+  // Reserve inventory in backend before adding to cart
+  try {
+    const reservationRequest = {
+      sanPhamChiTietId: sanPhamChiTiet.id,
+      soLuong: soLuong,
+      tabId: activeTabId.value,
+      serialNumbers: sanPhamChiTiet.serialNumber ? [sanPhamChiTiet.serialNumber] : undefined
+    }
 
-  calculateTabTotals(activeTabId.value)
+    await reserveForCart(reservationRequest)
+
+    // Add new variant to cart after successful reservation
+    activeTab.value.sanPhamList.push({
+      sanPhamChiTiet: sanPhamChiTiet,
+      soLuong: soLuong,
+      donGia: donGia,
+      thanhTien: thanhTien,
+      groupInfo: groupInfo // Store group info for display purposes
+    })
+
+    calculateTabTotals(activeTabId.value)
+
+    // Sync with product variant dialog to update stock counts
+    syncCartWithDialog()
+  } catch (error) {
+    console.error('Failed to reserve inventory:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: error.message || 'Không thể đặt trước sản phẩm',
+      life: 3000
+    })
+    return // Don't add to cart if reservation fails
+  }
 
   // Don't show individual success messages when adding from groups
   // The ProductVariantDialog will show the group success message
@@ -1401,34 +1357,7 @@ const loadCartImageUrl = async (imageFilename) => {
   }
 }
 
-// Helper method for product selection image display
-const getProductImage = (product) => {
-  let imageFilename = null
 
-  // Get first image from product's image array
-  if (product.hinhAnh && Array.isArray(product.hinhAnh) && product.hinhAnh.length > 0) {
-    imageFilename = product.hinhAnh[0]
-  } else if (typeof product.hinhAnh === 'string') {
-    // Handle single image as string
-    imageFilename = product.hinhAnh
-  }
-
-  if (!imageFilename) return null
-
-  // If it's already a full URL, return as is
-  if (imageFilename.startsWith('http')) return imageFilename
-
-  // Check cache first
-  if (imageUrlCache.value.has(imageFilename)) {
-    return imageUrlCache.value.get(imageFilename)
-  }
-
-  // Load presigned URL asynchronously
-  loadCartImageUrl(imageFilename)
-
-  // Return null for now, will update when loaded
-  return null
-}
 
 const getCartItemName = (item) => {
   if (item.sanPhamChiTiet) {
@@ -1480,56 +1409,29 @@ const getVariantDisplayInfo = (item) => {
   return ''
 }
 
-const canIncreaseQuantity = (item) => {
-  // For individual item tracking, each variant represents one item
-  // So we don't allow quantity increase for variants
-  if (item.sanPhamChiTiet) {
-    return false
-  }
-  // Legacy support for old product-based items
-  return item.soLuong < (item.sanPham?.soLuongTon || 0)
-}
 
-const increaseQuantity = (index) => {
+
+const removeFromActiveTab = async (index) => {
   const item = activeTab.value.sanPhamList[index]
 
-  // For variant-based items, we don't allow quantity increase
-  if (item.sanPhamChiTiet) {
-    toast.add({
-      severity: 'info',
-      summary: 'Thông báo',
-      detail: 'Không thể tăng số lượng cho sản phẩm có serial number. Vui lòng thêm sản phẩm khác từ cùng nhóm.',
-      life: 3000
-    })
-    return
+  // Release backend reservation before removing from cart
+  try {
+    if (item?.sanPhamChiTiet?.id) {
+      await releaseSpecificItems(activeTabId.value, item.sanPhamChiTiet.id, item.soLuong || 1)
+    }
+  } catch (error) {
+    console.error('Failed to release reservation:', error)
+    // Continue with removal even if backend release fails
   }
 
-  // Legacy support for old product-based items
-  if (item.soLuong < (item.sanPham?.soLuongTon || 0)) {
-    item.soLuong++
-    item.thanhTien = item.soLuong * item.donGia
-    calculateTabTotals(activeTabId.value)
-  }
-}
-
-const decreaseQuantity = (index) => {
-  const item = activeTab.value.sanPhamList[index]
-  if (item.soLuong > 1) {
-    item.soLuong--
-    item.thanhTien = item.soLuong * item.donGia
-    calculateTabTotals(activeTabId.value)
-  }
-}
-
-const removeFromActiveTab = (index) => {
   activeTab.value.sanPhamList.splice(index, 1)
   calculateTabTotals(activeTabId.value)
+
+  // Sync with product variant dialog to update stock counts
+  syncCartWithDialog()
 }
 
-// Product recommendation methods
-const toggleRecommendations = () => {
-  showAllRecommendations.value = !showAllRecommendations.value
-}
+
 
 // QR Scanner Methods
 const onQRDetect = async (detectedCodes) => {
@@ -1663,17 +1565,8 @@ const processScannedSerialNumber = async (serialNumber) => {
     // Find variant in current products or search for it
     let variant = null
 
-    // First, try to find in currently loaded products
-    for (const product of availableProducts.value) {
-      if (product.sanPhamChiTiets) {
-        variant = product.sanPhamChiTiets.find(v => v.id === variantId)
-        if (variant) {
-          // Add product reference to variant for display
-          variant.sanPham = product
-          break
-        }
-      }
-    }
+    // Try to find variant by fetching from product store
+    // This will be handled by the enhanced ProductVariantDialog
 
     // If not found in current products, search all products
     if (!variant) {
@@ -1727,8 +1620,8 @@ const processScannedSerialNumber = async (serialNumber) => {
     const variantData = {
       sanPhamChiTiet: variantWithSerial,
       soLuong: 1,
-      donGia: variant.giaKhuyenMai && variant.giaKhuyenMai > 0 ? variant.giaKhuyenMai : variant.giaBan,
-      thanhTien: variant.giaKhuyenMai && variant.giaKhuyenMai > 0 ? variant.giaKhuyenMai : variant.giaBan
+      donGia: variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan ? variant.giaKhuyenMai : variant.giaBan,
+      thanhTien: variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan ? variant.giaKhuyenMai : variant.giaBan
     }
 
     addVariantToActiveTab(variantData)
@@ -1754,138 +1647,16 @@ const processScannedSerialNumber = async (serialNumber) => {
   }
 }
 
-const generateRecommendations = () => {
-  if (!productStore.activeProducts || productStore.activeProducts.length === 0) {
-    allRecommendedProducts.value = []
-    return
-  }
 
-  // Get products already in cart to exclude them
-  const cartProductIds = new Set()
-  if (activeTab.value?.sanPhamList) {
-    activeTab.value.sanPhamList.forEach(item => {
-      if (item.sanPhamChiTiet?.sanPham?.id) {
-        cartProductIds.add(item.sanPhamChiTiet.sanPham.id)
-      }
-    })
-  }
 
-  // Get categories and brands from cart items for similarity matching
-  const cartCategories = new Set()
-  const cartBrands = new Set()
-  if (activeTab.value?.sanPhamList) {
-    activeTab.value.sanPhamList.forEach(item => {
-      if (item.sanPhamChiTiet?.sanPham) {
-        const product = item.sanPhamChiTiet.sanPham
-        if (product.danhMucs) {
-          product.danhMucs.forEach(category => cartCategories.add(category.id))
-        }
-        if (product.thuongHieu) {
-          cartBrands.add(product.thuongHieu.id)
-        }
-      }
-    })
-  }
 
-  // Filter and score products for recommendations
-  const candidates = productStore.activeProducts
-    .filter(product => {
-      // Exclude products already in cart
-      if (cartProductIds.has(product.id)) return false
 
-      // Only include products with available variants
-      return getAvailableVariantsCount(product) > 0
-    })
-    .map(product => {
-      let score = 0
-
-      // Base score for having promotional pricing
-      if (hasPromotionalPrice(product)) {
-        score += 10
-      }
-
-      // Score for category similarity
-      if (product.danhMucs && cartCategories.size > 0) {
-        const hasMatchingCategory = product.danhMucs.some(category =>
-          cartCategories.has(category.id)
-        )
-        if (hasMatchingCategory) score += 20
-      }
-
-      // Score for brand similarity
-      if (product.thuongHieu && cartBrands.has(product.thuongHieu.id)) {
-        score += 15
-      }
-
-      // Score for price range (prefer mid-range products)
-      const price = getProductPrice(product)
-      if (price >= 5000000 && price <= 20000000) {
-        score += 5
-      }
-
-      // Random factor for variety
-      score += Math.random() * 5
-
-      return { product, score }
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 12) // Get top 12 candidates
-    .map(item => item.product)
-
-  allRecommendedProducts.value = candidates
-}
-
-const getRecommendationProductImage = (product) => {
-  let imageFilename = null
-
-  // Get first image from product's image array (same logic as getProductImage)
-  if (product.hinhAnh && Array.isArray(product.hinhAnh) && product.hinhAnh.length > 0) {
-    imageFilename = product.hinhAnh[0]
-  } else if (product.hinhAnhs && Array.isArray(product.hinhAnhs) && product.hinhAnhs.length > 0) {
-    // Fallback to hinhAnhs if hinhAnh doesn't exist
-    const firstImage = product.hinhAnhs[0]
-    imageFilename = firstImage?.duongDanHinh || firstImage
-  } else if (typeof product.hinhAnh === 'string') {
-    // Single image as string
-    imageFilename = product.hinhAnh
-  }
-
-  if (!imageFilename) return null
-
-  // If it's already a full URL, return as is
-  if (imageFilename.startsWith('http')) return imageFilename
-
-  // Check if we have a cached URL
-  const cached = imageUrlCache.value.get(imageFilename)
-  if (cached) return cached
-
-  // Load the image URL asynchronously
-  loadRecommendationImageUrl(imageFilename)
-
-  // Return null for now, will update when loaded
-  return null
-}
-
-const loadRecommendationImageUrl = async (imageFilename) => {
-  try {
-    // Get presigned URL for the image filename
-    const presignedUrl = await storageApi.getPresignedUrl('products', imageFilename)
-
-    // Cache the URL for future use
-    imageUrlCache.value.set(imageFilename, presignedUrl)
-
-    // Force reactivity update
-    imageUrlCache.value = new Map(imageUrlCache.value)
-  } catch (error) {
-    console.warn('Failed to load recommendation image:', error)
-    // Cache a null value to avoid repeated attempts
-    imageUrlCache.value.set(imageFilename, null)
-  }
-}
-
-const onRecommendationImageError = (event) => {
-  // Hide broken image and show placeholder
-  event.target.style.display = 'none'
+// Customer display label helper
+const getCustomerDisplayLabel = (customer) => {
+  if (!customer) return ''
+  const name = customer.hoTen || 'Không có tên'
+  const phone = customer.soDienThoai || 'Không có SĐT'
+  return `${name} - ${phone}`
 }
 
 const searchCustomers = async (event) => {
@@ -2024,6 +1795,23 @@ const onStaffMemberSelect = (event) => {
 const clearStaffMemberFromTab = () => {
   updateActiveTabData({ nhanVien: null })
   selectedStaffMember.value = null
+}
+
+
+
+
+
+// Product selection dialog methods
+const showProductSelectionDialog = () => {
+  // Open the enhanced ProductVariantDialog that shows all variants from all products
+  variantDialogVisible.value = true
+}
+
+// Sync cart data with product variant dialog
+const syncCartWithDialog = () => {
+  if (productVariantDialogRef.value && activeTab.value?.sanPhamList) {
+    productVariantDialogRef.value.updateUsedSerialNumbers(activeTab.value.sanPhamList)
+  }
 }
 
 // Fast customer creation methods
@@ -2202,80 +1990,7 @@ const onDeliveryToggle = () => {
   calculateTabTotals(activeTabId.value)
 }
 
-const applyVoucher = async () => {
-  if (!voucherCode.value.trim()) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Cảnh báo',
-      detail: 'Vui lòng nhập mã voucher',
-      life: 3000
-    })
-    return
-  }
 
-  if (!activeTab.value) return
-
-  applyingVoucher.value = true
-  try {
-    // Validate voucher with backend
-    const customerId = activeTab.value.khachHang?.id || null
-    const orderTotal = activeTab.value.tongTienHang || 0
-
-    const response = await voucherApi.validateVoucher(voucherCode.value, customerId, orderTotal)
-
-    if (response.success && response.data.valid) {
-      // Check if voucher is already applied
-      const existingVoucher = activeTab.value.voucherList.find(
-        v => v.maPhieuGiamGia === response.data.voucher.maPhieuGiamGia
-      )
-
-      if (existingVoucher) {
-        toast.add({
-          severity: 'warn',
-          summary: 'Cảnh báo',
-          detail: 'Voucher này đã được áp dụng',
-          life: 3000
-        })
-        return
-      }
-
-      // Add voucher to active tab
-      const voucherData = {
-        ...response.data.voucher,
-        giaTriGiam: response.data.discountAmount
-      }
-
-      activeTab.value.voucherList.push(voucherData)
-      calculateTabTotals(activeTabId.value)
-
-      // Clear input and show success
-      voucherCode.value = ''
-      toast.add({
-        severity: 'success',
-        summary: 'Thành công',
-        detail: `Áp dụng voucher ${response.data.voucher.maPhieuGiamGia} thành công`,
-        life: 3000
-      })
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Lỗi',
-        detail: response.data.error || 'Voucher không hợp lệ',
-        life: 3000
-      })
-    }
-  } catch (error) {
-    console.error('Error applying voucher:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Lỗi',
-      detail: 'Không thể áp dụng voucher. Vui lòng thử lại.',
-      life: 3000
-    })
-  } finally {
-    applyingVoucher.value = false
-  }
-}
 
 const removeVoucherFromTab = async (index) => {
   if (!activeTab.value) return
@@ -2417,6 +2132,9 @@ const findAndApplyBestVoucher = async () => {
         })
       }
     }
+
+    // Generate smart voucher recommendations after processing vouchers
+    await generateVoucherRecommendation()
   } catch (error) {
     console.error('Error finding best voucher:', error)
     // Don't show error toast for automatic voucher application to avoid annoying users
@@ -2425,48 +2143,68 @@ const findAndApplyBestVoucher = async () => {
   }
 }
 
-// Legacy method for backward compatibility
-const findBestVoucher = findAndApplyBestVoucher
-
-const loadTopVouchers = async () => {
-  if (!activeTab.value) return
+// Smart Voucher Recommendation Logic
+const generateVoucherRecommendation = async () => {
+  if (!activeTab.value?.khachHang || !activeTab.value?.tongTienHang) {
+    voucherRecommendation.value = null
+    return
+  }
 
   try {
-    loadingTopVouchers.value = true
-    const customerId = activeTab.value.khachHang?.id || null
-    const orderTotal = activeTab.value.tongTienHang || 0
+    const currentTotal = activeTab.value.tongTienHang
 
-    const response = await voucherApi.getTopVouchers(customerId, orderTotal, 3)
+    // Get all available vouchers for the customer
+    const allVouchers = await voucherApi.getAvailableVouchers(activeTab.value.khachHang.id)
 
-    if (response.success) {
-      topVouchers.value = response.data
+    // Filter vouchers that are not currently applicable but could be with more spending
+    const futureVouchers = allVouchers.filter(voucher => {
+      const minOrder = voucher.giaTriDonHangToiThieu || 0
+      return minOrder > currentTotal
+    }).sort((a, b) => (a.giaTriDonHangToiThieu || 0) - (b.giaTriDonHangToiThieu || 0))
+
+    if (futureVouchers.length > 0) {
+      const nextVoucher = futureVouchers[0]
+      const targetAmount = nextVoucher.giaTriDonHangToiThieu
+      const additionalAmount = targetAmount - currentTotal
+      const potentialDiscount = calculateVoucherDiscount(nextVoucher, targetAmount)
+
+      voucherRecommendation.value = {
+        message: `Mua thêm ${formatCurrency(additionalAmount)} để được giảm thêm ${formatCurrency(potentialDiscount)}`,
+        nextVoucher: nextVoucher,
+        targetAmount: targetAmount,
+        additionalAmount: additionalAmount,
+        potentialDiscount: potentialDiscount
+      }
+    } else {
+      voucherRecommendation.value = null
     }
   } catch (error) {
-    console.error('Error loading top vouchers:', error)
-    topVouchers.value = []
-  } finally {
-    loadingTopVouchers.value = false
+    console.error('Error generating voucher recommendation:', error)
+    voucherRecommendation.value = null
   }
 }
 
-// Enhanced audit trail methods
-const createEnhancedAuditEntry = async (entryType, auditData) => {
+// Order confirmation methods
+const showOrderConfirmation = () => {
   if (!activeTab.value) return
 
-  try {
-    // Create audit entry using enhanced API
-    const response = await orderApi.createAuditEntry(
-      activeTab.value.id, // This would be the order ID after creation
-      entryType,
-      auditData
-    )
-
-    if (response.success) {
-      console.log('Enhanced audit entry created:', response.data)
-    }
-  } catch (error) {
-    console.error('Error creating enhanced audit entry:', error)
+  // Perform basic validation before showing confirmation
+  if (!canCreateActiveOrder.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Cảnh báo',
+      detail: 'Vui lòng hoàn tất thông tin đơn hàng trước khi thanh toán',
+      life: 3000
+    })
+    return
   }
+
+  orderConfirmationVisible.value = true
+}
+
+const confirmAndCreateOrder = async () => {
+  orderConfirmationVisible.value = false
+  await createOrderFromActiveTab()
 }
 
 const createOrderFromActiveTab = async () => {
@@ -2548,12 +2286,20 @@ const performOrderCreation = async () => {
 }
 
 // Enhanced tab closure with unsaved changes warning
-const closeTabWithConfirmation = (tabId) => {
+const closeTabWithConfirmation = async (tabId) => {
   const tab = orderTabs.value.find(t => t.id === tabId)
 
   if (!tab) {
     closeOrderTab(tabId)
     return
+  }
+
+  // Release cart reservations before closing tab
+  try {
+    await releaseCartReservations(tabId)
+  } catch (error) {
+    console.error('Failed to release cart reservations on tab close:', error)
+    // Continue with tab closure even if release fails
   }
 
   // Close tab directly (no confirmation)
@@ -2711,7 +2457,11 @@ watch(
     if (newTabId && newTabId !== oldTabId && activeTab.value && !activeTab.value.nhanVien && currentStaffMember.value) {
       // Auto-assign current staff member to new tabs
       updateActiveTabData({ nhanVien: currentStaffMember.value })
-      console.log('Auto-assigned current staff member to new tab:', currentStaffMember.value.hoTen)
+    }
+
+    // Sync cart data with product variant dialog when switching tabs
+    if (newTabId && newTabId !== oldTabId) {
+      syncCartWithDialog()
     }
   },
   { immediate: false }
@@ -2719,14 +2469,36 @@ watch(
 
 // Initialize
 onMounted(async () => {
-  // Initialize current staff member from localStorage
+  // Initialize current staff member
   try {
     const storedUser = localStorage.getItem('nguoiDung')
     if (storedUser) {
       const user = JSON.parse(storedUser)
+
+      // Check if data is incomplete (missing hoTen) and fix it
+      if (user && !user.hoTen && user.id) {
+        const completeUser = {
+          id: user.id,
+          maNguoiDung: user.id === 1 ? "ADM_Duyta001" : "ADM_uyta001",
+          avatar: user.id === 1
+            ? "https://lapxpert-storage-api.khoalda.dev/avatars/c4808b5b-a42b-4b65-aed2-3c79cb08fbf8_himmelfrieren.gif"
+            : "https://lapxpert-storage-api.khoalda.dev/avatars/5655cf04-8984-41c8-a9aa-94a5502bc2b2_jake-the-dog-pure-css-adventure-time-wallpaper-by-sangreprimitiva-d5vs51f.avif",
+          hoTen: user.id === 1 ? "Trần Anh Duy2" : "Trần Anh Duy",
+          gioiTinh: "NAM",
+          ngaySinh: user.id === 1 ? "2015-05-03" : "2006-01-15",
+          email: user.email,
+          soDienThoai: user.id === 1 ? "0866028113" : "0987654321",
+          cccd: user.id === 1 ? "001200000001" : "000000000000",
+          vaiTro: user.vaiTro,
+          trangThai: "HOAT_DONG"
+        }
+
+        localStorage.setItem("nguoiDung", JSON.stringify(completeUser))
+        currentStaffMember.value = completeUser
+      }
+
       if (user && (user.vaiTro === 'STAFF' || user.vaiTro === 'ADMIN')) {
         currentStaffMember.value = user
-        console.log('Current staff member loaded:', user.hoTen)
       }
     }
   } catch (error) {
@@ -2743,40 +2515,26 @@ onMounted(async () => {
     switchToTab(orderTabs.value[0].id)
   }
 
-  // Prefetch products for better user experience
-  await prefetchProducts()
-
-  // Generate initial recommendations
-  generateRecommendations()
-
-  // Test customer search with sample data
-  console.log('Testing customer search functionality...')
-  try {
-    const testCustomers = await customerStore.fetchCustomers()
-    console.log('Loaded customers for testing:', testCustomers)
-  } catch (error) {
-    console.error('Failed to load customers:', error)
+  // Auto-assign current staff member to the active tab if no staff member is assigned
+  if (currentStaffMember.value && activeTab.value && !activeTab.value.nhanVien) {
+    updateActiveTabData({ nhanVien: currentStaffMember.value })
   }
 
-  // Preload staff data for search functionality
+
+
+
+
+  // Preload data for search functionality
   try {
+    await customerStore.fetchCustomers()
     await staffStore.fetchStaff()
-    console.log('Staff data preloaded for search functionality')
   } catch (error) {
-    console.error('Failed to preload staff data:', error)
+    console.error('Failed to preload data:', error)
   }
 
 })
 
-// Watch for cart changes to update recommendations
-watch(() => activeTab.value?.sanPhamList, () => {
-  generateRecommendations()
-}, { deep: true })
 
-// Watch for product store changes to update recommendations
-watch(() => productStore.activeProducts, () => {
-  generateRecommendations()
-}, { deep: true })
 </script>
 
 <style scoped>

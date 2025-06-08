@@ -87,7 +87,8 @@ export const useProductStore = defineStore('product', {
 
       this.loading = true
       try {
-        this.products = await productService.getAllProducts()
+        // Use getActiveProducts instead of getAllProducts to get promotional pricing
+        this.products = await productService.getActiveProducts()
         this.lastFetch = Date.now()
 
         // Cache individual products

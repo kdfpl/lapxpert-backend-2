@@ -75,6 +75,32 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
     }
 
     /**
+     * Count total serial numbers for a specific product variant
+     */
+    default long countByVariantId(Long variantId) {
+        return countBySanPhamChiTietId(variantId);
+    }
+
+    /**
+     * Count serial numbers by variant ID
+     */
+    long countBySanPhamChiTietId(Long sanPhamChiTietId);
+
+    /**
+     * Count reserved serial numbers for a specific product variant
+     */
+    default long countReservedByVariant(Long variantId) {
+        return countByVariantAndStatus(variantId, TrangThaiSerialNumber.RESERVED);
+    }
+
+    /**
+     * Count sold serial numbers for a specific product variant
+     */
+    default long countSoldByVariant(Long variantId) {
+        return countByVariantAndStatus(variantId, TrangThaiSerialNumber.SOLD);
+    }
+
+    /**
      * Find available serial numbers for a specific product variant with limit
      */
     @Query("SELECT sn FROM SerialNumber sn WHERE sn.sanPhamChiTiet.id = :variantId AND sn.trangThai = 'AVAILABLE' ORDER BY sn.ngayTao ASC")
@@ -137,6 +163,17 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
      * Find reservations by order ID pattern (for temporary order cleanup)
      */
     List<SerialNumber> findByDonHangDatTruocStartingWith(String orderIdPrefix);
+
+    /**
+     * Find reservations by order ID and variant ID
+     */
+    List<SerialNumber> findByDonHangDatTruocAndSanPhamChiTiet_Id(String orderId, Long variantId);
+
+    /**
+     * Count reservations by order ID prefix and variant ID (for cart tracking)
+     */
+    @Query("SELECT COUNT(sn) FROM SerialNumber sn WHERE sn.donHangDatTruoc LIKE CONCAT(:orderIdPrefix, '%') AND sn.sanPhamChiTiet.id = :variantId")
+    int countByDonHangDatTruocStartingWithAndSanPhamChiTiet_Id(@Param("orderIdPrefix") String orderIdPrefix, @Param("variantId") Long variantId);
 
     /**
      * Release expired reservations (bulk update)

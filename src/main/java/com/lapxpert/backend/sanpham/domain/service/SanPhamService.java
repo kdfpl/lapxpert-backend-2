@@ -103,7 +103,10 @@ public class SanPhamService {
     @Transactional(readOnly = true)
     public List<SanPhamDto> findAll() {
         List<SanPham> entities = sanPhamRepository.findAll();
-        return sanPhamMapper.toDtos(entities);
+        List<SanPhamDto> dtos = sanPhamMapper.toDtos(entities);
+
+        // Apply promotional pricing from DotGiamGia campaigns to all product variants
+        return applyPromotionalPricingToProducts(dtos);
     }
 
     /**

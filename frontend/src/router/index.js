@@ -174,6 +174,22 @@ const router = createRouter({
           }
         },
         {
+          path: '/orders/:id/edit',
+          name: 'OrderEdit',
+          component: () => import('@/views/orders/OrderEdit.vue'),
+          props: true,
+          meta: {
+            title: 'Chỉnh sửa đơn hàng',
+            breadcrumb: [
+              { label: 'Trang chủ', to: '/' },
+              { label: 'Quản lý đơn hàng', to: '/orders' },
+              { label: 'Chỉnh sửa đơn hàng', to: null }
+            ],
+            permissions: ['ORDER_EDIT', 'ORDER_MANAGE'],
+            icon: 'pi pi-pencil'
+          }
+        },
+        {
           path: '/orders/:id',
           name: 'OrderDetail',
           component: () => import('@/views/orders/OrderDetail.vue'),

@@ -538,6 +538,9 @@ public class SerialNumberService {
 
         // Also clean up temporary order IDs that are older than 30 minutes
         cleanupTemporaryOrderIds();
+
+        // Clean up expired cart reservations
+        cleanupExpiredCartReservations();
     }
 
     /**
@@ -574,6 +577,43 @@ public class SerialNumberService {
             }
 
             log.info("Cleaned up {} expired temporary order reservations", expiredTempReservations.size());
+        }
+    }
+
+    /**
+     * Clean up expired cart reservations that are older than 30 minutes.
+     * This prevents inventory deadlocks from abandoned cart sessions.
+     */
+    @Transactional
+    public void cleanupExpiredCartReservations() {
+        Instant expiredBefore = Instant.now().minus(30, ChronoUnit.MINUTES);
+
+        // Find reservations with cart order IDs that are older than 30 minutes
+        List<SerialNumber> cartReservations = serialNumberRepository.findByDonHangDatTruocStartingWith("CART-");
+
+        List<SerialNumber> expiredCartReservations = cartReservations.stream()
+            .filter(sn -> sn.getThoiGianDatTruoc() != null && sn.getThoiGianDatTruoc().isBefore(expiredBefore))
+            .collect(Collectors.toList());
+
+        if (!expiredCartReservations.isEmpty()) {
+            for (SerialNumber serialNumber : expiredCartReservations) {
+                String cartSessionId = serialNumber.getDonHangDatTruoc();
+                serialNumber.releaseReservation();
+                serialNumberRepository.save(serialNumber);
+
+                // Create audit entry
+                SerialNumberAuditHistory auditEntry = SerialNumberAuditHistory.releaseEntry(
+                    serialNumber.getId(),
+                    "SYSTEM",
+                    String.format("Cleanup expired cart session: %s", cartSessionId)
+                );
+                auditHistoryRepository.save(auditEntry);
+
+                log.debug("Released expired cart reservation for serial number {} with cart session ID {}",
+                         serialNumber.getSerialNumberValue(), cartSessionId);
+            }
+
+            log.info("Cleaned up {} expired cart reservations", expiredCartReservations.size());
         }
     }
 

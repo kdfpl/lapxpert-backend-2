@@ -8,27 +8,29 @@
     @update:visible="$emit('update:visible', $event)"
     @hide="onDialogHide"
   >
-    <!-- Product Header -->
+    <!-- Product Catalog Header -->
     <div class="mb-6 p-4 border rounded-lg bg-surface-50 dark:bg-surface-800">
-      <div class="flex items-start gap-4">
-        <img
-          :src="getProductHeaderImage(product) || '/placeholder-product.png'"
-          :alt="product?.tenSanPham"
-          class="w-20 h-20 object-cover rounded-lg"
-        />
-        <div class="flex-1">
-          <h3 class="text-xl font-semibold text-surface-900 dark:text-surface-0 mb-2">
-            {{ product?.tenSanPham }}
-          </h3>
-          <div class="text-sm text-surface-600 dark:text-surface-400 mb-1">
-            Mã sản phẩm: {{ product?.maSanPham }}
-          </div>
-          <div class="text-sm text-surface-600 dark:text-surface-400">
-            Thương hiệu: {{ product?.thuongHieu?.moTaThuongHieu }}
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <i class="pi pi-shopping-bag text-primary text-2xl"></i>
+          <div>
+            <h3 class="text-xl font-semibold text-surface-900 dark:text-surface-0 mb-1">
+              Danh mục sản phẩm
+            </h3>
+            <div class="text-sm text-surface-600 dark:text-surface-400">
+              Chọn serial number để thêm sản phẩm vào giỏ hàng
+            </div>
           </div>
         </div>
-        <div class="text-right">
-          <Badge :value="`${availableVariants.length} phiên bản có sẵn`" severity="info" />
+        <div class="flex items-center gap-4 text-sm">
+          <div class="flex items-center gap-1">
+            <i class="pi pi-tag text-primary"></i>
+            <span>{{ availableVariants.length }} phiên bản</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <i class="pi pi-filter text-primary"></i>
+            <span>{{ filteredVariants.length }} hiển thị</span>
+          </div>
         </div>
       </div>
     </div>
@@ -40,8 +42,21 @@
       </h4>
 
       <!-- Filters Section -->
-      <div class="mb-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 border p-4 rounded-lg">
-        <!-- CPU Filter -->
+      <div class="mb-6 border p-4 rounded-lg">
+        <!-- Search Input -->
+        <div class="mb-4">
+          <label class="block mb-2 font-medium">Tìm kiếm sản phẩm</label>
+          <InputText
+            v-model="filters.searchQuery"
+            placeholder="Tìm theo tên sản phẩm, mã sản phẩm, SKU, CPU, RAM, GPU..."
+            fluid
+            class="w-full"
+          />
+        </div>
+
+        <!-- Attribute Filters Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <!-- CPU Filter -->
         <div>
           <label class="block mb-2 font-medium">CPU</label>
           <InputGroup>
@@ -184,15 +199,16 @@
           </div>
         </div>
 
-        <!-- Clear Filters Button -->
-        <div class="col-span-2 lg:col-span-3 xl:col-span-4 flex justify-end">
-          <Button
-            label="Xóa bộ lọc"
-            icon="pi pi-filter-slash"
-            outlined
-            @click="clearAllFilters"
-            :disabled="!hasActiveFilters"
-          />
+          <!-- Clear Filters Button -->
+          <div class="col-span-2 lg:col-span-3 xl:col-span-4 flex justify-end">
+            <Button
+              label="Xóa bộ lọc"
+              icon="pi pi-filter-slash"
+              outlined
+              @click="clearAllFilters"
+              :disabled="!hasActiveFilters"
+            />
+          </div>
         </div>
       </div>
 
@@ -221,9 +237,7 @@
       <!-- Variants DataTable -->
       <div v-else>
         <DataTable
-          v-model:selection="selectedVariants"
           :value="filteredVariants"
-          selectionMode="multiple"
           dataKey="id"
           :paginator="filteredVariants.length > 10"
           :rows="10"
@@ -241,11 +255,17 @@
                   ({{ availableVariants.length }} tổng cộng)
                 </span>
               </div>
-              <div v-if="selectedVariants.length > 0" class="text-sm text-surface-600">
-                Đã chọn: {{ selectedVariants.length }} phiên bản
-              </div>
             </div>
           </template>
+
+          <Column field="sanPham.tenSanPham" header="Sản phẩm" sortable style="min-width: 200px">
+            <template #body="{ data }">
+              <div>
+                <div class="font-medium text-sm">{{ data.sanPham?.tenSanPham || 'N/A' }}</div>
+                <div class="text-xs text-surface-500">{{ data.sanPham?.maSanPham || 'N/A' }}</div>
+              </div>
+            </template>
+          </Column>
 
           <Column field="sku" header="SKU" sortable style="min-width: 150px">
             <template #body="{ data }">
@@ -315,14 +335,16 @@
             </template>
           </Column>
 
-          <Column header="Thao tác" style="width: 120px">
+          <Column header="Thao tác" style="width: 140px">
             <template #body="{ data }">
               <Button
-                label="Chọn Serial"
-                icon="pi pi-barcode"
+                label="Chọn & Thêm"
+                icon="pi pi-shopping-cart"
                 size="small"
+                severity="primary"
                 @click="selectSerialNumbers(data)"
                 :disabled="getAvailableSerialCount(data) === 0"
+                v-tooltip.top="'Chọn serial number và thêm vào giỏ hàng'"
               />
             </template>
           </Column>
@@ -330,64 +352,20 @@
       </div>
     </div>
 
-    <!-- Selected Variants Summary -->
-    <div v-if="selectedVariants.length > 0" class="mb-6 p-4 border rounded-lg bg-surface-50 dark:bg-surface-800">
-      <h5 class="font-semibold mb-3 text-surface-900 dark:text-surface-0">
-        Phiên bản đã chọn ({{ selectedVariants.length }})
-      </h5>
-      <div class="space-y-2 max-h-32 overflow-y-auto">
-        <div
-          v-for="(variant, index) in selectedVariants"
-          :key="variant.id"
-          class="flex items-center justify-between p-2 bg-white dark:bg-surface-700 rounded border"
-        >
-          <div class="flex-1">
-            <div class="text-sm font-medium">{{ getVariantDisplayName(variant) }}</div>
-            <div class="text-xs text-surface-500">SKU: {{ variant.sku || 'Auto-generated' }}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm font-semibold text-primary">
-              {{ formatCurrency(getVariantPrice(variant)) }}
-            </div>
-          </div>
-          <Button
-            icon="pi pi-times"
-            text
-            rounded
-            size="small"
-            severity="danger"
-            @click="removeSelectedVariant(index)"
-            class="ml-2"
-          />
-        </div>
-      </div>
-      <div class="mt-3 pt-3 border-t border-surface-200">
-        <div class="flex justify-between items-center">
-          <span class="font-medium">Tổng cộng:</span>
-          <span class="text-lg font-semibold text-primary">{{ formatCurrency(getTotalPrice()) }}</span>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Dialog Actions -->
     <template #footer>
       <div class="flex justify-between items-center w-full">
-        <div v-if="selectedVariants.length > 0" class="text-lg font-semibold text-primary">
-          Tổng: {{ formatCurrency(getTotalPrice()) }}
+        <div class="text-sm text-surface-500">
+          Sử dụng nút "Chọn & Thêm" để chọn serial number và thêm vào giỏ hàng
         </div>
         <div class="flex gap-2">
           <Button
-            label="Hủy"
+            label="Đóng"
             icon="pi pi-times"
             text
             @click="closeDialog"
-          />
-          <Button
-            label="Thêm vào giỏ hàng"
-            icon="pi pi-shopping-cart"
-            @click="addToCart"
-            :disabled="selectedVariants.length === 0"
-            :loading="adding"
           />
         </div>
       </div>
@@ -485,8 +463,8 @@
             @click="serialDialogVisible = false"
           />
           <Button
-            label="Xác nhận"
-            icon="pi pi-check"
+            label="Thêm vào giỏ hàng"
+            icon="pi pi-shopping-cart"
             @click="confirmSerialSelection"
             :disabled="selectedSerialNumbers.length === 0"
           />
@@ -500,8 +478,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useAttributeStore } from '@/stores/attributestore'
+import { useProductStore } from '@/stores/productstore'
 import { storeToRefs } from 'pinia'
-import storageApi from '@/apis/storage'
+
 import serialNumberApi from '@/apis/serialNumberApi'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
@@ -510,6 +489,7 @@ import Column from 'primevue/column'
 import Badge from 'primevue/badge'
 import Select from 'primevue/select'
 import InputGroup from 'primevue/inputgroup'
+import InputText from 'primevue/inputtext'
 import Slider from 'primevue/slider'
 
 // Props
@@ -525,11 +505,12 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:visible', 'variant-selected'])
+const emit = defineEmits(['update:visible', 'variant-selected', 'request-cart-sync'])
 
 // Composables
 const toast = useToast()
 const attributeStore = useAttributeStore()
+const productStore = useProductStore()
 
 // Destructure attribute store
 const {
@@ -541,11 +522,13 @@ const {
   screen: screens
 } = storeToRefs(attributeStore)
 
+// Destructure product store
+const { products } = storeToRefs(productStore)
+
 // Local state
 const loading = ref(false)
-const adding = ref(false)
-const selectedVariants = ref([])
 const variantSerialNumbers = ref(new Map()) // Cache for variant serial numbers
+const usedSerialNumbers = ref(new Set()) // Track serial numbers that have been added to cart
 
 // Serial number selection dialog state
 const serialDialogVisible = ref(false)
@@ -553,8 +536,7 @@ const selectedVariantForSerial = ref(null)
 const availableSerialNumbers = ref([])
 const selectedSerialNumbers = ref([])
 
-// Image URL cache for performance
-const imageUrlCache = ref(new Map())
+
 
 // Filter state
 const filters = ref({
@@ -564,24 +546,72 @@ const filters = ref({
   colors: null,
   storage: null,
   screen: null,
-  priceRange: [0, 50000000]
+  priceRange: [0, 50000000],
+  searchQuery: ''
 })
 
 // Computed properties
 const dialogTitle = computed(() => {
-  return props.product ? `Chọn phiên bản - ${props.product.tenSanPham}` : 'Chọn phiên bản sản phẩm'
+  return 'Chọn sản phẩm'
 })
 
 const availableVariants = computed(() => {
-  if (!props.product?.sanPhamChiTiets) return []
+  if (!products.value?.length) return []
 
-  // Filter only active variants
-  return props.product.sanPhamChiTiets.filter(variant => variant.active === true)
+  // Collect all variants from all products
+  const allVariants = []
+
+  for (const product of products.value) {
+    if (product.sanPhamChiTiets && Array.isArray(product.sanPhamChiTiets)) {
+      // Filter only active variants and add product reference
+      const activeVariants = product.sanPhamChiTiets
+        .filter(variant => variant.active === true)
+        .map(variant => ({
+          ...variant,
+          sanPham: product // Add product reference for display
+        }))
+
+      allVariants.push(...activeVariants)
+    }
+  }
+
+  return allVariants
 })
 
 // Filtered variants computed property
 const filteredVariants = computed(() => {
   let filtered = availableVariants.value
+
+  // Apply search filter first
+  if (filters.value.searchQuery && filters.value.searchQuery.trim()) {
+    const query = filters.value.searchQuery.toLowerCase().trim()
+    filtered = filtered.filter(variant => {
+      // Search in product name, product code, variant SKU, and variant attributes
+      const productName = variant.sanPham?.tenSanPham?.toLowerCase() || ''
+      const productCode = variant.sanPham?.maSanPham?.toLowerCase() || ''
+      const variantSku = variant.sku?.toLowerCase() || ''
+      const variantCode = variant.maSanPhamChiTiet?.toLowerCase() || ''
+
+      // Search in attributes
+      const cpu = variant.cpu?.moTaCpu?.toLowerCase() || ''
+      const ram = variant.ram?.moTaRam?.toLowerCase() || ''
+      const gpu = variant.gpu?.moTaGpu?.toLowerCase() || ''
+      const color = variant.mauSac?.moTaMauSac?.toLowerCase() || ''
+      const storage = (variant.oCung || variant.ocung)?.moTaOCung?.toLowerCase() || ''
+      const screen = variant.manHinh?.moTaManHinh?.toLowerCase() || ''
+
+      return productName.includes(query) ||
+             productCode.includes(query) ||
+             variantSku.includes(query) ||
+             variantCode.includes(query) ||
+             cpu.includes(query) ||
+             ram.includes(query) ||
+             gpu.includes(query) ||
+             color.includes(query) ||
+             storage.includes(query) ||
+             screen.includes(query)
+    })
+  }
 
   // Apply CPU filter
   if (filters.value.cpu) {
@@ -639,7 +669,8 @@ const hasActiveFilters = computed(() => {
          filters.value.colors !== null ||
          filters.value.storage !== null ||
          filters.value.screen !== null ||
-         (filters.value.priceRange[0] !== 0 || filters.value.priceRange[1] !== 50000000)
+         (filters.value.priceRange[0] !== 0 || filters.value.priceRange[1] !== 50000000) ||
+         (filters.value.searchQuery && filters.value.searchQuery.trim())
 })
 
 // Methods
@@ -659,7 +690,12 @@ const getColorValue = (colorName) => {
 const getAvailableSerialCount = (variant) => {
   const cachedSerials = variantSerialNumbers.value.get(variant.id)
   if (!cachedSerials) return 0
-  return cachedSerials.filter((serial) => serial.trangThai === 'AVAILABLE').length
+
+  // Filter out serials that are available AND not already used in cart
+  return cachedSerials.filter((serial) => {
+    const serialValue = serial.serialNumberValue || serial.serialNumber
+    return serial.trangThai === 'AVAILABLE' && !usedSerialNumbers.value.has(serialValue)
+  }).length
 }
 
 const getVariantPrice = (variant) => {
@@ -681,9 +717,7 @@ const getVariantDisplayName = (variant) => {
   return parts.length > 0 ? parts.join(' - ') : 'Phiên bản cơ bản'
 }
 
-const removeSelectedVariant = (index) => {
-  selectedVariants.value.splice(index, 1)
-}
+
 
 const selectSerialNumbers = async (variant) => {
   selectedVariantForSerial.value = variant
@@ -691,7 +725,11 @@ const selectSerialNumbers = async (variant) => {
   // Load serial numbers for this variant
   try {
     const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variant.id)
-    availableSerialNumbers.value = serialNumbers.filter(serial => serial.trangThai === 'AVAILABLE')
+    // Filter out serials that are available AND not already used in cart
+    availableSerialNumbers.value = serialNumbers.filter(serial => {
+      const serialValue = serial.serialNumberValue || serial.serialNumber
+      return serial.trangThai === 'AVAILABLE' && !usedSerialNumbers.value.has(serialValue)
+    })
     selectedSerialNumbers.value = []
     serialDialogVisible.value = true
   } catch (error) {
@@ -705,100 +743,69 @@ const selectSerialNumbers = async (variant) => {
   }
 }
 
-const confirmSerialSelection = () => {
+const confirmSerialSelection = async () => {
   if (!selectedSerialNumbers.value.length || !selectedVariantForSerial.value) {
     return
   }
 
   const selectedCount = selectedSerialNumbers.value.length
 
-  // Add each selected serial number as a separate variant to the cart
-  for (const serialNumber of selectedSerialNumbers.value) {
-    // Create a variant copy with the specific serial number
-    const variantWithSerial = {
-      ...selectedVariantForSerial.value,
-      serialNumber: serialNumber.serialNumberValue || serialNumber.serialNumber,
-      serialNumberId: serialNumber.id
-    }
-
-    // Add to selected variants if not already added
-    const existingIndex = selectedVariants.value.findIndex(
-      item => item.id === selectedVariantForSerial.value.id &&
-              item.serialNumberId === serialNumber.id
-    )
-
-    if (existingIndex === -1) {
-      selectedVariants.value.push(variantWithSerial)
-    }
-  }
-
-  // Close the serial selection dialog
-  serialDialogVisible.value = false
-  selectedSerialNumbers.value = []
-  selectedVariantForSerial.value = null
-
-  toast.add({
-    severity: 'success',
-    summary: 'Thành công',
-    detail: `Đã chọn ${selectedCount} sản phẩm`,
-    life: 3000
-  })
-}
-
-const loadVariantImageUrl = async (imageFilename) => {
   try {
-    // Get presigned URL for the image filename
-    const presignedUrl = await storageApi.getPresignedUrl('products', imageFilename)
+    // Add each selected serial number as a separate variant directly to the cart
+    for (const serialNumber of selectedSerialNumbers.value) {
+      const serialValue = serialNumber.serialNumberValue || serialNumber.serialNumber
 
-    // Cache the URL for future use
-    imageUrlCache.value.set(imageFilename, presignedUrl)
+      // Create a variant copy with the specific serial number
+      const variantWithSerial = {
+        ...selectedVariantForSerial.value,
+        serialNumber: serialValue,
+        serialNumberId: serialNumber.id
+      }
 
-    // Force reactivity update
-    imageUrlCache.value = new Map(imageUrlCache.value)
+      // Emit variant-selected event to add to cart immediately
+      emit('variant-selected', {
+        sanPhamChiTiet: variantWithSerial,
+        soLuong: 1, // Each variant is individual
+        donGia: getVariantPrice(variantWithSerial),
+        thanhTien: getVariantPrice(variantWithSerial),
+        groupInfo: {
+          displayName: getVariantDisplayName(variantWithSerial),
+          isFromGroup: false
+        }
+      })
+
+      // Track this serial number as used to update available count
+      usedSerialNumbers.value.add(serialValue)
+    }
+
+    // Close the serial selection dialog
+    serialDialogVisible.value = false
+    selectedSerialNumbers.value = []
+    selectedVariantForSerial.value = null
+
+    toast.add({
+      severity: 'success',
+      summary: 'Thành công',
+      detail: `Đã thêm ${selectedCount} sản phẩm vào giỏ hàng`,
+      life: 3000
+    })
+
   } catch (error) {
-    console.warn('Error getting presigned URL for variant image:', imageFilename, error)
-    // Cache null to prevent repeated attempts
-    imageUrlCache.value.set(imageFilename, null)
+    console.error('Error adding variants to cart:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Không thể thêm sản phẩm vào giỏ hàng',
+      life: 3000
+    })
   }
 }
 
-// Helper method for product header image display
-const getProductHeaderImage = (product) => {
-  if (!product?.hinhAnh) return null
 
-  let imageFilename = null
 
-  // Handle both array and string formats
-  if (Array.isArray(product.hinhAnh) && product.hinhAnh.length > 0) {
-    imageFilename = product.hinhAnh[0]
-  } else if (typeof product.hinhAnh === 'string') {
-    imageFilename = product.hinhAnh
-  }
 
-  if (!imageFilename) return null
 
-  // If it's already a full URL, return as is
-  if (imageFilename.startsWith('http')) return imageFilename
 
-  // Check cache first
-  if (imageUrlCache.value.has(imageFilename)) {
-    return imageUrlCache.value.get(imageFilename)
-  }
-
-  // Load presigned URL asynchronously
-  loadVariantImageUrl(imageFilename)
-
-  // Return null for now, will update when loaded
-  return null
-}
-
-const getTotalPrice = () => {
-  if (!selectedVariants.value.length) return 0
-
-  return selectedVariants.value.reduce((total, variant) => {
-    return total + getVariantPrice(variant)
-  }, 0)
-}
 
 const formatCurrency = (amount) => {
   if (!amount) return '0 ₫'
@@ -808,62 +815,14 @@ const formatCurrency = (amount) => {
   }).format(amount)
 }
 
-const addToCart = async () => {
-  if (!selectedVariants.value.length) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Cảnh báo',
-      detail: 'Vui lòng chọn ít nhất một phiên bản sản phẩm',
-      life: 3000
-    })
-    return
-  }
 
-  adding.value = true
-  try {
-    // Emit individual variants for backend compatibility
-    for (const variant of selectedVariants.value) {
-      emit('variant-selected', {
-        sanPhamChiTiet: variant,
-        soLuong: 1, // Each variant is individual
-        donGia: getVariantPrice(variant),
-        thanhTien: getVariantPrice(variant),
-        groupInfo: {
-          displayName: getVariantDisplayName(variant),
-          isFromGroup: false
-        }
-      })
-    }
-
-    toast.add({
-      severity: 'success',
-      summary: 'Thành công',
-      detail: `Đã thêm ${selectedVariants.value.length} sản phẩm vào giỏ hàng`,
-      life: 3000
-    })
-
-    closeDialog()
-  } catch (error) {
-    console.error('Error adding variants to cart:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Lỗi',
-      detail: 'Không thể thêm sản phẩm vào giỏ hàng',
-      life: 3000
-    })
-  } finally {
-    adding.value = false
-  }
-}
 
 const closeDialog = () => {
   emit('update:visible', false)
 }
 
 const onDialogHide = () => {
-  // Reset state when dialog is hidden
-  selectedVariants.value = []
-  adding.value = false
+  // Don't clear usedSerialNumbers - keep cart tracking persistent
   serialDialogVisible.value = false
   // Reset filters
   clearAllFilters()
@@ -878,35 +837,101 @@ const clearAllFilters = () => {
     colors: null,
     storage: null,
     screen: null,
-    priceRange: [0, 50000000]
+    priceRange: [0, 50000000],
+    searchQuery: ''
   }
 }
 
-// Watch for product changes to reset selection
-watch(() => props.product, () => {
-  selectedVariants.value = []
-}, { immediate: true })
+// Sync used serial numbers with current cart items (legacy method for compatibility)
+const syncUsedSerialNumbersWithCart = () => {
+  // This method is now deprecated in favor of backend reservations
+  // Keep for compatibility but functionality moved to backend
+  emit('request-cart-sync')
+}
 
-// Load serial numbers for variants when product changes
-watch(() => props.product, async (newProduct) => {
-  if (newProduct?.sanPhamChiTiets) {
-    try {
-      for (const variant of newProduct.sanPhamChiTiets) {
-        if (variant.active) {
-          const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variant.id)
-          variantSerialNumbers.value.set(variant.id, serialNumbers || [])
-        }
+// Method to receive cart data from parent (legacy for compatibility)
+const updateUsedSerialNumbers = () => {
+  // This method is now deprecated in favor of backend reservations
+  // Keep for compatibility but clear the tracking since backend handles it
+  usedSerialNumbers.value.clear()
+}
+
+// Expose method for parent to call
+defineExpose({
+  updateUsedSerialNumbers
+})
+
+// Watch for dialog visibility to load data
+watch(() => props.visible, async (isVisible) => {
+  if (isVisible) {
+    // Sync used serial numbers with current cart items when dialog opens
+    syncUsedSerialNumbersWithCart()
+
+    // Load all products if not already loaded
+    if (!products.value?.length) {
+      loading.value = true
+      try {
+        await productStore.fetchProducts()
+      } catch (error) {
+        console.error('Error loading products:', error)
+        toast.add({
+          severity: 'error',
+          summary: 'Lỗi',
+          detail: 'Không thể tải danh sách sản phẩm',
+          life: 3000
+        })
+      } finally {
+        loading.value = false
       }
-    } catch (error) {
-      console.warn('Error loading serial numbers:', error)
     }
+
+    // Load serial numbers for all variants
+    await loadAllSerialNumbers()
   }
 }, { immediate: true })
 
-// Load attributes on component mount
+// Load serial numbers for all variants
+const loadAllSerialNumbers = async () => {
+  if (!products.value?.length) return
+
+  try {
+    for (const product of products.value) {
+      if (product.sanPhamChiTiets && Array.isArray(product.sanPhamChiTiets)) {
+        for (const variant of product.sanPhamChiTiets) {
+          if (variant.active && !variantSerialNumbers.value.has(variant.id)) {
+            try {
+              const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variant.id)
+              variantSerialNumbers.value.set(variant.id, serialNumbers || [])
+            } catch (error) {
+              console.warn(`Error loading serial numbers for variant ${variant.id}:`, error)
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading serial numbers:', error)
+  }
+}
+
+// Load attributes and products on component mount
 onMounted(async () => {
   try {
+    // Load attributes for filtering
     await attributeStore.fetchAllAttributes()
+
+    // Load products if dialog is initially visible
+    if (props.visible && !products.value?.length) {
+      loading.value = true
+      try {
+        await productStore.fetchProducts()
+        await loadAllSerialNumbers()
+      } catch (error) {
+        console.error('Error loading products:', error)
+      } finally {
+        loading.value = false
+      }
+    }
   } catch (error) {
     console.error('Error loading attributes:', error)
   }

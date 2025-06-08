@@ -398,7 +398,7 @@ public class HoaDonService {
 
     /**
      * Set order status based on order type and payment method.
-     * Simplified logic for TIEN_MAT and COD payment methods.
+     * Respects status values provided in DTO, only sets defaults when not provided.
      */
     private void setOrderStatus(HoaDon hoaDon, HoaDonDto hoaDonDto) {
         // Ensure loaiHoaDon is set, defaulting to ONLINE if not specified
@@ -409,22 +409,33 @@ public class HoaDonService {
         // Validate payment method based on order type
         validatePaymentMethodForOrderType(hoaDon, hoaDonDto);
 
-        // Set default status fields if not provided by DTO
-        if (hoaDon.getTrangThaiDonHang() == null) {
+        // Set order status - use DTO value if provided, otherwise set defaults
+        if (hoaDonDto.getTrangThaiDonHang() != null) {
+            // Use status provided by frontend (e.g., from OrderCreate.vue logic)
+            hoaDon.setTrangThaiDonHang(hoaDonDto.getTrangThaiDonHang());
+            log.debug("Using order status from DTO: {}", hoaDonDto.getTrangThaiDonHang());
+        } else if (hoaDon.getTrangThaiDonHang() == null) {
+            // Set default status only if not provided by DTO
             if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
-                // POS orders default to pending confirmation (payment method will determine final status)
+                // POS orders default to pending confirmation
                 hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
-                hoaDon.setTrangThaiThanhToan(TrangThaiThanhToan.CHUA_THANH_TOAN);
+                log.debug("Setting default POS order status: CHO_XAC_NHAN");
             } else {
                 // Online orders start as pending confirmation
                 hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
-                // Payment status depends on payment method (will be updated during payment confirmation)
-                hoaDon.setTrangThaiThanhToan(TrangThaiThanhToan.CHUA_THANH_TOAN);
+                log.debug("Setting default online order status: CHO_XAC_NHAN");
             }
         }
 
-        if (hoaDon.getTrangThaiThanhToan() == null) {
+        // Set payment status - use DTO value if provided, otherwise set defaults
+        if (hoaDonDto.getTrangThaiThanhToan() != null) {
+            // Use payment status provided by frontend (e.g., DA_THANH_TOAN for TIEN_MAT)
+            hoaDon.setTrangThaiThanhToan(hoaDonDto.getTrangThaiThanhToan());
+            log.debug("Using payment status from DTO: {}", hoaDonDto.getTrangThaiThanhToan());
+        } else if (hoaDon.getTrangThaiThanhToan() == null) {
+            // Set default payment status only if not provided by DTO
             hoaDon.setTrangThaiThanhToan(TrangThaiThanhToan.CHUA_THANH_TOAN);
+            log.debug("Setting default payment status: CHUA_THANH_TOAN");
         }
     }
 
@@ -1144,10 +1155,95 @@ public class HoaDonService {
             log.info("Released {} items during order update", itemsToRelease.size());
         }
 
+        // Process additions - handle new items without IDs
+        List<Long> itemsToReserve = new ArrayList<>();
+        for (HoaDonChiTietDto newItem : newItems) {
+            if (newItem.getId() == null) {
+                // This is a new item to be added
+                log.info("Adding new item to order: sanPhamChiTietId={}, soLuong={}",
+                        newItem.getSanPhamChiTietId(), newItem.getSoLuong());
+
+                // Validate product variant exists
+                SanPhamChiTiet sanPhamChiTiet = sanPhamChiTietRepository.findById(newItem.getSanPhamChiTietId())
+                    .orElseThrow(() -> new EntityNotFoundException("Sản phẩm chi tiết không tồn tại với ID: " + newItem.getSanPhamChiTietId()));
+
+                // Check inventory availability
+                int availableQuantity = serialNumberService.getAvailableQuantityByVariant(newItem.getSanPhamChiTietId());
+                if (availableQuantity < newItem.getSoLuong()) {
+                    throw new IllegalArgumentException("Insufficient inventory for product: " +
+                        sanPhamChiTiet.getSanPham().getTenSanPham() +
+                        ". Available: " + availableQuantity + ", Requested: " + newItem.getSoLuong());
+                }
+
+                // Create new HoaDonChiTiet entity
+                HoaDonChiTiet newChiTiet = new HoaDonChiTiet();
+                newChiTiet.setHoaDon(existingHoaDon);
+                newChiTiet.setSanPhamChiTiet(sanPhamChiTiet);
+                newChiTiet.setSoLuong(newItem.getSoLuong());
+
+                // Set price from DTO or use current product price
+                BigDecimal giaBan = newItem.getGiaBan() != null ? newItem.getGiaBan() :
+                    (sanPhamChiTiet.getGiaKhuyenMai() != null && sanPhamChiTiet.getGiaKhuyenMai().compareTo(BigDecimal.ZERO) > 0 ?
+                     sanPhamChiTiet.getGiaKhuyenMai() : sanPhamChiTiet.getGiaBan());
+                newChiTiet.setGiaBan(giaBan);
+
+                // Set original price (required field)
+                newChiTiet.setGiaGoc(sanPhamChiTiet.getGiaBan());
+
+                // Calculate line total
+                BigDecimal thanhTien = giaBan.multiply(BigDecimal.valueOf(newItem.getSoLuong()));
+                newChiTiet.setThanhTien(thanhTien);
+
+                // Set snapshot fields for audit trail (required fields)
+                if (sanPhamChiTiet.getSanPham() != null) {
+                    newChiTiet.setTenSanPhamSnapshot(sanPhamChiTiet.getSanPham().getTenSanPham());
+                }
+                newChiTiet.setSkuSnapshot(sanPhamChiTiet.getSku());
+                if (sanPhamChiTiet.getHinhAnh() != null && !sanPhamChiTiet.getHinhAnh().isEmpty()) {
+                    newChiTiet.setHinhAnhSnapshot(sanPhamChiTiet.getHinhAnh().get(0));
+                }
+
+                // Add to order
+                existingHoaDon.getHoaDonChiTiets().add(newChiTiet);
+
+                // Reserve inventory for new items - always reserve available serial numbers
+                List<SerialNumber> availableSerialNumbers = serialNumberService.getAvailableSerialNumbers(newItem.getSanPhamChiTietId());
+                for (int i = 0; i < Math.min(newItem.getSoLuong(), availableSerialNumbers.size()); i++) {
+                    itemsToReserve.add(availableSerialNumbers.get(i).getId());
+                }
+
+                log.info("Added new item to order {}: {} x {} = {}",
+                        existingHoaDon.getId(), sanPhamChiTiet.getSanPham().getTenSanPham(),
+                        newItem.getSoLuong(), thanhTien);
+            }
+        }
+
+        // Apply inventory reservations for new items
+        if (!itemsToReserve.isEmpty()) {
+            // Create temporary order items for reservation
+            List<HoaDonChiTietDto> tempOrderItems = new ArrayList<>();
+            for (HoaDonChiTietDto newItem : newItems) {
+                if (newItem.getId() == null) {
+                    tempOrderItems.add(newItem);
+                }
+            }
+
+            // Reserve items using the existing service method
+            if (!tempOrderItems.isEmpty()) {
+                serialNumberService.reserveItemsWithTracking(
+                    tempOrderItems,
+                    "ORDER_UPDATE",
+                    existingHoaDon.getId().toString(),
+                    "system"
+                );
+            }
+            log.info("Reserved {} items for order update", itemsToReserve.size());
+        }
+
         // Recalculate order totals
         recalculateOrderTotals(existingHoaDon);
 
-        log.info("Updated line items for order {}", existingHoaDon.getId());
+        log.info("Updated line items for order {} - {} items total", existingHoaDon.getId(), existingHoaDon.getHoaDonChiTiets().size());
     }
 
     /**

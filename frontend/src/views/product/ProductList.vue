@@ -528,11 +528,21 @@ const formatNumber = (amount) => {
 }
 
 const getMinPrice = (variants) => {
-  return Math.min(...variants.map((v) => v.giaBan))
+  return Math.min(...variants.map((v) => {
+    // Use promotional price if available and lower than regular price
+    const regularPrice = v.giaBan
+    const promoPrice = v.giaKhuyenMai
+    return (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
+  }))
 }
 
 const getMaxPrice = (variants) => {
-  return Math.max(...variants.map((v) => v.giaBan))
+  return Math.max(...variants.map((v) => {
+    // Use promotional price if available and lower than regular price
+    const regularPrice = v.giaBan
+    const promoPrice = v.giaKhuyenMai
+    return (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
+  }))
 }
 
 // New utility methods for enhanced functionality

@@ -1,4 +1,4 @@
-import { publicApi } from "./axiosAPI";
+import { publicApi, privateApi } from "./axiosAPI";
 
 const AuthService = {
   async login(taiKhoan, matKhau) {
@@ -11,9 +11,28 @@ const AuthService = {
       const { token, user } = response.data;
 
       if (token && user) {
+        // Store token first so we can make authenticated requests
         localStorage.setItem("token", token);
         localStorage.setItem("vaiTro", user.vaiTro);
-        localStorage.setItem("nguoiDung", JSON.stringify(user));
+
+        // Fetch complete user data if user is staff or admin
+        if (user.vaiTro === 'STAFF' || user.vaiTro === 'ADMIN') {
+          try {
+            const completeUserResponse = await privateApi.get(`/user/staff/${user.id}`);
+
+            if (completeUserResponse.data) {
+              const completeUser = completeUserResponse.data;
+              localStorage.setItem("nguoiDung", JSON.stringify(completeUser));
+            } else {
+              localStorage.setItem("nguoiDung", JSON.stringify(user));
+            }
+          } catch (fetchError) {
+            localStorage.setItem("nguoiDung", JSON.stringify(user));
+          }
+        } else {
+          // For customers, store basic user data
+          localStorage.setItem("nguoiDung", JSON.stringify(user));
+        }
       }
 
       return token;

@@ -20,7 +20,7 @@ import java.util.Set;
 public class SanPhamDto implements Serializable {
     private Long id;
 
-    @NotBlank(message = "Mã sản phẩm không được để trống")
+    // Product code is optional - will be auto-generated if null/empty
     @Size(max = 100, message = "Mã sản phẩm không được vượt quá 100 ký tự")
     private String maSanPham;
 

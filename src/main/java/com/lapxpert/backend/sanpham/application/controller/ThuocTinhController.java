@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * REST Controller for product attributes management
  * Updated for SanPham module refactoring - only includes 8 core attributes:
- * 6 Core Product Attributes: CPU, RAM, GPU, MauSac, OCung, ManHinh
+ * 6 Core Product Attributes: CPU, RAM, GPU, MauSac, BoNho, ManHinh
  * 2 Additional Required: DanhMuc, ThuongHieu
  */
 @RestController
@@ -25,7 +25,7 @@ public class ThuocTinhController {
     private final RamService ramService;
     private final GpuService gpuService;
     private final MauSacService mauSacService;
-    private final OCungService oCungService;
+    private final BoNhoService boNhoService;
     private final ManHinhService manHinhService;
 
     // Additional Required Attributes
@@ -174,29 +174,29 @@ public class ThuocTinhController {
         return ResponseEntity.noContent().build();
     }
 
-    // OCung (Storage) CRUD
+    // BoNho (Storage) CRUD
     @GetMapping("/storage")
-    public ResponseEntity<List<OCung>> findAllStorage() {
-        return ResponseEntity.ok(oCungService.findAll());
+    public ResponseEntity<List<BoNho>> findAllStorage() {
+        return ResponseEntity.ok(boNhoService.findAll());
     }
 
     @PutMapping("/storage")
-    public ResponseEntity<OCung> saveStorage(@RequestBody OCung storage) {
-        return ResponseEntity.ok(oCungService.save(storage));
+    public ResponseEntity<BoNho> saveStorage(@RequestBody BoNho storage) {
+        return ResponseEntity.ok(boNhoService.save(storage));
     }
 
     @PutMapping("/storage/multiple")
-    public ResponseEntity<List<OCung>> saveMultipleStorage(@RequestBody List<OCung> storages) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(oCungService.saveMultiple(storages));
+    public ResponseEntity<List<BoNho>> saveMultipleStorage(@RequestBody List<BoNho> storages) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(boNhoService.saveMultiple(storages));
     }
 
     @DeleteMapping("/storage/{id}")
     public ResponseEntity<Void> deleteStorage(@PathVariable Long id) {
-        OCung existingStorage = oCungService.findById(id);
+        BoNho existingStorage = boNhoService.findById(id);
         if (existingStorage == null) {
             return ResponseEntity.notFound().build();
         }
-        oCungService.deleteById(id);
+        boNhoService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -205,7 +205,7 @@ public class ThuocTinhController {
         if (ids == null || ids.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        oCungService.deleteMultiple(ids);
+        boNhoService.deleteMultiple(ids);
         return ResponseEntity.noContent().build();
     }
 
@@ -257,6 +257,11 @@ public class ThuocTinhController {
         return ResponseEntity.ok(danhMucService.save(category));
     }
 
+    @PutMapping("/categories/multiple")
+    public ResponseEntity<List<DanhMuc>> saveMultipleCategory(@RequestBody List<DanhMuc> categories) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(danhMucService.saveMultiple(categories));
+    }
+
     @DeleteMapping("/category/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         DanhMuc existingCategory = danhMucService.findById(id);
@@ -264,6 +269,15 @@ public class ThuocTinhController {
             return ResponseEntity.notFound().build();
         }
         danhMucService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/category")
+    public ResponseEntity<Void> deleteMultipleCategory(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        danhMucService.deleteMultiple(ids);
         return ResponseEntity.noContent().build();
     }
 
@@ -280,6 +294,11 @@ public class ThuocTinhController {
 
     @PutMapping("/brand/multiple")
     public ResponseEntity<List<ThuongHieu>> saveMultipleBrand(@RequestBody List<ThuongHieu> brands) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(thuongHieuService.saveMultiple(brands));
+    }
+
+    @PutMapping("/brands/multiple")
+    public ResponseEntity<List<ThuongHieu>> saveMultipleBrandPlural(@RequestBody List<ThuongHieu> brands) {
         return ResponseEntity.status(HttpStatus.CREATED).body(thuongHieuService.saveMultiple(brands));
     }
 

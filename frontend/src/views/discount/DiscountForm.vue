@@ -1060,10 +1060,10 @@ async function deleteDiscount() {
                         <span class="font-medium">RAM:</span>
                         <span>{{ detailData.ram.moTaRam }}</span>
                       </div>
-                      <div v-if="detailData.oCung" class="flex items-center gap-2 text-sm">
+                      <div v-if="detailData.boNho || detailData.bonho || detailData.oCung || detailData.ocung" class="flex items-center gap-2 text-sm">
                         <i class="pi pi-database text-orange-600"></i>
                         <span class="font-medium">Ổ cứng:</span>
-                        <span>{{ detailData.oCung.moTaOCung }}</span>
+                        <span>{{ (detailData.boNho?.moTaBoNho || detailData.bonho?.moTaBoNho || detailData.oCung?.moTaOCung || detailData.ocung?.moTaOCung) }}</span>
                       </div>
                       <div v-if="detailData.gpu" class="flex items-center gap-2 text-sm">
                         <i class="pi pi-desktop text-purple-600"></i>
@@ -1075,7 +1075,7 @@ async function deleteDiscount() {
                         <span class="font-medium">Màn hình:</span>
                         <span>{{ detailData.manHinh.moTaManHinh }}</span>
                       </div>
-                      <div v-if="!detailData.cpu && !detailData.ram && !detailData.oCung && !detailData.gpu && !detailData.manHinh" class="text-surface-400 text-sm">
+                      <div v-if="!detailData.cpu && !detailData.ram && !detailData.boNho && !detailData.bonho && !detailData.oCung && !detailData.ocung && !detailData.gpu && !detailData.manHinh" class="text-surface-400 text-sm">
                         Chưa có thông số
                       </div>
                     </div>

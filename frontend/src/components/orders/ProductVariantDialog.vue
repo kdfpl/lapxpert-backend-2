@@ -188,9 +188,9 @@
           <Slider
             v-model="filters.priceRange"
             range
-            :min="0"
-            :max="50000000"
-            :step="500000"
+            :min="dynamicPricing.minPrice.value"
+            :max="dynamicPricing.maxPrice.value"
+            :step="dynamicPricing.priceStep.value"
             class="w-full"
           />
           <div class="flex justify-between text-xs text-surface-600 mt-1">
@@ -306,9 +306,9 @@
             </template>
           </Column>
 
-          <Column field="oCung.moTaOCung" header="Dung lượng" sortable style="min-width: 100px">
+          <Column field="boNho.moTaBoNho" header="Dung lượng" sortable style="min-width: 100px">
             <template #body="{ data }">
-              <span>{{ (data.oCung || data.ocung)?.moTaOCung || 'N/A' }}</span>
+              <span>{{ data.boNho?.moTaBoNho || 'N/A' }}</span>
             </template>
           </Column>
 
@@ -479,6 +479,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductStore } from '@/stores/productstore'
+import { useDynamicPricing } from '@/composables/useDynamicPricing'
 import { storeToRefs } from 'pinia'
 
 import serialNumberApi from '@/apis/serialNumberApi'
@@ -511,6 +512,7 @@ const emit = defineEmits(['update:visible', 'variant-selected', 'request-cart-sy
 const toast = useToast()
 const attributeStore = useAttributeStore()
 const productStore = useProductStore()
+const dynamicPricing = useDynamicPricing()
 
 // Destructure attribute store
 const {
@@ -546,9 +548,17 @@ const filters = ref({
   colors: null,
   storage: null,
   screen: null,
-  priceRange: [0, 50000000],
+  priceRange: [0, 50000000], // Will be updated dynamically
   searchQuery: ''
 })
+
+// Watch for price range changes and update filter default
+watch(() => dynamicPricing.defaultPriceRange.value, (newRange) => {
+  // Only update if current range is at the old default
+  if (filters.value.priceRange[0] === 0 && filters.value.priceRange[1] === 50000000) {
+    filters.value.priceRange = [...newRange]
+  }
+}, { immediate: true })
 
 // Computed properties
 const dialogTitle = computed(() => {
@@ -636,8 +646,8 @@ const filteredVariants = computed(() => {
   // Apply Storage filter
   if (filters.value.storage) {
     filtered = filtered.filter(variant => {
-      // Handle both oCung (camelCase) and ocung (lowercase) field names
-      const storage = variant.oCung || variant.ocung
+      // Handle both boNho (camelCase) and bonho (lowercase) field names for backward compatibility
+      const storage = variant.boNho || variant.bonho || variant.oCung || variant.ocung
       return storage?.id === filters.value.storage
     })
   }
@@ -663,13 +673,14 @@ const filteredVariants = computed(() => {
 
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
+  const defaultRange = dynamicPricing.defaultPriceRange.value
   return filters.value.cpu !== null ||
          filters.value.ram !== null ||
          filters.value.gpu !== null ||
          filters.value.colors !== null ||
          filters.value.storage !== null ||
          filters.value.screen !== null ||
-         (filters.value.priceRange[0] !== 0 || filters.value.priceRange[1] !== 50000000) ||
+         (filters.value.priceRange[0] !== defaultRange[0] || filters.value.priceRange[1] !== defaultRange[1]) ||
          (filters.value.searchQuery && filters.value.searchQuery.trim())
 })
 
@@ -711,9 +722,8 @@ const getVariantDisplayName = (variant) => {
   if (variant.cpu) parts.push(variant.cpu.moTaCpu)
   if (variant.ram) parts.push(variant.ram.moTaRam)
   if (variant.gpu) parts.push(variant.gpu.moTaGpu)
-  // Fix storage field reference - handle both oCung and ocung
-  const storage = variant.oCung || variant.ocung
-  if (storage) parts.push(storage.moTaOCung)
+  // Storage field reference (boNho)
+  if (variant.boNho) parts.push(variant.boNho.moTaBoNho)
   return parts.length > 0 ? parts.join(' - ') : 'Phiên bản cơ bản'
 }
 
@@ -837,7 +847,7 @@ const clearAllFilters = () => {
     colors: null,
     storage: null,
     screen: null,
-    priceRange: [0, 50000000],
+    priceRange: [...dynamicPricing.defaultPriceRange.value],
     searchQuery: ''
   }
 }

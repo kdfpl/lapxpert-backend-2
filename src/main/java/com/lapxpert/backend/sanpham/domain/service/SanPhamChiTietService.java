@@ -90,7 +90,7 @@ public class SanPhamChiTietService {
             existing.setMauSac(sanPham.getMauSac());
             existing.setCpu(sanPham.getCpu());
             existing.setRam(sanPham.getRam());
-            existing.setOCung(sanPham.getOCung());
+            existing.setBoNho(sanPham.getBoNho());
             existing.setGpu(sanPham.getGpu());
             existing.setManHinh(sanPham.getManHinh());
 

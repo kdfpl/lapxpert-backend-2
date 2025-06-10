@@ -983,8 +983,8 @@ const getVariantInfo = (item) => {
   if (item.sanPhamChiTiet.gpu) parts.push(item.sanPhamChiTiet.gpu.moTaGpu)
   if (item.sanPhamChiTiet.mauSac) parts.push(item.sanPhamChiTiet.mauSac.moTaMauSac)
 
-  const storage = item.sanPhamChiTiet.oCung || item.sanPhamChiTiet.ocung
-  if (storage) parts.push(storage.moTaOCung)
+  const storage = item.sanPhamChiTiet.boNho || item.sanPhamChiTiet.bonho || item.sanPhamChiTiet.oCung || item.sanPhamChiTiet.ocung
+  if (storage) parts.push(storage.moTaBoNho || storage.moTaOCung)
 
   if (item.sanPhamChiTiet.manHinh) parts.push(item.sanPhamChiTiet.manHinh.moTaManHinh)
 

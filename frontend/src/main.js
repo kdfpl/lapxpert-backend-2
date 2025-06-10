@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import AuthService from '@/apis/auth'
 
 import Aura from '@primeuix/themes/aura'
 import PrimeVue from 'primevue/config'
@@ -25,7 +26,7 @@ app.use(PrimeVue, {
       darkModeSelector: '.app-dark',
     }
   },
-  ripple: true, 
+  ripple: true,
 })
 
 app.use(ToastService)
@@ -39,11 +40,31 @@ app.config.errorHandler = (err, vm, info) => {
 
 app.mount('#app')
 
-router.isReady().then(() => {
-  const isAuthenticated = localStorage.getItem('token')
+// Enhanced authentication state restoration
+router.isReady().then(async () => {
   const currentRoute = router.currentRoute.value
-  
-  if (!isAuthenticated && currentRoute.meta.requiresAuth) {
-    router.push('/login')
+
+  // Check authentication state on app startup
+  if (currentRoute.meta.requiresAuth) {
+    const isAuthenticated = AuthService.isAuthenticated()
+
+    if (!isAuthenticated) {
+      console.log('No valid authentication found - redirecting to login')
+      router.push('/login')
+    } else {
+      // Optionally validate session with backend on startup
+      try {
+        const sessionValid = await AuthService.checkSession()
+        if (!sessionValid) {
+          console.log('Session validation failed on startup - redirecting to login')
+          router.push('/login')
+        } else {
+          console.log('Authentication restored successfully')
+        }
+      } catch (error) {
+        console.warn('Session validation error on startup:', error)
+        // Don't redirect on network errors, let user continue
+      }
+    }
   }
 })

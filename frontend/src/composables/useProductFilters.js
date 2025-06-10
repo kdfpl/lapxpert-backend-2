@@ -1,10 +1,12 @@
 import { ref, computed, watch } from 'vue'
 import { useProductStore } from '@/stores/productstore'
 import { useAttributeStore } from '@/stores/attributestore'
+import { useDynamicPricing } from './useDynamicPricing'
 
 export function useProductFilters() {
   const productStore = useProductStore()
   const attributeStore = useAttributeStore()
+  const { defaultPriceRange } = useDynamicPricing()
 
   const filters = ref({
     tenSanPham: '',
@@ -14,9 +16,17 @@ export function useProductFilters() {
     cpu: null,
     ram: null,
     gpu: null,
-    priceRange: [0, 50000000],
+    priceRange: [0, 50000000], // Will be updated dynamically
     trangThai: null
   })
+
+  // Watch for price range changes and update filter default
+  watch(defaultPriceRange, (newRange) => {
+    // Only update if current range is at the old default
+    if (filters.value.priceRange[0] === 0 && filters.value.priceRange[1] === 50000000) {
+      filters.value.priceRange = [...newRange]
+    }
+  }, { immediate: true })
 
   const filteredProducts = computed(() => {
     let products = productStore.products
@@ -68,16 +78,29 @@ export function useProductFilters() {
 
     // Price range filter - enhanced to handle dual-price structure properly
     if (filters.value.priceRange && filters.value.priceRange.length === 2) {
+      const beforeCount = products.length
       products = products.filter(p => {
-        if (!p.sanPhamChiTiets?.length) return false
+        // If product has no variants, include it in the results (don't filter out)
+        // This allows products without pricing to be visible
+        if (!p.sanPhamChiTiets?.length) {
+          return true
+        }
 
         // Get all variant prices (including promotional prices)
         const prices = p.sanPhamChiTiets.map(detail => {
           // Use promotional price if available and lower than regular price
           const regularPrice = detail.giaBan
           const promoPrice = detail.giaKhuyenMai
-          return (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
-        })
+          const effectivePrice = (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
+
+          // Handle null/undefined prices by returning 0
+          return effectivePrice || 0
+        }).filter(price => price > 0) // Remove zero prices
+
+        // If no valid prices found, include the product (don't filter out)
+        if (prices.length === 0) {
+          return true
+        }
 
         const minPrice = Math.min(...prices)
         const maxPrice = Math.max(...prices)
@@ -106,7 +129,7 @@ export function useProductFilters() {
       cpu: null,
       ram: null,
       gpu: null,
-      priceRange: [0, 50000000],
+      priceRange: [...defaultPriceRange.value],
       trangThai: null
     }
   }
@@ -130,6 +153,7 @@ export function useProductFilters() {
     filteredProducts,
     clearFilters,
     updateFilter,
-    applyFilters
+    applyFilters,
+    defaultPriceRange
   }
 }

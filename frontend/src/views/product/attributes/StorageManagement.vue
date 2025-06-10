@@ -13,7 +13,8 @@ const storageConfig = {
   tableTitle: 'Danh sách Ổ cứng',
   dialogTitle: 'Thông tin Ổ cứng',
   icon: 'pi pi-database',
-  fieldName: 'moTaOCung',
-  fieldLabel: 'Mô tả Ổ cứng'
+  fieldName: 'moTaBoNho',
+  fieldLabel: 'Mô tả Ổ cứng',
+  codeFieldName: 'maBoNho'
 }
 </script>

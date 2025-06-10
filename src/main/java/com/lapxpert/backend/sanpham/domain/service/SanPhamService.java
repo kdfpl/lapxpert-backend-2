@@ -446,7 +446,7 @@ public class SanPhamService {
         if (tempVariant.getCpu() != null) variant.setCpu(tempVariant.getCpu());
         if (tempVariant.getRam() != null) variant.setRam(tempVariant.getRam());
         if (tempVariant.getGpu() != null) variant.setGpu(tempVariant.getGpu());
-        if (tempVariant.getOCung() != null) variant.setOCung(tempVariant.getOCung());
+        if (tempVariant.getBoNho() != null) variant.setBoNho(tempVariant.getBoNho());
         if (tempVariant.getManHinh() != null) variant.setManHinh(tempVariant.getManHinh());
     }
 
@@ -466,8 +466,8 @@ public class SanPhamService {
         if (variant.getRam() != null && variant.getRam().getMoTaRam() != null) {
             sku.append("-").append(variant.getRam().getMoTaRam().replaceAll("\\s+", "").toUpperCase());
         }
-        if (variant.getOCung() != null && variant.getOCung().getMoTaOCung() != null) {
-            sku.append("-").append(variant.getOCung().getMoTaOCung().replaceAll("\\s+", "").toUpperCase());
+        if (variant.getBoNho() != null && variant.getBoNho().getMoTaBoNho() != null) {
+            sku.append("-").append(variant.getBoNho().getMoTaBoNho().replaceAll("\\s+", "").toUpperCase());
         }
         if (variant.getMauSac() != null && variant.getMauSac().getMoTaMauSac() != null) {
             sku.append("-").append(variant.getMauSac().getMoTaMauSac().replaceAll("\\s+", "").toUpperCase());

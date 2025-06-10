@@ -122,7 +122,7 @@
             <Select
               v-model="filters.storage"
               :options="storages"
-              optionLabel="moTaOCung"
+              optionLabel="moTaBoNho"
               optionValue="id"
               placeholder="Chọn bộ nhớ"
               fluid
@@ -163,9 +163,9 @@
           <Slider
             v-model="filters.priceRange"
             range
-            :min="0"
-            :max="50000000"
-            :step="500000"
+            :min="dynamicPricing.minPrice.value"
+            :max="dynamicPricing.maxPrice.value"
+            :step="dynamicPricing.priceStep.value"
             class="w-full"
           />
           <div class="flex justify-between text-xs text-surface-600 mt-1">
@@ -289,9 +289,9 @@
         </template>
       </Column>
 
-      <Column field="oCung.moTaOCung" header="Storage" sortable>
+      <Column field="boNho.moTaBoNho" header="Storage" sortable>
         <template #body="{ data }">
-          <span>{{ (data.oCung?.moTaOCung || data.ocung?.moTaOCung) || 'N/A' }}</span>
+          <span>{{ (data.boNho?.moTaBoNho || data.bonho?.moTaBoNho || data.oCung?.moTaOCung || data.ocung?.moTaOCung) || 'N/A' }}</span>
         </template>
       </Column>
 
@@ -303,15 +303,7 @@
 
       <Column field="giaBan" header="Giá bán" sortable>
         <template #body="{ data }">
-          <div>
-            <span class="font-semibold">{{ formatCurrency(data.giaBan) }}</span>
-            <div v-if="data.giaKhuyenMai && data.giaKhuyenMai < data.giaBan" class="text-sm">
-              <span class="text-red-500 font-medium">{{ formatCurrency(data.giaKhuyenMai) }}</span>
-              <span class="text-surface-500 line-through ml-1">{{
-                formatCurrency(data.giaBan)
-              }}</span>
-            </div>
-          </div>
+          <span class="font-semibold">{{ formatCurrency(data.giaBan) }}</span>
         </template>
       </Column>
 
@@ -443,9 +435,9 @@
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Bộ nhớ</label>
             <Select
-              v-model="variantForm.oCung"
+              v-model="variantForm.boNho"
               :options="storages"
-              optionLabel="moTaOCung"
+              optionLabel="moTaBoNho"
               placeholder="Chọn bộ nhớ"
             />
           </div>
@@ -486,16 +478,66 @@
             <small v-if="errors.giaBan" class="p-error">{{ errors.giaBan }}</small>
           </div>
 
-          <!-- Promotional Price -->
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Giá khuyến mãi</label>
-            <InputNumber
-              v-model="variantForm.giaKhuyenMai"
-              mode="currency"
-              currency="VND"
-              locale="vi-VN"
-              placeholder="Nhập giá khuyến mãi"
-            />
+        </div>
+
+        <!-- Image Upload Section -->
+        <div class="flex flex-col gap-2 mt-4">
+          <label class="text-sm font-medium">Hình ảnh biến thể</label>
+          <div class="flex items-center gap-4">
+            <!-- Image Preview -->
+            <div class="relative">
+              <div
+                class="w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200"
+                :class="variantImagePreview
+                  ? 'border-primary-200 shadow-sm'
+                  : 'border-dashed border-surface-300 bg-surface-50'"
+              >
+                <img
+                  v-if="variantImagePreview"
+                  :src="variantImagePreview"
+                  alt="Variant image preview"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <i class="pi pi-image text-2xl text-surface-400"></i>
+                </div>
+              </div>
+
+              <!-- Remove button -->
+              <Button
+                v-if="variantImagePreview"
+                icon="pi pi-times"
+                severity="danger"
+                text
+                rounded
+                size="small"
+                class="absolute -top-2 -right-2"
+                @click="removeVariantImage"
+              />
+            </div>
+
+            <!-- Upload Controls -->
+            <div class="flex flex-col gap-2">
+              <input
+                ref="variantImageInput"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="onVariantImageSelect"
+              />
+              <Button
+                :label="variantImagePreview ? 'Thay đổi ảnh' : 'Tải ảnh lên'"
+                :icon="variantImagePreview ? 'pi pi-refresh' : 'pi pi-upload'"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="$refs.variantImageInput?.click()"
+                :loading="uploadingVariantImage"
+              />
+              <small class="text-surface-500">
+                Định dạng: JPG, PNG. Tối đa 10MB
+              </small>
+            </div>
           </div>
         </div>
 
@@ -722,8 +764,10 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductStore } from '@/stores/productstore'
+import { useDynamicPricing } from '@/composables/useDynamicPricing'
 import { debounce } from 'lodash-es'
 import serialNumberApi from '@/apis/serialNumberApi'
+import storageApi from '@/apis/storage'
 
 const props = defineProps({
   productId: {
@@ -742,6 +786,7 @@ const toast = useToast()
 const confirm = useConfirm()
 const attributeStore = useAttributeStore()
 const productStore = useProductStore()
+const dynamicPricing = useDynamicPricing()
 
 // Component state
 const loading = ref(false)
@@ -760,8 +805,16 @@ const filters = ref({
   colors: null,
   storage: null,
   screen: null,
-  priceRange: [0, 50000000]
+  priceRange: [0, 50000000] // Will be updated dynamically
 })
+
+// Watch for price range changes and update filter default
+watch(() => dynamicPricing.defaultPriceRange.value, (newRange) => {
+  // Only update if current range is at the old default
+  if (filters.value.priceRange[0] === 0 && filters.value.priceRange[1] === 50000000) {
+    filters.value.priceRange = [...newRange]
+  }
+}, { immediate: true })
 
 // Product information for SKU generation
 const productInfo = ref(null)
@@ -784,7 +837,7 @@ const variantForm = ref({
   mauSac: null,
   cpu: null,
   ram: null,
-  oCung: null,
+  boNho: null,
   gpu: null,
   manHinh: null,
   giaBan: null,
@@ -832,8 +885,8 @@ const filteredVariants = computed(() => {
   // Apply Storage filter
   if (filters.value.storage) {
     filtered = filtered.filter(variant => {
-      // Handle both oCung (camelCase) and ocung (lowercase) field names
-      const storage = variant.oCung || variant.ocung
+      // Handle both boNho (camelCase) and bonho (lowercase) field names for backward compatibility
+      const storage = variant.boNho || variant.bonho || variant.oCung || variant.ocung
       return storage?.id === filters.value.storage
     })
   }
@@ -847,9 +900,7 @@ const filteredVariants = computed(() => {
   if (filters.value.priceRange && filters.value.priceRange.length === 2) {
     const [minPrice, maxPrice] = filters.value.priceRange
     filtered = filtered.filter(variant => {
-      const price = variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan
-        ? variant.giaKhuyenMai
-        : variant.giaBan
+      const price = variant.giaBan
       return price >= minPrice && price <= maxPrice
     })
   }
@@ -864,7 +915,7 @@ const filteredVariants = computed(() => {
         variant.cpu?.moTaCpu?.toLowerCase().includes(searchTerm) ||
         variant.ram?.moTaRam?.toLowerCase().includes(searchTerm) ||
         variant.gpu?.moTaGpu?.toLowerCase().includes(searchTerm) ||
-        (variant.oCung?.moTaOCung || variant.ocung?.moTaOCung)?.toLowerCase().includes(searchTerm) ||
+        (variant.boNho?.moTaBoNho || variant.bonho?.moTaBoNho || variant.oCung?.moTaOCung || variant.ocung?.moTaOCung)?.toLowerCase().includes(searchTerm) ||
         variant.manHinh?.moTaManHinh?.toLowerCase().includes(searchTerm)
       )
     })
@@ -919,7 +970,7 @@ const clearAllFilters = () => {
     colors: null,
     storage: null,
     screen: null,
-    priceRange: [0, 50000000]
+    priceRange: [...dynamicPricing.defaultPriceRange.value]
   }
   globalFilter.value = ''
 
@@ -947,8 +998,8 @@ const generateBaseSku = (variant) => {
     parts.push(variant.mauSac.moTaMauSac.replace(/\s+/g, '').toUpperCase().substring(0, 4))
   }
   // Add storage to SKU for better uniqueness
-  if (variant.oCung?.moTaOCung) {
-    parts.push(variant.oCung.moTaOCung.replace(/\s+/g, '').toUpperCase().substring(0, 6))
+  if (variant.boNho?.moTaBoNho) {
+    parts.push(variant.boNho.moTaBoNho.replace(/\s+/g, '').toUpperCase().substring(0, 6))
   }
 
   return parts.join('-')
@@ -1006,20 +1057,33 @@ const generateUniqueSku = async (baseSku) => {
   throw new Error(`Không thể tạo SKU duy nhất cho: ${baseSku}`)
 }
 
-const openVariantDialog = (variant = null) => {
+const openVariantDialog = async (variant = null) => {
   editingVariant.value = variant
   if (variant) {
     // Deep copy for editing to avoid modifying original data
-    // Handle both oCung (camelCase) and ocung (lowercase) field names from backend
-    const storageField = variant.oCung || variant.ocung
+    // Handle both boNho (camelCase) and bonho (lowercase) field names from backend, with backward compatibility
+    const storageField = variant.boNho || variant.bonho || variant.oCung || variant.ocung
     variantForm.value = {
       ...variant,
       mauSac: variant.mauSac ? { ...variant.mauSac } : null,
       cpu: variant.cpu ? { ...variant.cpu } : null,
       ram: variant.ram ? { ...variant.ram } : null,
-      oCung: storageField ? { ...storageField } : null,
+      boNho: storageField ? { ...storageField } : null,
       gpu: variant.gpu ? { ...variant.gpu } : null,
       manHinh: variant.manHinh ? { ...variant.manHinh } : null,
+    }
+
+    // Load existing image preview if available
+    if (variant.hinhAnh && variant.hinhAnh.length > 0) {
+      try {
+        const presignedUrl = await storageApi.getPresignedUrl('products', variant.hinhAnh[0])
+        variantImagePreview.value = presignedUrl
+      } catch (error) {
+        console.warn('Could not load variant image preview:', error)
+        variantImagePreview.value = null
+      }
+    } else {
+      variantImagePreview.value = null
     }
   } else {
     resetVariantForm()
@@ -1033,15 +1097,16 @@ const resetVariantForm = () => {
     mauSac: null,
     cpu: null,
     ram: null,
-    oCung: null,
+    boNho: null,
     gpu: null,
     manHinh: null,
     giaBan: null,
-    giaKhuyenMai: null,
     trangThai: true,
     hinhAnh: [],
     serialNumbers: []
   }
+  // Reset image preview
+  variantImagePreview.value = null
 }
 
 const validateVariantForm = () => {
@@ -1057,20 +1122,14 @@ const validateVariantForm = () => {
     errors.value.giaBan = 'Giá bán phải lớn hơn 0'
   }
 
-  // Promotional price validation (optional but must be less than selling price)
-  if (
-    variantForm.value.giaKhuyenMai &&
-    variantForm.value.giaKhuyenMai >= variantForm.value.giaBan
-  ) {
-    errors.value.giaKhuyenMai = 'Giá khuyến mãi phải nhỏ hơn giá bán'
-  }
+
 
   // Validate that at least one technical attribute is selected (besides color which is required)
   const hasAttributes =
     variantForm.value.cpu ||
     variantForm.value.ram ||
     variantForm.value.gpu ||
-    variantForm.value.oCung ||
+    variantForm.value.boNho ||
     variantForm.value.manHinh
 
   if (!hasAttributes) {
@@ -1328,6 +1387,11 @@ const selectedVariantForSerial = ref(null)
 const newSerialNumber = ref('')
 const variantSerialNumbersForDialog = ref([])
 
+// Image upload state for variant dialog
+const variantImagePreview = ref(null)
+const uploadingVariantImage = ref(false)
+const variantImageInput = ref(null)
+
 
 
 // Serial number changes tracking for backend persistence
@@ -1571,9 +1635,9 @@ const getVariantDisplayName = (variant) => {
   if (variant.ram?.moTaRam) attributes.push(variant.ram.moTaRam)
   if (variant.gpu?.moTaGpu) attributes.push(variant.gpu.moTaGpu)
   if (variant.mauSac?.moTaMauSac) attributes.push(variant.mauSac.moTaMauSac)
-  // Handle both oCung (camelCase) and ocung (lowercase) field names
-  if (variant.oCung?.moTaOCung || variant.ocung?.moTaOCung) {
-    attributes.push(variant.oCung?.moTaOCung || variant.ocung?.moTaOCung)
+  // Handle storage field (boNho)
+  if (variant.boNho?.moTaBoNho) {
+    attributes.push(variant.boNho.moTaBoNho)
   }
   if (variant.manHinh?.moTaManHinh) attributes.push(variant.manHinh.moTaManHinh)
 
@@ -1605,6 +1669,99 @@ const refreshVariants = async () => {
   }
 }
 
+// Image upload methods for variant dialog
+const onVariantImageSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Vui lòng chọn file hình ảnh',
+      life: 3000
+    })
+    return
+  }
+
+  // Validate file size (10MB limit)
+  if (file.size > 10 * 1024 * 1024) {
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Kích thước file không được vượt quá 10MB',
+      life: 3000
+    })
+    return
+  }
+
+  uploadingVariantImage.value = true
+  try {
+    // Create immediate preview using FileReader
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      variantImagePreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to MinIO
+    const uploadedFilenames = await storageApi.uploadFiles([file], 'products')
+
+    if (uploadedFilenames && uploadedFilenames.length > 0) {
+      // Initialize hinhAnh array if needed
+      if (!variantForm.value.hinhAnh) {
+        variantForm.value.hinhAnh = []
+      }
+
+      // Set as the primary image
+      variantForm.value.hinhAnh = [uploadedFilenames[0]]
+
+      // Get presigned URL for the uploaded image and update preview
+      try {
+        const presignedUrl = await storageApi.getPresignedUrl('products', uploadedFilenames[0])
+        variantImagePreview.value = presignedUrl
+      } catch (error) {
+        console.warn('Could not get presigned URL for variant preview:', error)
+        // Keep the FileReader preview
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Thành công',
+        detail: 'Tải ảnh biến thể thành công',
+        life: 3000
+      })
+    }
+  } catch (error) {
+    console.error('Error uploading variant image:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: error.message || 'Lỗi tải ảnh lên',
+      life: 3000
+    })
+  } finally {
+    uploadingVariantImage.value = false
+    // Clear the input
+    event.target.value = ''
+  }
+}
+
+const removeVariantImage = () => {
+  variantImagePreview.value = null
+  if (variantForm.value.hinhAnh) {
+    variantForm.value.hinhAnh = []
+  }
+
+  toast.add({
+    severity: 'success',
+    summary: 'Thành công',
+    detail: 'Đã xóa ảnh biến thể',
+    life: 2000
+  })
+}
+
 // Watch for variants changes to reload serial numbers
 watch(() => props.variants, async (newVariants) => {
   if (newVariants?.length) {
@@ -1619,6 +1776,17 @@ onMounted(async () => {
     loadProductInfo(),
     loadVariantSerialNumbers()
   ])
+
+  // Debug: Log storage data after loading
+  console.log('Storage data loaded:', attributeStore.storage)
+  console.log('All attribute store data:', {
+    cpu: attributeStore.cpu,
+    ram: attributeStore.ram,
+    gpu: attributeStore.gpu,
+    colors: attributeStore.colors,
+    storage: attributeStore.storage,
+    screen: attributeStore.screen
+  })
 })
 </script>
 

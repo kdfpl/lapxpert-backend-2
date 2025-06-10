@@ -14,6 +14,7 @@ const colorConfig = {
   dialogTitle: 'Thông tin Màu sắc',
   icon: 'pi pi-palette',
   fieldName: 'moTaMauSac',
-  fieldLabel: 'Mô tả Màu sắc'
+  fieldLabel: 'Mô tả Màu sắc',
+  codeFieldName: 'maMauSac'
 }
 </script>

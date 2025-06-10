@@ -140,8 +140,8 @@ public class GioHangChiTiet extends BaseAuditableEntity {
         if (sanPhamChiTiet.getRam() != null) {
             variantName.append(" - ").append(sanPhamChiTiet.getRam().getMoTaRam());
         }
-        if (sanPhamChiTiet.getOCung() != null) {
-            variantName.append("/").append(sanPhamChiTiet.getOCung().getMoTaOCung());
+        if (sanPhamChiTiet.getBoNho() != null) {
+            variantName.append("/").append(sanPhamChiTiet.getBoNho().getMoTaBoNho());
         }
         if (sanPhamChiTiet.getMauSac() != null) {
             variantName.append(" - ").append(sanPhamChiTiet.getMauSac().getMoTaMauSac());

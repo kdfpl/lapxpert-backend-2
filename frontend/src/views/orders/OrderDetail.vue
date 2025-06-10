@@ -371,24 +371,25 @@
                     <div>
                       <p class="font-semibold">{{ data.tenSanPhamSnapshot || data.sanPhamChiTiet?.sanPham?.tenSanPham || 'Không có tên' }}</p>
                       <p class="text-sm text-surface-600">{{ data.skuSnapshot || data.sanPhamChiTiet?.sanPham?.maSanPham || 'Không có mã' }}</p>
-                      <!-- Serial Numbers Integration -->
-                      <div v-if="getSerialNumbers(data).length > 0" class="mt-1">
-                        <div class="text-xs text-surface-500 font-mono">
-                          <span class="font-medium">Serial Numbers:</span>
-                          <div class="flex flex-wrap gap-1 mt-1">
-                            <Badge
-                              v-for="serial in getSerialNumbers(data)"
-                              :key="serial"
-                              :value="serial"
-                              severity="info"
-                              size="small"
-                              class="font-mono text-xs"
-                            />
+
+                      <!-- Simplified Serial Numbers Display -->
+                      <div class="mt-2">
+                        <!-- Show serial numbers if available -->
+                        <div v-if="getSerialNumbers(data).length > 0" class="flex flex-wrap gap-1">
+                          <div
+                            v-for="serial in getSerialNumbers(data)"
+                            :key="serial"
+                            class="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded text-xs font-mono"
+                          >
+                            <i class="pi pi-hashtag text-xs"></i>
+                            <span>Serial: {{ serial }}</span>
                           </div>
                         </div>
-                      </div>
-                      <div v-if="data.sanPhamChiTiet?.id" class="text-xs text-surface-500 mt-1">
-                        ID Biến thể: {{ data.sanPhamChiTiet.id }}
+
+                        <!-- No serial numbers available -->
+                        <div v-else class="flex items-center gap-2">
+                          <span class="text-xs text-surface-500 italic">Không có serial number</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -403,12 +404,6 @@
                       {{ formatCurrency(data.giaGoc) }}
                     </div>
                   </div>
-                </template>
-              </Column>
-
-              <Column field="soLuong" header="Số lượng" class="text-center min-w-24">
-                <template #body="{ data }">
-                  <Badge :value="data.soLuong" severity="info" />
                 </template>
               </Column>
 
@@ -750,6 +745,7 @@ import { useOrderAudit } from '@/composables/useOrderAudit'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import orderApi from '@/apis/orderApi'
 import storageApi from '@/apis/storage'
+import serialNumberApi from '@/apis/serialNumberApi'
 import OrderAuditLog from './components/OrderAuditLog.vue'
 import PaymentStatus from './components/PaymentStatus.vue'
 import PaymentSummary from './components/PaymentSummary.vue'
@@ -784,7 +780,7 @@ const selectedStatusUpdate = ref(null)
 const paymentHistory = ref([])
 const showReceiptPreview = ref(false)
 const imageUrlCache = ref(new Map())
-const serialNumbersCache = ref(new Map())
+const orderSerialNumbers = ref([])
 
 // Computed properties
 // Payment actions are handled by PaymentStatus component
@@ -1191,78 +1187,61 @@ const handleImageError = (event) => {
   }
 }
 
-// Serial number extraction for order items
-const getSerialNumbers = (orderItem) => {
-  if (!orderItem.sanPhamChiTiet?.id) return []
-
-  const variantId = orderItem.sanPhamChiTiet.id
-  const cacheKey = `${order.value.id}-${variantId}`
-
-  // Check cache first
-  if (serialNumbersCache.value.has(cacheKey)) {
-    return serialNumbersCache.value.get(cacheKey)
+// Load serial numbers for the order
+const loadOrderSerialNumbers = async () => {
+  if (!order.value?.id) {
+    console.log('No order ID available for loading serial numbers')
+    return
   }
 
-  // Load serial numbers asynchronously
-  loadSerialNumbers(orderItem, cacheKey)
+  console.log('=== Loading serial numbers for order ID:', order.value.id)
 
-  // Return empty array for now, will update when loaded
-  return []
-}
-
-// Load serial numbers for order item
-const loadSerialNumbers = async (orderItem, cacheKey) => {
   try {
-    // Check if we have serial number information in the order item
-    let serialNumbers = []
-
-    // Try to get serial numbers from order item data
-    if (orderItem.serialNumbers && Array.isArray(orderItem.serialNumbers)) {
-      serialNumbers = orderItem.serialNumbers
-    } else if (orderItem.serialNumber) {
-      // Single serial number
-      serialNumbers = [orderItem.serialNumber]
-    } else if (orderItem.sanPhamChiTiet?.serialNumbers && Array.isArray(orderItem.sanPhamChiTiet.serialNumbers)) {
-      serialNumbers = orderItem.sanPhamChiTiet.serialNumbers
-    } else if (orderItem.sanPhamChiTiet?.serialNumber) {
-      // Single serial number from variant
-      serialNumbers = [orderItem.sanPhamChiTiet.serialNumber]
-    } else {
-      // If no serial numbers found, try to fetch from API
-      try {
-        const serialNumberApi = await import('@/apis/serialNumberApi')
-        if (orderItem.sanPhamChiTiet?.id) {
-          const response = await serialNumberApi.default.getSerialNumbersByVariant(orderItem.sanPhamChiTiet.id)
-          if (response.success && response.data) {
-            // Filter serial numbers that are sold/reserved for this order
-            serialNumbers = response.data
-              .filter(sn => sn.trangThai === 'SOLD' || sn.trangThai === 'RESERVED')
-              .map(sn => sn.serialNumber || sn.soSerial)
-              .slice(0, orderItem.soLuong) // Limit to quantity ordered
-          }
-        }
-      } catch (apiError) {
-        console.warn('Could not fetch serial numbers from API:', apiError)
-        // Fallback to generating display serial numbers based on quantity
-        const quantity = orderItem.soLuong || 1
-        const baseSku = orderItem.skuSnapshot || orderItem.sanPhamChiTiet?.sku || 'UNKNOWN'
-        for (let i = 1; i <= quantity; i++) {
-          serialNumbers.push(`${baseSku}-${String(i).padStart(4, '0')}`)
-        }
-      }
-    }
-
-    // Cache the serial numbers
-    serialNumbersCache.value.set(cacheKey, serialNumbers)
-
-    // Force reactivity update
-    serialNumbersCache.value = new Map(serialNumbersCache.value)
+    const serialNumbers = await serialNumberApi.getSerialNumbersByOrder(order.value.id.toString())
+    console.log('API response for serial numbers:', serialNumbers)
+    orderSerialNumbers.value = serialNumbers || []
+    console.log('Set orderSerialNumbers.value to:', orderSerialNumbers.value)
   } catch (error) {
-    console.warn('Error loading serial numbers for order item:', orderItem, error)
-    // Cache empty array to prevent repeated attempts
-    serialNumbersCache.value.set(cacheKey, [])
+    console.warn('Error loading serial numbers for order:', error)
+    orderSerialNumbers.value = []
   }
 }
+
+// Get serial numbers for a specific order item
+const getSerialNumbers = (orderItem) => {
+  console.log('=== DEBUG getSerialNumbers ===')
+  console.log('orderItem:', orderItem)
+  console.log('orderItem.sanPhamChiTietId:', orderItem.sanPhamChiTietId)
+  console.log('orderSerialNumbers.value:', orderSerialNumbers.value)
+  console.log('orderSerialNumbers.value.length:', orderSerialNumbers.value.length)
+
+  // Use sanPhamChiTietId directly from the order item (not from nested object)
+  const variantId = orderItem.sanPhamChiTietId || orderItem.sanPhamChiTiet?.id
+
+  if (!variantId || !orderSerialNumbers.value.length) {
+    console.log('Early return: missing variantId or no serial numbers loaded')
+    return []
+  }
+
+  // Filter serial numbers that belong to this specific product variant
+  const variantSerialNumbers = orderSerialNumbers.value.filter(sn => {
+    console.log(`Comparing sn.sanPhamChiTietId (${sn.sanPhamChiTietId}) === variantId (${variantId})`)
+    return sn.sanPhamChiTietId === variantId
+  })
+
+  console.log('variantSerialNumbers:', variantSerialNumbers)
+
+  // Extract the serial number values and limit to the quantity ordered
+  const serialNumberValues = variantSerialNumbers
+    .slice(0, orderItem.soLuong || 1)
+    .map(sn => sn.serialNumberValue)
+    .filter(sn => sn && sn.trim())
+
+  console.log('Final serialNumberValues:', serialNumberValues)
+  return serialNumberValues
+}
+
+
 
 // Payment method determination (since it's not stored in order)
 const getPaymentMethod = () => {
@@ -1620,7 +1599,8 @@ const loadOrder = async () => {
       throw new Error('Không tìm thấy đơn hàng')
     }
 
-
+    // Load serial numbers for this order
+    await loadOrderSerialNumbers()
 
   } catch (err) {
     error.value = err.message || 'Lỗi tải dữ liệu đơn hàng'

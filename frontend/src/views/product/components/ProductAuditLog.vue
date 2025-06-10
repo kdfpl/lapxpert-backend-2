@@ -8,36 +8,48 @@
           Theo dõi tất cả các thay đổi của sản phẩm
         </p>
       </div>
-      <Button 
-        label="Làm mới" 
-        icon="pi pi-refresh" 
-        severity="secondary" 
-        outlined 
-        @click="$emit('refresh')"
+      <Button
+        label="Làm mới"
+        icon="pi pi-refresh"
+        severity="secondary"
+        outlined
+        @click="loadAuditHistory"
+        :loading="isLoading"
       />
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-8">
+    <div v-if="isLoading" class="text-center py-8">
       <ProgressSpinner />
       <p class="mt-4 text-surface-600">Đang tải lịch sử...</p>
     </div>
 
+    <!-- Error State -->
+    <div v-else-if="error" class="text-center py-8">
+      <i class="pi pi-exclamation-triangle text-4xl text-red-400 mb-4 block"></i>
+      <p class="text-surface-600 mb-4">{{ error }}</p>
+      <Button
+        label="Thử lại"
+        icon="pi pi-refresh"
+        @click="loadAuditHistory"
+      />
+    </div>
+
     <!-- Empty State -->
-    <div v-else-if="!auditHistory?.length" class="text-center py-8">
+    <div v-else-if="!displayAuditHistory?.length" class="text-center py-8">
       <i class="pi pi-history text-4xl text-surface-400 mb-4 block"></i>
       <p class="text-surface-600">Chưa có lịch sử thay đổi</p>
     </div>
 
     <!-- Audit Timeline -->
-    <Timeline v-else :value="auditHistory" class="w-full">
+    <Timeline v-else :value="displayAuditHistory" class="w-full">
       <template #marker="{ item }">
         <div class="flex items-center justify-center w-8 h-8 rounded-full border-2"
              :class="getAuditMarkerClass(item.hanhDong)">
           <i :class="getAuditIcon(item.hanhDong)" class="text-sm"></i>
         </div>
       </template>
-      
+
       <template #content="{ item }">
         <Card class="border border-surface-200 dark:border-surface-700 mb-4">
           <template #content>
@@ -45,9 +57,9 @@
               <!-- Header with Action and Time -->
               <div class="flex justify-between items-start">
                 <div class="flex items-center gap-3">
-                  <Badge 
-                    :value="item.hanhDongDisplay || item.hanhDong" 
-                    :severity="getAuditSeverity(item.hanhDong)" 
+                  <Badge
+                    :value="item.hanhDongDisplay || item.hanhDong"
+                    :severity="getAuditSeverity(item.hanhDong)"
                   />
                   <span class="font-semibold text-surface-900 dark:text-surface-0">
                     {{ item.nguoiThucHien || 'Hệ thống' }}
@@ -57,7 +69,7 @@
                   {{ formatFullTimestamp(item.thoiGianThayDoi) }}
                 </span>
               </div>
-              
+
               <!-- Reason -->
               <div v-if="item.lyDoThayDoi" class="bg-surface-50 dark:bg-surface-800 p-3 rounded-lg">
                 <div class="flex items-start gap-2">
@@ -68,17 +80,17 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Change Details -->
               <div v-if="item.chiTietThayDoi?.length" class="space-y-3">
                 <h4 class="font-medium text-surface-900 dark:text-surface-0 flex items-center gap-2">
                   <i class="pi pi-list text-primary"></i>
                   Chi tiết thay đổi:
                 </h4>
-                
+
                 <div class="space-y-3">
-                  <div 
-                    v-for="change in item.chiTietThayDoi" 
+                  <div
+                    v-for="change in item.chiTietThayDoi"
                     :key="change.field"
                     class="bg-surface-50 dark:bg-surface-800 p-4 rounded-lg"
                   >
@@ -87,7 +99,7 @@
                         {{ change.fieldName }}:
                       </span>
                     </div>
-                    
+
                     <!-- Old Value -->
                     <div class="mb-2">
                       <label class="text-xs font-medium text-surface-600 dark:text-surface-400 uppercase tracking-wide">
@@ -99,7 +111,7 @@
                         </span>
                       </div>
                     </div>
-                    
+
                     <!-- New Value -->
                     <div>
                       <label class="text-xs font-medium text-surface-600 dark:text-surface-400 uppercase tracking-wide">
@@ -114,7 +126,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Additional Info -->
               <div v-if="item.ipAddress || item.userAgent" class="border-t border-surface-200 dark:border-surface-700 pt-3">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-surface-600 dark:text-surface-400">
@@ -136,11 +148,11 @@
 
     <!-- Load More Button -->
     <div v-if="hasMore" class="text-center mt-6">
-      <Button 
-        label="Tải thêm" 
-        icon="pi pi-chevron-down" 
-        severity="secondary" 
-        outlined 
+      <Button
+        label="Tải thêm"
+        icon="pi pi-chevron-down"
+        severity="secondary"
+        outlined
         @click="loadMore"
         :loading="loadingMore"
       />
@@ -149,7 +161,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import productService from '@/apis/product'
 
 const props = defineProps({
   productId: {
@@ -168,26 +182,31 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh', 'load-more'])
 
+const toast = useToast()
+
 // Component state
 const loadingMore = ref(false)
-const hasMore = ref(false) // This would be determined by the API response
+const hasMore = ref(false)
+const internalAuditHistory = ref([])
+const internalLoading = ref(false)
+const error = ref(null)
 
 // Methods
 const formatFullTimestamp = (timestamp) => {
   if (!timestamp) return 'Không có thông tin'
-  
+
   const date = new Date(timestamp)
-  const time = date.toLocaleTimeString('vi-VN', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit' 
+  const time = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
   })
   const dateStr = date.toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
   })
-  
+
   return `${time} ${dateStr}`
 }
 
@@ -229,13 +248,13 @@ const getAuditSeverity = (action) => {
 
 const getUserAgentInfo = (userAgent) => {
   if (!userAgent) return 'Không có thông tin'
-  
+
   // Simple user agent parsing
   if (userAgent.includes('Chrome')) return 'Chrome Browser'
   if (userAgent.includes('Firefox')) return 'Firefox Browser'
   if (userAgent.includes('Safari')) return 'Safari Browser'
   if (userAgent.includes('Edge')) return 'Edge Browser'
-  
+
   return 'Unknown Browser'
 }
 
@@ -247,6 +266,180 @@ const loadMore = async () => {
     loadingMore.value = false
   }
 }
+
+// Computed property to determine which audit history to use
+const displayAuditHistory = computed(() => {
+  // Use props data if provided, otherwise use internal data
+  return props.auditHistory?.length > 0 ? props.auditHistory : internalAuditHistory.value
+})
+
+// Computed property to determine loading state
+const isLoading = computed(() => {
+  return props.loading || internalLoading.value
+})
+
+// Load audit history from API
+const loadAuditHistory = async () => {
+  if (!props.productId) return
+
+  internalLoading.value = true
+  error.value = null
+
+  try {
+    const response = await productService.getProductAuditHistory(props.productId)
+
+    // Handle different response formats
+    let auditData = []
+    if (response?.data) {
+      auditData = Array.isArray(response.data) ? response.data : []
+    } else if (Array.isArray(response)) {
+      auditData = response
+    }
+
+    // Process and enhance audit data
+    internalAuditHistory.value = auditData.map(item => ({
+      ...item,
+      hanhDongDisplay: getActionDisplayName(item.hanhDong),
+      chiTietThayDoi: parseChangeDetails(item.giaTriCu, item.giaTriMoi)
+    }))
+
+    console.log('Loaded audit history:', internalAuditHistory.value)
+  } catch (err) {
+    console.error('Error loading audit history:', err)
+    error.value = err.message || 'Lỗi tải lịch sử thay đổi'
+
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Không thể tải lịch sử thay đổi',
+      life: 3000
+    })
+  } finally {
+    internalLoading.value = false
+  }
+}
+
+// Get display name for action
+const getActionDisplayName = (action) => {
+  const actionMap = {
+    'CREATE': 'Tạo mới',
+    'UPDATE': 'Cập nhật',
+    'DELETE': 'Xóa',
+    'STATUS_CHANGE': 'Thay đổi trạng thái',
+    'PRICE_CHANGE': 'Thay đổi giá',
+    'RESTORE': 'Khôi phục'
+  }
+  return actionMap[action] || action
+}
+
+// Parse change details from old and new values
+const parseChangeDetails = (oldValues, newValues) => {
+  const changes = []
+
+  try {
+    const oldData = oldValues ? JSON.parse(oldValues) : {}
+    const newData = newValues ? JSON.parse(newValues) : {}
+
+    // Get all unique field names
+    const allFields = new Set([...Object.keys(oldData), ...Object.keys(newData)])
+
+    allFields.forEach(field => {
+      const oldValue = oldData[field]
+      const newValue = newData[field]
+
+      // Only include if values are different
+      if (oldValue !== newValue) {
+        changes.push({
+          field,
+          fieldName: getFieldDisplayName(field),
+          oldValue: formatFieldValue(oldValue),
+          newValue: formatFieldValue(newValue)
+        })
+      }
+    })
+  } catch (error) {
+    console.warn('Error parsing change details:', error)
+    // Fallback: show raw values if JSON parsing fails
+    if (oldValues || newValues) {
+      changes.push({
+        field: 'raw',
+        fieldName: 'Thay đổi',
+        oldValue: oldValues || 'Không có',
+        newValue: newValues || 'Không có'
+      })
+    }
+  }
+
+  return changes
+}
+
+// Get display name for field
+const getFieldDisplayName = (field) => {
+  const fieldNames = {
+    tenSanPham: 'Tên sản phẩm',
+    moTa: 'Mô tả',
+    giaBan: 'Giá bán',
+    giaKhuyenMai: 'Giá khuyến mãi',
+    trangThai: 'Trạng thái',
+    soLuongTon: 'Số lượng tồn',
+    ngayRaMat: 'Ngày ra mắt',
+    thuongHieu: 'Thương hiệu',
+    danhMucs: 'Danh mục',
+    hinhAnh: 'Hình ảnh',
+    maSanPham: 'Mã sản phẩm',
+    sku: 'SKU',
+    cpu: 'CPU',
+    ram: 'RAM',
+    gpu: 'GPU',
+    mauSac: 'Màu sắc',
+    boNho: 'Bộ nhớ',
+    manHinh: 'Màn hình'
+  }
+  return fieldNames[field] || field
+}
+
+// Format field value for display
+const formatFieldValue = (value) => {
+  if (value === null || value === undefined) {
+    return 'Không có'
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Có' : 'Không'
+  }
+
+  if (typeof value === 'object') {
+    // Handle object values (like nested entities)
+    if (value.tenSanPham) return value.tenSanPham
+    if (value.moTaCpu) return value.moTaCpu
+    if (value.moTaRam) return value.moTaRam
+    if (value.moTaGpu) return value.moTaGpu
+    if (value.moTaMauSac) return value.moTaMauSac
+    if (value.moTaBoNho) return value.moTaBoNho
+    if (value.moTaManHinh) return value.moTaManHinh
+    if (value.tenThuongHieu) return value.tenThuongHieu
+    if (value.tenDanhMuc) return value.tenDanhMuc
+
+    return JSON.stringify(value)
+  }
+
+  return String(value)
+}
+
+// Watch for productId changes to reload data
+watch(() => props.productId, (newId) => {
+  if (newId) {
+    loadAuditHistory()
+  }
+}, { immediate: true })
+
+// Lifecycle
+onMounted(() => {
+  // Only load if no audit history is provided via props
+  if (!props.auditHistory?.length && props.productId) {
+    loadAuditHistory()
+  }
+})
 </script>
 
 <style scoped>

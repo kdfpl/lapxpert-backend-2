@@ -23,7 +23,7 @@ import java.util.Set;
 /**
  * Entity representing product variants with specific configurations.
  * Each variant defines a unique sellable configuration with 6 core attributes:
- * CPU, RAM, GPU, Color (MauSac), Storage (OCung), Screen Size (ManHinh).
+ * CPU, RAM, GPU, Color (MauSac), Storage (BoNho), Screen Size (ManHinh).
  * Individual units are tracked separately in SerialNumber entity.
  * Uses BaseAuditableEntity for basic audit fields and SanPhamChiTietAuditHistory for detailed change tracking.
  */
@@ -100,8 +100,8 @@ public class SanPhamChiTiet extends BaseAuditableEntity {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "o_cung_id")
-    private OCung oCung;
+    @JoinColumn(name = "bo_nho_id")
+    private BoNho boNho;
 
     /**
      * Screen size specification

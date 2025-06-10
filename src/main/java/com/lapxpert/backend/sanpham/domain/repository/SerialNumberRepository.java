@@ -124,8 +124,8 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
         AND COALESCE(spct.ram_id, 0) = COALESCE((
             SELECT ref.ram_id FROM san_pham_chi_tiet ref WHERE ref.id = :variantId
         ), 0)
-        AND COALESCE(spct.o_cung_id, 0) = COALESCE((
-            SELECT ref.o_cung_id FROM san_pham_chi_tiet ref WHERE ref.id = :variantId
+        AND COALESCE(spct.bo_nho_id, 0) = COALESCE((
+            SELECT ref.bo_nho_id FROM san_pham_chi_tiet ref WHERE ref.id = :variantId
         ), 0)
         AND COALESCE(spct.gpu_id, 0) = COALESCE((
             SELECT ref.gpu_id FROM san_pham_chi_tiet ref WHERE ref.id = :variantId

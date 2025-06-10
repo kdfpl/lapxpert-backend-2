@@ -1386,9 +1386,8 @@ const getVariantDisplayInfo = (item) => {
     if (item.sanPhamChiTiet.gpu) parts.push(item.sanPhamChiTiet.gpu.moTaGpu)
     if (item.sanPhamChiTiet.mauSac) parts.push(item.sanPhamChiTiet.mauSac.moTaMauSac)
 
-    // Fix storage field reference - handle both oCung and ocung
-    const storage = item.sanPhamChiTiet.oCung || item.sanPhamChiTiet.ocung
-    if (storage) parts.push(storage.moTaOCung)
+    // Storage field reference (boNho)
+    if (item.sanPhamChiTiet.boNho) parts.push(item.sanPhamChiTiet.boNho.moTaBoNho)
 
     if (item.sanPhamChiTiet.manHinh) parts.push(item.sanPhamChiTiet.manHinh.moTaManHinh)
 

@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class MauSacDto implements Serializable {
     Long id;
+    String maMauSac;
     String moTaMauSac;
 }

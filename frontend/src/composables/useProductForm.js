@@ -21,6 +21,34 @@ export function useProductForm() {
     sanPhamChiTiets: []
   })
 
+  // Helper function to validate serial numbers across all variants
+  const validateSerialNumbers = () => {
+    const allSerialNumbers = new Set()
+    const duplicates = []
+
+    productForm.value.sanPhamChiTiets.forEach((variant, variantIndex) => {
+      if (variant.serialNumbers && variant.serialNumbers.length > 0) {
+        variant.serialNumbers.forEach((serial, serialIndex) => {
+          const serialValue = serial.serialNumberValue || serial.serialNumber
+          if (serialValue && serialValue.trim()) {
+            const trimmedSerial = serialValue.trim()
+            if (allSerialNumbers.has(trimmedSerial)) {
+              duplicates.push({
+                serialNumber: trimmedSerial,
+                variantIndex,
+                serialIndex
+              })
+            } else {
+              allSerialNumbers.add(trimmedSerial)
+            }
+          }
+        })
+      }
+    })
+
+    return duplicates
+  }
+
   const validateForm = () => {
     errors.value = {}
 
@@ -56,6 +84,13 @@ export function useProductForm() {
     // Description validation
     if (productForm.value.moTa && productForm.value.moTa.length > 5000) {
       errors.value.moTa = 'Mô tả không được vượt quá 5000 ký tự'
+    }
+
+    // Cross-variant serial number duplicate validation
+    const serialDuplicates = validateSerialNumbers()
+    if (serialDuplicates.length > 0) {
+      const duplicateSerials = serialDuplicates.map(d => d.serialNumber).join(', ')
+      errors.value.serialNumbers = `Phát hiện serial number trùng lặp giữa các biến thể: ${duplicateSerials}`
     }
 
     // Variants validation (optional - allow products without variants)
@@ -115,7 +150,9 @@ export function useProductForm() {
         ngayRaMat: productForm.value.ngayRaMat ?
           new Date(productForm.value.ngayRaMat).toISOString().split('T')[0] : null,
         // Keep danhMucs array for many-to-many relationship
-        danhMucs: productForm.value.danhMucs || []
+        danhMucs: productForm.value.danhMucs || [],
+        // Handle empty product code - remove it to let backend auto-generate
+        maSanPham: productForm.value.maSanPham?.trim() || null
       }
 
       if (isEdit) {
@@ -351,6 +388,7 @@ export function useProductForm() {
     isFormValid,
     hasErrors,
     validateForm,
+    validateSerialNumbers,
     submitForm,
     resetForm,
     addVariant,

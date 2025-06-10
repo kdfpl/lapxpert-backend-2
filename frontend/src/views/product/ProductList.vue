@@ -154,9 +154,9 @@
         <Slider
           v-model="filters.priceRange"
           range
-          :min="0"
-          :max="50000000"
-          :step="500000"
+          :min="dynamicPricing.minPrice.value"
+          :max="dynamicPricing.maxPrice.value"
+          :step="dynamicPricing.priceStep.value"
           class="w-full"
         />
         <div class="flex justify-between text-xs text-surface-600 mt-1">
@@ -471,6 +471,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useProductStore } from '@/stores/productstore'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductFilters } from '@/composables/useProductFilters'
+import { useDynamicPricing } from '@/composables/useDynamicPricing'
 import { debounce } from 'lodash-es'
 import storageApi from '@/apis/storage'
 import inventoryApi from '@/apis/inventoryApi'
@@ -482,8 +483,9 @@ const confirm = useConfirm()
 const productStore = useProductStore()
 const attributeStore = useAttributeStore()
 
-// Use composable for filters
+// Use composables for filters and dynamic pricing
 const { filters, filteredProducts, clearFilters: clearFiltersComposable } = useProductFilters()
+const dynamicPricing = useDynamicPricing()
 
 // Component state
 const loading = ref(false)

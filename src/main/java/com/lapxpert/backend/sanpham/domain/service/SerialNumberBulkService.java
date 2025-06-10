@@ -423,9 +423,9 @@ public class SerialNumberBulkService {
         if (variant.getRam() != null) {
             name.append(variant.getRam().getMoTaRam());
         }
-        if (variant.getOCung() != null) {
+        if (variant.getBoNho() != null) {
             if (name.length() > 0) name.append("/");
-            name.append(variant.getOCung().getMoTaOCung());
+            name.append(variant.getBoNho().getMoTaBoNho());
         }
         if (variant.getMauSac() != null) {
             if (name.length() > 0) name.append(" - ");

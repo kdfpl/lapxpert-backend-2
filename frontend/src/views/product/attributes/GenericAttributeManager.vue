@@ -75,8 +75,17 @@
         </template>
 
         <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-        <Column field="id" header="ID" sortable style="width: 100px"></Column>
-        <Column :field="config.fieldName" :header="config.fieldLabel" sortable>
+        <Column header="STT" sortable style="width: 80px">
+          <template #body="{ index }">
+            <span class="font-medium">{{ index + 1 }}</span>
+          </template>
+        </Column>
+        <Column :field="config.codeFieldName" header="Mã" sortable style="width: 120px">
+          <template #body="{ data }">
+            <span class="font-medium text-primary">{{ data[config.codeFieldName] }}</span>
+          </template>
+        </Column>
+        <Column :field="config.fieldName" header="Tên" sortable>
           <template #body="{ data }">
             <span class="font-medium">{{ data[config.fieldName] }}</span>
           </template>
@@ -109,45 +118,64 @@
     <!-- Add/Edit Dialog -->
     <Dialog
       v-model:visible="itemDialog"
-      :style="{ width: '450px' }"
+      :style="{ width: '600px' }"
       :header="isEditing ? `Chỉnh sửa ${config.label}` : `Thêm ${config.label} mới`"
       :modal="true"
       class="p-fluid"
     >
-      <div class="border border-surface-200 rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-4">
-          <i :class="config.icon" class="text-primary"></i>
-          <span class="font-semibold text-lg">{{ config.dialogTitle }}</span>
+      <div class="space-y-6">
+        <!-- Header Section -->
+        <div class="flex items-center gap-3 pb-4 border-b border-surface-200">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+            <i :class="config.icon" class="text-2xl text-primary"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-lg text-surface-900 m-0">{{ config.dialogTitle }}</h3>
+            <p class="text-surface-500 text-sm mt-1 mb-0">
+              {{ isEditing ? 'Cập nhật thông tin' : 'Thêm mới vào hệ thống' }}
+            </p>
+          </div>
         </div>
 
-        <div class="field">
-          <label :for="config.fieldName" class="font-medium">{{ config.fieldLabel }} *</label>
-          <InputText
-            :id="config.fieldName"
-            v-model="currentItem[config.fieldName]"
-            :class="{ 'p-invalid': submitted && !currentItem[config.fieldName] }"
-            :placeholder="`Nhập ${config.fieldLabel.toLowerCase()}...`"
-          />
-          <small v-if="submitted && !currentItem[config.fieldName]" class="p-error">
-            {{ config.fieldLabel }} là bắt buộc.
-          </small>
+        <!-- Input Section -->
+        <div class="space-y-4">
+          <div class="field">
+            <label :for="config.fieldName" class="block font-medium text-surface-900 mb-2">
+              {{ config.fieldLabel }} *
+            </label>
+            <Textarea
+              :id="config.fieldName"
+              v-model="currentItem[config.fieldName]"
+              :class="{ 'p-invalid': submitted && !currentItem[config.fieldName] }"
+              :placeholder="isEditing ? `Nhập ${config.fieldLabel.toLowerCase()}...` : `Nhập ${config.fieldLabel.toLowerCase()}... (có thể nhập nhiều giá trị cách nhau bằng dấu phẩy)`"
+              rows="4"
+              :autoResize="true"
+              class="w-full"
+            />
+            <small v-if="submitted && !currentItem[config.fieldName]" class="p-error block mt-1">
+              {{ config.fieldLabel }} là bắt buộc.
+            </small>
+          </div>
         </div>
       </div>
 
       <template #footer>
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-end gap-3 pt-4">
           <Button
             label="Hủy"
             icon="pi pi-times"
+            severity="secondary"
             outlined
             @click="hideDialog"
             :disabled="saving"
+            class="px-4 py-2"
           />
           <Button
             :label="isEditing ? 'Cập nhật' : 'Lưu'"
             icon="pi pi-check"
             @click="saveItem"
             :loading="saving"
+            class="px-4 py-2"
           />
         </div>
       </template>
@@ -167,7 +195,7 @@ const props = defineProps({
     type: Object,
     required: true,
     validator: (config) => {
-      return config.type && config.label && config.fieldName && config.fieldLabel
+      return config.type && config.label && config.fieldName && config.fieldLabel && config.codeFieldName
     }
   }
 })
@@ -253,14 +281,34 @@ const saveItem = async () => {
         life: 3000,
       })
     } else {
-      const createMethod = getApiMethod('create')
-      await createMethod(currentItem.value)
-      toast.add({
-        severity: 'success',
-        summary: 'Thành công',
-        detail: `${props.config.label} đã được thêm mới`,
-        life: 3000,
-      })
+      // Handle bulk creation for comma-separated input
+      const inputValue = currentItem.value[props.config.fieldName].trim()
+      const values = inputValue.split(',').map(v => v.trim()).filter(v => v.length > 0)
+
+      if (values.length > 1) {
+        // Bulk creation
+        const items = values.map(value => ({
+          [props.config.fieldName]: value
+        }))
+        const createMultipleMethod = getApiMethod('createMultiple')
+        await createMultipleMethod(items)
+        toast.add({
+          severity: 'success',
+          summary: 'Thành công',
+          detail: `Đã thêm ${values.length} ${props.config.label}`,
+          life: 3000,
+        })
+      } else {
+        // Single creation
+        const createMethod = getApiMethod('create')
+        await createMethod(currentItem.value)
+        toast.add({
+          severity: 'success',
+          summary: 'Thành công',
+          detail: `${props.config.label} đã được thêm mới`,
+          life: 3000,
+        })
+      }
     }
 
     hideDialog()

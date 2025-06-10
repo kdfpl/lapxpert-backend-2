@@ -75,10 +75,6 @@
           <span>Biến thể sản phẩm</span>
           <Badge :value="product.sanPhamChiTiets?.length || 0" severity="info" class="ml-2" />
         </Tab>
-        <Tab value="stats" class="flex items-center gap-2">
-          <i class="pi pi-chart-line"></i>
-          <span>Thống kê</span>
-        </Tab>
         <Tab value="audit" class="flex items-center gap-2">
           <i class="pi pi-history"></i>
           <span>Lịch sử thay đổi</span>
@@ -131,7 +127,7 @@
             <div class="card border border-surface-200 dark:border-surface-700 h-full flex flex-col">
               <div class="flex items-center gap-2 mb-4">
                 <i class="pi pi-tags text-primary"></i>
-                <span class="font-semibold text-xl">Phân loại</span>
+                <span class="font-semibold text-xl">Phân loại & Hình ảnh</span>
               </div>
               <div class="space-y-4 flex-1">
                 <div>
@@ -153,33 +149,30 @@
                   <p class="text-lg">{{ product.thuongHieu?.moTaThuongHieu || 'Chưa có thương hiệu' }}</p>
                 </div>
 
+                <!-- Product Images Section (moved from standalone section) -->
+                <div v-if="product.hinhAnh?.length" class="mt-4">
+                  <label class="text-sm font-medium text-surface-600 mb-2 block">Hình ảnh sản phẩm</label>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div
+                      v-for="(image, index) in product.hinhAnh"
+                      :key="index"
+                      class="relative group cursor-pointer"
+                      @click="showImageDialog(image)"
+                    >
+                      <img
+                        :src="getProductImage(image) || '/placeholder-product.png'"
+                        :alt="`${product.tenSanPham} - ${index + 1}`"
+                        class="w-full h-20 object-cover rounded-lg border border-surface-200 dark:border-surface-700 transition-transform group-hover:scale-105"
+                      />
+                      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
+                        <i class="pi pi-eye text-white opacity-0 group-hover:opacity-100 text-xl"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Add some spacing to balance the height -->
                 <div class="flex-1"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Product Images -->
-          <div class="card mt-6 border border-surface-200 dark:border-surface-700" v-if="product.hinhAnh?.length">
-            <div class="flex items-center gap-2 mb-4">
-              <i class="pi pi-images text-primary"></i>
-              <span class="font-semibold text-xl">Hình ảnh sản phẩm</span>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <div
-                v-for="(image, index) in product.hinhAnh"
-                :key="index"
-                class="relative group cursor-pointer"
-                @click="showImageDialog(image)"
-              >
-                <img
-                  :src="getProductImage(image) || '/placeholder-product.png'"
-                  :alt="`${product.tenSanPham} - ${index + 1}`"
-                  class="w-full h-32 object-cover rounded-lg border border-surface-200 dark:border-surface-700 transition-transform group-hover:scale-105"
-                />
-                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                  <i class="pi pi-eye text-white opacity-0 group-hover:opacity-100 text-xl"></i>
-                </div>
               </div>
             </div>
           </div>
@@ -194,50 +187,10 @@
           />
         </TabPanel>
 
-        <TabPanel value="stats">
-          <!-- Product Statistics -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-            <div class="card border border-surface-200 dark:border-surface-700 h-full">
-              <div class="text-center h-full flex flex-col justify-center">
-                <i class="pi pi-box text-3xl text-blue-500 mb-2 block"></i>
-                <p class="text-2xl font-bold mb-1">{{ product.sanPhamChiTiets?.length || 0 }}</p>
-                <p class="text-sm text-surface-600">Tổng biến thể</p>
-              </div>
-            </div>
-
-            <div class="card border border-surface-200 dark:border-surface-700 h-full">
-              <div class="text-center h-full flex flex-col justify-center">
-                <i class="pi pi-check-circle text-3xl text-green-500 mb-2 block"></i>
-                <p class="text-2xl font-bold mb-1">{{ availableVariants }}</p>
-                <p class="text-sm text-surface-600">Có sẵn</p>
-              </div>
-            </div>
-
-            <div class="card border border-surface-200 dark:border-surface-700 h-full">
-              <div class="text-center h-full flex flex-col justify-center">
-                <i class="pi pi-dollar text-3xl text-yellow-500 mb-2 block"></i>
-                <p class="text-2xl font-bold mb-1 break-words">{{ formatCurrency(minPrice) }}</p>
-                <p class="text-sm text-surface-600">Giá thấp nhất</p>
-              </div>
-            </div>
-
-            <div class="card border border-surface-200 dark:border-surface-700 h-full">
-              <div class="text-center h-full flex flex-col justify-center">
-                <i class="pi pi-dollar text-3xl text-red-500 mb-2 block"></i>
-                <p class="text-2xl font-bold mb-1 break-words">{{ formatCurrency(maxPrice) }}</p>
-                <p class="text-sm text-surface-600">Giá cao nhất</p>
-              </div>
-            </div>
-          </div>
-        </TabPanel>
-
         <TabPanel value="audit">
           <!-- Audit Trail -->
           <ProductAuditLog
             :product-id="product.id"
-            :audit-history="auditHistory"
-            :loading="auditLoading"
-            @refresh="loadAuditHistory"
           />
         </TabPanel>
       </TabPanels>
@@ -323,7 +276,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useProductStore } from '@/stores/productstore'
@@ -339,9 +292,7 @@ const productStore = useProductStore()
 
 // Component state
 const product = ref(null)
-const auditHistory = ref([])
 const loading = ref(false)
-const auditLoading = ref(false)
 const error = ref(null)
 const imageDialogVisible = ref(false)
 const selectedImage = ref(null)
@@ -358,42 +309,7 @@ const variantSerialNumbers = ref(new Map()) // Cache for variant serial numbers
 // Image URL cache for performance
 const imageUrlCache = ref(new Map())
 
-// Computed properties
-const availableVariants = computed(() => {
-  return product.value?.sanPhamChiTiets?.filter(variant =>
-    variant.trangThai === true
-  ).length || 0
-})
-
-const minPrice = computed(() => {
-  if (!product.value?.sanPhamChiTiets?.length) return 0
-  const prices = product.value.sanPhamChiTiets.map(v => {
-    // Use promotional price if available and lower than regular price
-    const regularPrice = v.giaBan
-    const promoPrice = v.giaKhuyenMai
-    return (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
-  })
-  return Math.min(...prices)
-})
-
-const maxPrice = computed(() => {
-  if (!product.value?.sanPhamChiTiets?.length) return 0
-  const prices = product.value.sanPhamChiTiets.map(v => {
-    // Use promotional price if available and lower than regular price
-    const regularPrice = v.giaBan
-    const promoPrice = v.giaKhuyenMai
-    return (promoPrice && promoPrice < regularPrice) ? promoPrice : regularPrice
-  })
-  return Math.max(...prices)
-})
-
-const totalSerialNumbers = computed(() => {
-  if (!product.value?.sanPhamChiTiets?.length) return 0
-  return product.value.sanPhamChiTiets.reduce((total, variant) => {
-    const cachedSerials = variantSerialNumbers.value.get(variant.id)
-    return total + (cachedSerials?.length || 0)
-  }, 0)
-})
+// Computed properties (removed stats-related computed properties)
 
 // Methods
 const formatDate = (dateString) => {
@@ -401,12 +317,7 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(amount)
-}
+
 
 // Helper method for product image display
 const getProductImage = (imageFilename) => {
@@ -496,46 +407,9 @@ const loadProduct = async () => {
   }
 }
 
-const loadAuditHistory = async () => {
-  if (!product.value?.id) return
 
-  try {
-    auditLoading.value = true
-    auditHistory.value = await productStore.fetchProductAuditHistory(product.value.id)
-  } catch (err) {
-    console.error('Error loading audit history:', err)
-    // Don't show error toast for audit history as it's not critical
-    auditHistory.value = []
-  } finally {
-    auditLoading.value = false
-  }
-}
 
-// Serial number management methods
-const getVariantDisplayName = (variant) => {
-  const attributes = []
-  if (variant.cpu?.moTaCpu) attributes.push(variant.cpu.moTaCpu)
-  if (variant.ram?.moTaRam) attributes.push(variant.ram.moTaRam)
-  if (variant.gpu?.moTaGpu) attributes.push(variant.gpu.moTaGpu)
-  if (variant.mauSac?.moTaMauSac) attributes.push(variant.mauSac.moTaMauSac)
-  if (variant.oCung?.moTaOCung) attributes.push(variant.oCung.moTaOCung)
-  if (variant.manHinh?.moTaManHinh) attributes.push(variant.manHinh.moTaManHinh)
-
-  return attributes.length > 0 ? attributes.join(' • ') : 'Biến thể cơ bản'
-}
-
-const getVariantSerialCount = (variant) => {
-  const cachedSerials = variantSerialNumbers.value.get(variant.id)
-  return cachedSerials?.length || 0
-}
-
-const getSerialCountByStatus = (variant, status) => {
-  const cachedSerials = variantSerialNumbers.value.get(variant.id)
-  if (!cachedSerials) return 0
-  return cachedSerials.filter(serial => serial.trangThai === status).length
-}
-
-// Load serial numbers for all variants
+// Load serial numbers for all variants (simplified - only for caching)
 const loadVariantSerialNumbers = async () => {
   if (!product.value?.sanPhamChiTiets?.length) return
 
@@ -547,51 +421,6 @@ const loadVariantSerialNumbers = async () => {
   } catch (error) {
     console.warn('Error loading serial numbers:', error)
     // Don't show error toast as this is not critical for product display
-  }
-}
-
-const manageVariantSerials = (variant) => {
-  router.push({
-    name: 'serial-number-management',
-    params: { productId: product.value.id, variantId: variant.id }
-  })
-}
-
-const exportSerialNumbers = async () => {
-  try {
-    // This would export all serial numbers for the product
-    const data = []
-
-    product.value.sanPhamChiTiets?.forEach(variant => {
-      const cachedSerials = variantSerialNumbers.value.get(variant.id)
-      cachedSerials?.forEach(serial => {
-        data.push({
-          'Biến thể': getVariantDisplayName(variant),
-          'SKU': variant.sku || 'Auto-generated',
-          'Serial Number': serial.serialNumberValue,
-          'Trạng thái': serial.trangThaiDisplay,
-          'Ngày tạo': formatDate(serial.ngayTao)
-        })
-      })
-    })
-
-    // Implement actual CSV export here
-    console.log('Exporting serial numbers:', data)
-
-    toast.add({
-      severity: 'success',
-      summary: 'Thành công',
-      detail: 'Đã xuất danh sách serial numbers',
-      life: 3000
-    })
-  } catch (err) {
-    console.error('Export error:', err)
-    toast.add({
-      severity: 'error',
-      summary: 'Lỗi',
-      detail: 'Lỗi xuất dữ liệu',
-      life: 3000
-    })
   }
 }
 
@@ -678,7 +507,6 @@ const cancelSerialImport = () => {
 
 const refreshData = async () => {
   await loadProduct()
-  await loadAuditHistory()
   toast.add({
     severity: 'success',
     summary: 'Thành công',
@@ -690,7 +518,6 @@ const refreshData = async () => {
 // Lifecycle
 onMounted(async () => {
   await loadProduct()
-  await loadAuditHistory()
 })
 </script>
 

@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class RamDto implements Serializable {
     Long id;
+    String maRam;
     String moTaRam;
 }

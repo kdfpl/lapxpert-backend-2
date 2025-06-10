@@ -8,7 +8,7 @@ export const useAttributeStore = defineStore('attributes', {
         ram: [],
         gpu: [],
         colors: [], // MauSac in backend
-        storage: [], // OCung in backend
+        storage: [], // BoNho in backend
         screen: [], // ManHinh in backend
 
         // 2 Additional Required Attributes

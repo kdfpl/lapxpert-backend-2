@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import java.util.List;
 import java.util.Set;
 
-@Mapper(componentModel = "spring", uses = {SanPhamMapper.class, MauSacMapper.class, CpuMapper.class, RamMapper.class, GpuMapper.class, OCungMapper.class, ManHinhMapper.class})
+@Mapper(componentModel = "spring", uses = {SanPhamMapper.class, MauSacMapper.class, CpuMapper.class, RamMapper.class, GpuMapper.class, BoNhoMapper.class, ManHinhMapper.class})
 public interface SanPhamChiTietMapper {
     SanPhamChiTietDto toDto(SanPhamChiTiet sanPhamChiTiet);
 

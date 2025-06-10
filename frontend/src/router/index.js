@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '@/layout/AppLayout.vue'
+import AuthService from '@/apis/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -218,24 +219,50 @@ const router = createRouter({
   ],
 })
 
-// Navigation guard
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('vaiTro');
-
+// Navigation guard with enhanced authentication checks
+router.beforeEach(async (to, from, next) => {
+  // Check if route requires authentication
   if (to.meta.requiresAuth) {
-    if (!token || token === "0" || token === "undefined") {
-      console.warn('Redirect vì token không hợp lệ');
+    // Use AuthService for comprehensive authentication check
+    const isAuthenticated = AuthService.isAuthenticated();
+
+    if (!isAuthenticated) {
+      console.warn('Redirecting to login - authentication required');
       next('/login');
-    } else {
-      if (role === 'CUSTOMER') {
-        console.warn('CUSTOMER không có quyền truy cập');
-        next('/error');
-      } else {
-        next();
+      return;
+    }
+
+    // Check user role permissions
+    const role = AuthService.getRole();
+    if (role === 'CUSTOMER') {
+      console.warn('CUSTOMER role does not have access to admin dashboard');
+      next('/error');
+      return;
+    }
+
+    // For critical routes, validate session with backend
+    if (to.meta.requiresValidation) {
+      try {
+        const sessionValid = await AuthService.checkSession();
+        if (!sessionValid) {
+          console.warn('Session validation failed - redirecting to login');
+          next('/login');
+          return;
+        }
+      } catch (error) {
+        console.error('Session validation error:', error);
+        next('/login');
+        return;
       }
     }
+
+    next();
   } else {
+    // Public route - check if already authenticated and redirect to dashboard
+    if (to.path === '/login' && AuthService.isAuthenticated()) {
+      next('/');
+      return;
+    }
     next();
   }
 });

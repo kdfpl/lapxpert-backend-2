@@ -42,7 +42,7 @@ public class SanPhamChiTietDto implements Serializable {
     private CpuDto cpu;
     private RamDto ram;
     private GpuDto gpu;
-    private OCungDto oCung;
+    private BoNhoDto boNho;
     private ManHinhDto manHinh;
 
     // Computed fields for business logic

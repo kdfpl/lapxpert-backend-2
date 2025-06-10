@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class DanhMucDto implements Serializable {
     Long id;
+    String maDanhMuc;
     String moTaDanhMuc;
 }

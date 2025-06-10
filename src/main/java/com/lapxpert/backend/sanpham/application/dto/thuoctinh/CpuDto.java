@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class CpuDto implements Serializable {
     Long id;
+    String maCpu;
     String moTaCpu;
 }

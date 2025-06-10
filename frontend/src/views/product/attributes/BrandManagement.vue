@@ -14,6 +14,7 @@ const brandConfig = {
   dialogTitle: 'Thông tin Thương hiệu',
   icon: 'pi pi-tag',
   fieldName: 'moTaThuongHieu',
-  fieldLabel: 'Mô tả Thương hiệu'
+  fieldLabel: 'Mô tả Thương hiệu',
+  codeFieldName: 'maThuongHieu'
 }
 </script>

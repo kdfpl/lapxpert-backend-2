@@ -103,6 +103,21 @@ const serialNumberApi = {
   },
 
   /**
+   * Get serial numbers for a specific order
+   * @param {string} orderId - Order ID
+   * @returns {Promise<Array>} Serial numbers for the order
+   */
+  async getSerialNumbersByOrder(orderId) {
+    try {
+      const response = await privateApi.get(`${SERIAL_NUMBER_BASE_URL}/order/${orderId}`)
+      return response.data?.data || []
+    } catch (error) {
+      console.error('Error fetching serial numbers for order:', error.response?.data || error.message)
+      throw error
+    }
+  },
+
+  /**
    * Update serial number (including value and metadata)
    * @param {number} serialNumberId - Serial number ID
    * @param {Object} serialNumberData - Updated serial number data

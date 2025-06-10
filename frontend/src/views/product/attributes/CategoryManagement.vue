@@ -14,6 +14,7 @@ const categoryConfig = {
   dialogTitle: 'Thông tin Danh mục',
   icon: 'pi pi-sitemap',
   fieldName: 'moTaDanhMuc',
-  fieldLabel: 'Mô tả Danh mục'
+  fieldLabel: 'Mô tả Danh mục',
+  codeFieldName: 'maDanhMuc'
 }
 </script>

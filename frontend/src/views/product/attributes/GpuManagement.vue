@@ -14,6 +14,7 @@ const gpuConfig = {
   dialogTitle: 'Thông tin GPU',
   icon: 'pi pi-desktop',
   fieldName: 'moTaGpu',
-  fieldLabel: 'Mô tả GPU'
+  fieldLabel: 'Mô tả GPU',
+  codeFieldName: 'maGpu'
 }
 </script>

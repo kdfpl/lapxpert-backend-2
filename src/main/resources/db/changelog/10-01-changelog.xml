@@ -5,124 +5,89 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd"
         objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
-    <changeSet id="1748665161152-1" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="am_thanh_id_seq" startValue="1"/>
+    <changeSet id="1749553564527-1" author="obscurites">
+        <createSequence incrementBy="1" sequenceName="bo_nho_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-2" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="ban_phim_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-3" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="bao_mat_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-4" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="cong_giao_tiep_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-5" author="obscurites">
+    <changeSet id="1749553564527-2" author="obscurites">
         <createSequence incrementBy="1" sequenceName="cpu_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-6" author="obscurites">
+    <changeSet id="1749553564527-3" author="obscurites">
         <createSequence incrementBy="1" sequenceName="danh_gia_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-7" author="obscurites">
+    <changeSet id="1749553564527-4" author="obscurites">
         <createSequence incrementBy="1" sequenceName="danh_muc_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-8" author="obscurites">
+    <changeSet id="1749553564527-5" author="obscurites">
         <createSequence incrementBy="1" sequenceName="danh_sach_yeu_thich_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-9" author="obscurites">
+    <changeSet id="1749553564527-6" author="obscurites">
         <createSequence incrementBy="1" sequenceName="dia_chi_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-10" author="obscurites">
+    <changeSet id="1749553564527-7" author="obscurites">
         <createSequence incrementBy="1" sequenceName="dot_giam_gia_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-11" author="obscurites">
+    <changeSet id="1749553564527-8" author="obscurites">
         <createSequence incrementBy="1" sequenceName="gio_hang_chi_tiet_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-12" author="obscurites">
+    <changeSet id="1749553564527-9" author="obscurites">
         <createSequence incrementBy="1" sequenceName="gio_hang_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-13" author="obscurites">
+    <changeSet id="1749553564527-10" author="obscurites">
         <createSequence incrementBy="1" sequenceName="gpu_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-14" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="he_dieu_hanh_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-15" author="obscurites">
+    <changeSet id="1749553564527-11" author="obscurites">
         <createSequence incrementBy="1" sequenceName="hoa_don_chi_tiet_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-16" author="obscurites">
+    <changeSet id="1749553564527-12" author="obscurites">
         <createSequence incrementBy="1" sequenceName="hoa_don_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-17" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="ket_noi_mang_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-18" author="obscurites">
+    <changeSet id="1749553564527-13" author="obscurites">
         <createSequence incrementBy="1" sequenceName="man_hinh_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-19" author="obscurites">
+    <changeSet id="1749553564527-14" author="obscurites">
+        <createSequence incrementBy="1" sequenceName="mau_sac_id_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1749553564527-15" author="obscurites">
         <createSequence incrementBy="1" sequenceName="nguoi_dung_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-20" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="o_cung_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-21" author="obscurites">
+    <changeSet id="1749553564527-16" author="obscurites">
         <createSequence incrementBy="1" sequenceName="phieu_giam_gia_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-22" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="pin_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-23" author="obscurites">
+    <changeSet id="1749553564527-17" author="obscurites">
         <createSequence incrementBy="1" sequenceName="ram_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-24" author="obscurites">
+    <changeSet id="1749553564527-18" author="obscurites">
         <createSequence incrementBy="1" sequenceName="san_pham_chi_tiet_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-25" author="obscurites">
+    <changeSet id="1749553564527-19" author="obscurites">
         <createSequence incrementBy="1" sequenceName="san_pham_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-26" author="obscurites">
+    <changeSet id="1749553564527-20" author="obscurites">
+        <createSequence incrementBy="1" sequenceName="serial_number_audit_history_id_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1749553564527-21" author="obscurites">
+        <createSequence incrementBy="1" sequenceName="serial_number_id_seq" startValue="1"/>
+    </changeSet>
+    <changeSet id="1749553564527-22" author="obscurites">
         <createSequence incrementBy="1" sequenceName="thanh_toan_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-27" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="thiet_ke_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-28" author="obscurites">
+    <changeSet id="1749553564527-23" author="obscurites">
         <createSequence incrementBy="1" sequenceName="thuong_hieu_id_seq" startValue="1"/>
     </changeSet>
-    <changeSet id="1748665161152-29" author="obscurites">
-        <createSequence incrementBy="1" sequenceName="webcam_id_seq" startValue="1"/>
-    </changeSet>
-    <changeSet id="1748665161152-30" author="obscurites">
-        <createTable tableName="am_thanh">
+    <changeSet id="1749553564527-24" author="obscurites">
+        <createTable tableName="bo_nho">
             <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_am_thanh"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_bo_nho"/>
             </column>
-            <column name="mo_ta_am_thanh" type="VARCHAR(200)">
+            <column name="ma_bo_nho" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mo_ta_bo_nho" type="VARCHAR(150)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-31" author="obscurites">
-        <createTable tableName="ban_phim">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_ban_phim"/>
-            </column>
-            <column name="mo_ta_ban_phim" type="VARCHAR(200)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-32" author="obscurites">
-        <createTable tableName="bao_mat">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_bao_mat"/>
-            </column>
-            <column name="mo_ta_bao_mat" type="VARCHAR(200)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-33" author="obscurites">
+    <changeSet id="1749553564527-25" author="obscurites">
         <createTable tableName="chuyen_doi_trang_thai_hoa_don">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_chuyen_doi_trang_thai_hoa_don"/>
@@ -147,27 +112,20 @@
             <column name="ngay_tao" type="DATETIME"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-34" author="obscurites">
-        <createTable tableName="cong_giao_tiep">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_cong_giao_tiep"/>
-            </column>
-            <column name="mo_ta_cong" type="VARCHAR(512)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-35" author="obscurites">
+    <changeSet id="1749553564527-26" author="obscurites">
         <createTable tableName="cpu">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_cpu"/>
+            </column>
+            <column name="ma_cpu" type="VARCHAR(10)">
+                <constraints nullable="false"/>
             </column>
             <column name="mo_ta_cpu" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-36" author="obscurites">
+    <changeSet id="1749553564527-27" author="obscurites">
         <createTable tableName="danh_gia">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_danh_gia"/>
@@ -200,20 +158,20 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-37" author="obscurites">
+    <changeSet id="1749553564527-28" author="obscurites">
         <createTable tableName="danh_muc">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_danh_muc"/>
             </column>
-            <column name="ma_danh_muc" type="VARCHAR(50)">
+            <column name="ma_danh_muc" type="VARCHAR(10)">
                 <constraints nullable="false"/>
             </column>
-            <column name="ten_danh_muc" type="VARCHAR(255)">
+            <column name="mo_ta_danh_muc" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-38" author="obscurites">
+    <changeSet id="1749553564527-29" author="obscurites">
         <createTable tableName="danh_sach_yeu_thich">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_danh_sach_yeu_thich"/>
@@ -235,7 +193,7 @@
             <column name="gia_khi_them" type="DECIMAL(15, 2)"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-39" author="obscurites">
+    <changeSet id="1749553564527-30" author="obscurites">
         <createTable tableName="dia_chi">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_dia_chi"/>
@@ -264,7 +222,7 @@
             <column defaultValueComputed="CURRENT_TIMESTAMP" name="ngay_cap_nhat" type="timestamp with time zone"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-40" author="obscurites">
+    <changeSet id="1749553564527-31" author="obscurites">
         <createTable tableName="dot_giam_gia">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_dot_giam_gia"/>
@@ -292,13 +250,10 @@
             <column name="ngay_ket_thuc" type="DATETIME">
                 <constraints nullable="false"/>
             </column>
-            <column defaultValueBoolean="false" name="da_an" type="BOOLEAN">
-                <constraints nullable="false"/>
-            </column>
             <column defaultValue="CHUA_DIEN_RA" name="trang_thai" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-41" author="obscurites">
+    <changeSet id="1749553564527-32" author="obscurites">
         <createTable tableName="dot_giam_gia_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_dot_giam_gia_audit_history"/>
@@ -318,7 +273,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-42" author="obscurites">
+    <changeSet id="1749553564527-33" author="obscurites">
         <createTable tableName="gio_hang">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_gio_hang"/>
@@ -336,7 +291,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-43" author="obscurites">
+    <changeSet id="1749553564527-34" author="obscurites">
         <createTable tableName="gio_hang_chi_tiet">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_gio_hang_chi_tiet"/>
@@ -363,27 +318,20 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-44" author="obscurites">
+    <changeSet id="1749553564527-35" author="obscurites">
         <createTable tableName="gpu">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_gpu"/>
+            </column>
+            <column name="ma_gpu" type="VARCHAR(10)">
+                <constraints nullable="false"/>
             </column>
             <column name="mo_ta_gpu" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-45" author="obscurites">
-        <createTable tableName="he_dieu_hanh">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_he_dieu_hanh"/>
-            </column>
-            <column name="mo_ta_he_dieu_hanh" type="VARCHAR(100)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-46" author="obscurites">
+    <changeSet id="1749553564527-36" author="obscurites">
         <createTable tableName="hoa_don">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_hoa_don"/>
@@ -399,9 +347,7 @@
             <column name="ma_hoa_don" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="khach_hang_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
+            <column name="khach_hang_id" type="BIGINT"/>
             <column name="nhan_vien_id" type="BIGINT"/>
             <column name="dia_chi_giao_hang_id" type="BIGINT"/>
             <column name="nguoi_nhan_ten" type="VARCHAR(255)"/>
@@ -429,7 +375,7 @@
             <column name="ngay_du_kien_giao_hang" type="DATETIME"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-47" author="obscurites">
+    <changeSet id="1749553564527-37" author="obscurites">
         <createTable tableName="hoa_don_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_hoa_don_audit_history"/>
@@ -449,7 +395,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-48" author="obscurites">
+    <changeSet id="1749553564527-38" author="obscurites">
         <createTable tableName="hoa_don_chi_tiet">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_hoa_don_chi_tiet"/>
@@ -485,7 +431,7 @@
             <column name="hinh_anh_snapshot" type="VARCHAR(512)"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-49" author="obscurites">
+    <changeSet id="1749553564527-39" author="obscurites">
         <createTable tableName="hoa_don_phieu_giam_gia">
             <column name="gia_tri_da_giam" type="DECIMAL(15, 2)">
                 <constraints nullable="false"/>
@@ -498,7 +444,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-50" author="obscurites">
+    <changeSet id="1749553564527-40" author="obscurites">
         <createTable tableName="hoa_don_thanh_toan">
             <column defaultValueNumeric="0" name="so_tien_ap_dung" type="DECIMAL(15, 2)">
                 <constraints nullable="false"/>
@@ -517,27 +463,33 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-51" author="obscurites">
-        <createTable tableName="ket_noi_mang">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_ket_noi_mang"/>
-            </column>
-            <column name="mo_ta_ket_noi" type="VARCHAR(200)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-52" author="obscurites">
+    <changeSet id="1749553564527-41" author="obscurites">
         <createTable tableName="man_hinh">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_man_hinh"/>
+            </column>
+            <column name="ma_man_hinh" type="VARCHAR(10)">
+                <constraints nullable="false"/>
             </column>
             <column name="mo_ta_man_hinh" type="VARCHAR(300)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-53" author="obscurites">
+    <changeSet id="1749553564527-42" author="obscurites">
+        <createTable tableName="mau_sac">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_mau_sac"/>
+            </column>
+            <column name="ma_mau_sac" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mo_ta_mau_sac" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1749553564527-43" author="obscurites">
         <createTable tableName="nguoi_dung">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_nguoi_dung"/>
@@ -558,9 +510,7 @@
             <column name="gioi_tinh" type="VARCHAR(255)"/>
             <column name="ngay_sinh" type="DATE"/>
             <column name="cccd" type="VARCHAR(12)"/>
-            <column name="email" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
+            <column name="email" type="VARCHAR(255)"/>
             <column name="so_dien_thoai" type="VARCHAR(20)"/>
             <column name="mat_khau" type="VARCHAR(255)">
                 <constraints nullable="false"/>
@@ -573,7 +523,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-54" author="obscurites">
+    <changeSet id="1749553564527-44" author="obscurites">
         <createTable tableName="nguoi_dung_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_nguoi_dung_audit_history"/>
@@ -593,17 +543,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-55" author="obscurites">
-        <createTable tableName="o_cung">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_o_cung"/>
-            </column>
-            <column name="mo_ta_o_cung" type="VARCHAR(150)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-56" author="obscurites">
+    <changeSet id="1749553564527-45" author="obscurites">
         <createTable tableName="phieu_giam_gia">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_phieu_giam_gia"/>
@@ -642,7 +582,7 @@
             <column name="so_luong_da_dung" type="INT"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-57" author="obscurites">
+    <changeSet id="1749553564527-46" author="obscurites">
         <createTable tableName="phieu_giam_gia_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_phieu_giam_gia_audit_history"/>
@@ -662,7 +602,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-58" author="obscurites">
+    <changeSet id="1749553564527-47" author="obscurites">
         <createTable tableName="phieu_giam_gia_nguoi_dung">
             <column name="ngay_nhan" type="timestamp"/>
             <column name="da_su_dung" type="BOOLEAN">
@@ -679,27 +619,20 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-59" author="obscurites">
-        <createTable tableName="pin">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_pin"/>
-            </column>
-            <column name="mo_ta_pin" type="VARCHAR(150)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-60" author="obscurites">
+    <changeSet id="1749553564527-48" author="obscurites">
         <createTable tableName="ram">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_ram"/>
+            </column>
+            <column name="ma_ram" type="VARCHAR(10)">
+                <constraints nullable="false"/>
             </column>
             <column name="mo_ta_ram" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-61" author="obscurites">
+    <changeSet id="1749553564527-49" author="obscurites">
         <createTable tableName="san_pham">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham"/>
@@ -727,7 +660,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-62" author="obscurites">
+    <changeSet id="1749553564527-50" author="obscurites">
         <createTable tableName="san_pham_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham_audit_history"/>
@@ -747,7 +680,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-63" author="obscurites">
+    <changeSet id="1749553564527-51" author="obscurites">
         <createTable tableName="san_pham_chi_tiet">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham_chi_tiet"/>
@@ -763,35 +696,24 @@
             <column name="san_pham_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="serial_number" type="VARCHAR(100)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="mau_sac" type="VARCHAR(50)"/>
+            <column name="sku" type="VARCHAR(100)"/>
+            <column name="cpu_id" type="BIGINT"/>
+            <column name="ram_id" type="BIGINT"/>
+            <column name="gpu_id" type="BIGINT"/>
+            <column name="mau_sac_id" type="BIGINT"/>
+            <column name="bo_nho_id" type="BIGINT"/>
+            <column name="man_hinh_id" type="BIGINT"/>
             <column name="gia_ban" type="DECIMAL(15, 2)">
                 <constraints nullable="false"/>
             </column>
             <column name="gia_khuyen_mai" type="DECIMAL(15, 2)"/>
             <column name="hinh_anh" type="jsonb"/>
-            <column defaultValue="AVAILABLE" name="trang_thai" type="VARCHAR(255)">
+            <column defaultValueBoolean="true" name="trang_thai" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
-            <column name="cpu_id" type="BIGINT"/>
-            <column name="ram_id" type="BIGINT"/>
-            <column name="o_cung_id" type="BIGINT"/>
-            <column name="gpu_id" type="BIGINT"/>
-            <column name="man_hinh_id" type="BIGINT"/>
-            <column name="cong_giao_tiep_id" type="BIGINT"/>
-            <column name="ban_phim_id" type="BIGINT"/>
-            <column name="ket_noi_mang_id" type="BIGINT"/>
-            <column name="am_thanh_id" type="BIGINT"/>
-            <column name="webcam_id" type="BIGINT"/>
-            <column name="bao_mat_id" type="BIGINT"/>
-            <column name="he_dieu_hanh_id" type="BIGINT"/>
-            <column name="pin_id" type="BIGINT"/>
-            <column name="thiet_ke_id" type="BIGINT"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-64" author="obscurites">
+    <changeSet id="1749553564527-52" author="obscurites">
         <createTable tableName="san_pham_chi_tiet_audit_history">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham_chi_tiet_audit_history"/>
@@ -811,7 +733,7 @@
             <column name="gia_tri_moi" type="jsonb"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-65" author="obscurites">
+    <changeSet id="1749553564527-53" author="obscurites">
         <createTable tableName="san_pham_chi_tiet_dot_giam_gia">
             <column name="dot_giam_gia_id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham_chi_tiet_dot_giam_gia"/>
@@ -821,7 +743,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-66" author="obscurites">
+    <changeSet id="1749553564527-54" author="obscurites">
         <createTable tableName="san_pham_danh_muc">
             <column name="danh_muc_id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_san_pham_danh_muc"/>
@@ -831,7 +753,66 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-67" author="obscurites">
+    <changeSet id="1749553564527-55" author="obscurites">
+        <createTable tableName="serial_number">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_serial_number"/>
+            </column>
+            <column name="ngay_tao" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ngay_cap_nhat" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nguoi_tao" type="VARCHAR(100)"/>
+            <column name="nguoi_cap_nhat" type="VARCHAR(100)"/>
+            <column name="serial_number_value" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="san_pham_chi_tiet_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValue="AVAILABLE" name="trang_thai" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="thoi_gian_dat_truoc" type="DATETIME"/>
+            <column name="kenh_dat_truoc" type="VARCHAR(20)"/>
+            <column name="don_hang_dat_truoc" type="VARCHAR(50)"/>
+            <column name="batch_number" type="VARCHAR(50)"/>
+            <column name="ngay_san_xuat" type="DATETIME"/>
+            <column name="ngay_het_bao_hanh" type="DATETIME"/>
+            <column name="nha_cung_cap" type="VARCHAR(100)"/>
+            <column name="import_batch_id" type="VARCHAR(50)"/>
+            <column name="ghi_chu" type="VARCHAR(500)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1749553564527-56" author="obscurites">
+        <createTable tableName="serial_number_audit_history">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_serial_number_audit_history"/>
+            </column>
+            <column name="serial_number_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hanh_dong" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="thoi_gian_thay_doi" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nguoi_thuc_hien" type="VARCHAR(100)"/>
+            <column name="ly_do_thay_doi" type="VARCHAR(500)"/>
+            <column name="gia_tri_cu" type="jsonb"/>
+            <column name="gia_tri_moi" type="jsonb"/>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="user_agent" type="VARCHAR(500)"/>
+            <column name="batch_operation_id" type="VARCHAR(50)"/>
+            <column name="order_id" type="VARCHAR(50)"/>
+            <column name="channel" type="VARCHAR(20)"/>
+            <column name="metadata" type="jsonb"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="1749553564527-57" author="obscurites">
         <createTable tableName="thanh_toan">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_thanh_toan"/>
@@ -859,17 +840,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-68" author="obscurites">
-        <createTable tableName="thiet_ke">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_thiet_ke"/>
-            </column>
-            <column name="mo_ta_thiet_ke" type="VARCHAR(300)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-69" author="obscurites">
+    <changeSet id="1749553564527-58" author="obscurites">
         <createTable tableName="thong_ke_doanh_so_top_hang_ngay">
             <column name="id" type="INT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_thong_ke_doanh_so_top_hang_ngay"/>
@@ -879,7 +850,7 @@
             <column name="sale" type="INT"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-70" author="obscurites">
+    <changeSet id="1749553564527-59" author="obscurites">
         <createTable tableName="thong_ke_doanh_thu_hang_ngay">
             <column name="id" type="INT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_thong_ke_doanh_thu_hang_ngay"/>
@@ -889,256 +860,347 @@
             <column name="revenue" type="INT"/>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-71" author="obscurites">
+    <changeSet id="1749553564527-60" author="obscurites">
         <createTable tableName="thuong_hieu">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_thuong_hieu"/>
+            </column>
+            <column name="ma_thuong_hieu" type="VARCHAR(10)">
+                <constraints nullable="false"/>
             </column>
             <column name="mo_ta_thuong_hieu" type="VARCHAR(300)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="1748665161152-72" author="obscurites">
-        <createTable tableName="webcam">
-            <column name="id" type="BIGINT">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_webcam"/>
-            </column>
-            <column name="mo_ta_wc" type="VARCHAR(200)">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="1748665161152-73" author="obscurites">
+    <changeSet id="1749553564527-61" author="obscurites">
         <addUniqueConstraint columnNames="trang_thai_tu, trang_thai_den" constraintName="uc_42e70b9f9175194276a8a4fcc"
                              tableName="chuyen_doi_trang_thai_hoa_don"/>
     </changeSet>
-    <changeSet id="1748665161152-74" author="obscurites">
+    <changeSet id="1749553564527-62" author="obscurites">
+        <addUniqueConstraint columnNames="ma_bo_nho" constraintName="uc_bo_nho_ma_bo_nho" tableName="bo_nho"/>
+    </changeSet>
+    <changeSet id="1749553564527-63" author="obscurites">
+        <addUniqueConstraint columnNames="ma_cpu" constraintName="uc_cpu_ma_cpu" tableName="cpu"/>
+    </changeSet>
+    <changeSet id="1749553564527-64" author="obscurites">
+        <addUniqueConstraint columnNames="ma_danh_muc" constraintName="uc_danh_muc_ma_danh_muc" tableName="danh_muc"/>
+    </changeSet>
+    <changeSet id="1749553564527-65" author="obscurites">
         <addUniqueConstraint columnNames="nguoi_dung_id" constraintName="uc_gio_hang_nguoi_dung" tableName="gio_hang"/>
     </changeSet>
-    <changeSet id="1748665161152-75" author="obscurites">
+    <changeSet id="1749553564527-66" author="obscurites">
+        <addUniqueConstraint columnNames="ma_gpu" constraintName="uc_gpu_ma_gpu" tableName="gpu"/>
+    </changeSet>
+    <changeSet id="1749553564527-67" author="obscurites">
         <addUniqueConstraint columnNames="ma_hoa_don" constraintName="uc_hoa_don_ma_hoa_don" tableName="hoa_don"/>
     </changeSet>
-    <changeSet id="1748665161152-76" author="obscurites">
+    <changeSet id="1749553564527-68" author="obscurites">
+        <addUniqueConstraint columnNames="ma_man_hinh" constraintName="uc_man_hinh_ma_man_hinh" tableName="man_hinh"/>
+    </changeSet>
+    <changeSet id="1749553564527-69" author="obscurites">
+        <addUniqueConstraint columnNames="ma_mau_sac" constraintName="uc_mau_sac_ma_mau_sac" tableName="mau_sac"/>
+    </changeSet>
+    <changeSet id="1749553564527-70" author="obscurites">
         <addUniqueConstraint columnNames="cccd" constraintName="uc_nguoi_dung_cccd" tableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-77" author="obscurites">
+    <changeSet id="1749553564527-71" author="obscurites">
         <addUniqueConstraint columnNames="email" constraintName="uc_nguoi_dung_email" tableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-78" author="obscurites">
+    <changeSet id="1749553564527-72" author="obscurites">
         <addUniqueConstraint columnNames="ma_nguoi_dung" constraintName="uc_nguoi_dung_ma_nguoi_dung"
                              tableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-79" author="obscurites">
+    <changeSet id="1749553564527-73" author="obscurites">
         <addUniqueConstraint columnNames="so_dien_thoai" constraintName="uc_nguoi_dung_so_dien_thoai"
                              tableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-80" author="obscurites">
+    <changeSet id="1749553564527-74" author="obscurites">
         <addUniqueConstraint columnNames="ma_phieu_giam_gia" constraintName="uc_phieu_giam_gia_ma_phieu_giam_gia"
                              tableName="phieu_giam_gia"/>
     </changeSet>
-    <changeSet id="1748665161152-81" author="obscurites">
-        <addUniqueConstraint columnNames="serial_number" constraintName="uc_san_pham_chi_tiet_serial_number"
-                             tableName="san_pham_chi_tiet"/>
+    <changeSet id="1749553564527-75" author="obscurites">
+        <addUniqueConstraint columnNames="ma_ram" constraintName="uc_ram_ma_ram" tableName="ram"/>
     </changeSet>
-    <changeSet id="1748665161152-82" author="obscurites">
+    <changeSet id="1749553564527-76" author="obscurites">
+        <addUniqueConstraint columnNames="ma_thuong_hieu" constraintName="uc_thuong_hieu_ma_thuong_hieu"
+                             tableName="thuong_hieu"/>
+    </changeSet>
+    <changeSet id="1749553564527-77" author="obscurites">
         <addUniqueConstraint columnNames="gio_hang_id, san_pham_chi_tiet_id" constraintName="uk_gio_hang_san_pham"
                              tableName="gio_hang_chi_tiet"/>
     </changeSet>
-    <changeSet id="1748665161152-83" author="obscurites">
+    <changeSet id="1749553564527-78" author="obscurites">
         <addUniqueConstraint columnNames="hoa_don_chi_tiet_id" constraintName="uk_hoa_don_chi_tiet"
                              tableName="danh_gia"/>
     </changeSet>
-    <changeSet id="1748665161152-84" author="obscurites">
+    <changeSet id="1749553564527-79" author="obscurites">
         <addUniqueConstraint columnNames="nguoi_dung_id, san_pham_id" constraintName="uk_nguoi_dung_san_pham"
                              tableName="danh_sach_yeu_thich"/>
     </changeSet>
-    <changeSet id="1748665161152-85" author="obscurites">
-        <createIndex indexName="idx_dot_giam_gia_audit_action" tableName="dot_giam_gia_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
+    <changeSet id="1749553564527-80" author="obscurites">
+        <addUniqueConstraint columnNames="sku" constraintName="uk_san_pham_chi_tiet_sku" tableName="san_pham_chi_tiet"/>
     </changeSet>
-    <changeSet id="1748665161152-86" author="obscurites">
-        <createIndex indexName="idx_hoa_don_audit_action" tableName="hoa_don_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
+    <changeSet id="1749553564527-81" author="obscurites">
+        <addUniqueConstraint columnNames="serial_number_value" constraintName="uk_serial_number_value"
+                             tableName="serial_number"/>
     </changeSet>
-    <changeSet id="1748665161152-87" author="obscurites">
-        <createIndex indexName="idx_nguoi_dung_audit_action" tableName="nguoi_dung_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-88" author="obscurites">
-        <createIndex indexName="idx_phieu_giam_gia_audit_action" tableName="phieu_giam_gia_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-89" author="obscurites">
-        <createIndex indexName="idx_san_pham_audit_action" tableName="san_pham_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-90" author="obscurites">
-        <createIndex indexName="idx_san_pham_chi_tiet_audit_action" tableName="san_pham_chi_tiet_audit_history">
-            <column name="hanh_dong"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-91" author="obscurites">
+    <changeSet id="1749553564527-82" author="obscurites">
         <createIndex indexName="idx_audit_dot_giam_gia_id" tableName="dot_giam_gia_audit_history">
             <column name="dot_giam_gia_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-92" author="obscurites">
+    <changeSet id="1749553564527-83" author="obscurites">
         <createIndex indexName="idx_audit_hoa_don_id" tableName="hoa_don_audit_history">
             <column name="hoa_don_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-93" author="obscurites">
+    <changeSet id="1749553564527-84" author="obscurites">
         <createIndex indexName="idx_audit_nguoi_dung_id" tableName="nguoi_dung_audit_history">
             <column name="nguoi_dung_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-94" author="obscurites">
+    <changeSet id="1749553564527-85" author="obscurites">
         <createIndex indexName="idx_audit_phieu_id" tableName="phieu_giam_gia_audit_history">
             <column name="phieu_giam_gia_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-95" author="obscurites">
+    <changeSet id="1749553564527-86" author="obscurites">
         <createIndex indexName="idx_audit_san_pham_chi_tiet_id" tableName="san_pham_chi_tiet_audit_history">
             <column name="san_pham_chi_tiet_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-96" author="obscurites">
+    <changeSet id="1749553564527-87" author="obscurites">
         <createIndex indexName="idx_audit_san_pham_id" tableName="san_pham_audit_history">
             <column name="san_pham_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-97" author="obscurites">
-        <createIndex indexName="idx_dot_giam_gia_audit_timestamp" tableName="dot_giam_gia_audit_history">
-            <column name="thoi_gian_thay_doi"/>
+    <changeSet id="1749553564527-88" author="obscurites">
+        <createIndex indexName="idx_audit_serial_number_id" tableName="serial_number_audit_history">
+            <column name="serial_number_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-98" author="obscurites">
-        <createIndex indexName="idx_hoa_don_audit_timestamp" tableName="hoa_don_audit_history">
-            <column name="thoi_gian_thay_doi"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-99" author="obscurites">
-        <createIndex indexName="idx_nguoi_dung_audit_timestamp" tableName="nguoi_dung_audit_history">
-            <column name="thoi_gian_thay_doi"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-100" author="obscurites">
-        <createIndex indexName="idx_phieu_giam_gia_audit_timestamp" tableName="phieu_giam_gia_audit_history">
-            <column name="thoi_gian_thay_doi"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-101" author="obscurites">
-        <createIndex indexName="idx_san_pham_audit_timestamp" tableName="san_pham_audit_history">
-            <column name="thoi_gian_thay_doi"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-102" author="obscurites">
-        <createIndex indexName="idx_san_pham_chi_tiet_audit_timestamp" tableName="san_pham_chi_tiet_audit_history">
-            <column name="thoi_gian_thay_doi"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="1748665161152-103" author="obscurites">
+    <changeSet id="1749553564527-89" author="obscurites">
         <createIndex indexName="idx_chuyen_doi_trang_thai_den" tableName="chuyen_doi_trang_thai_hoa_don">
             <column name="trang_thai_den"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-104" author="obscurites">
+    <changeSet id="1749553564527-90" author="obscurites">
         <createIndex indexName="idx_chuyen_doi_trang_thai_tu" tableName="chuyen_doi_trang_thai_hoa_don">
             <column name="trang_thai_tu"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-105" author="obscurites">
+    <changeSet id="1749553564527-91" author="obscurites">
         <createIndex indexName="idx_danh_gia_diem" tableName="danh_gia">
             <column name="diem_danh_gia"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-106" author="obscurites">
+    <changeSet id="1749553564527-92" author="obscurites">
         <createIndex indexName="idx_danh_gia_ngay_tao" tableName="danh_gia">
             <column name="ngay_tao"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-109" author="obscurites">
+    <changeSet id="1749553564527-95" author="obscurites">
         <createIndex indexName="idx_danh_gia_trang_thai" tableName="danh_gia">
             <column name="trang_thai"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-110" author="obscurites">
+    <changeSet id="1749553564527-96" author="obscurites">
         <createIndex indexName="idx_danh_sach_yeu_thich_ngay_them" tableName="danh_sach_yeu_thich">
             <column name="ngay_tao"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-113" author="obscurites">
+    <changeSet id="1749553564527-99" author="obscurites">
+        <createIndex indexName="idx_dot_giam_gia_audit_action" tableName="dot_giam_gia_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-100" author="obscurites">
+        <createIndex indexName="idx_dot_giam_gia_audit_timestamp" tableName="dot_giam_gia_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-101" author="obscurites">
         <createIndex indexName="idx_dot_giam_gia_ma" tableName="dot_giam_gia">
             <column name="ma_dot_giam_gia"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-114" author="obscurites">
+    <changeSet id="1749553564527-102" author="obscurites">
         <createIndex indexName="idx_dot_giam_gia_ngay_bat_dau" tableName="dot_giam_gia">
             <column name="ngay_bat_dau"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-115" author="obscurites">
+    <changeSet id="1749553564527-103" author="obscurites">
         <createIndex indexName="idx_dot_giam_gia_ngay_ket_thuc" tableName="dot_giam_gia">
             <column name="ngay_ket_thuc"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-116" author="obscurites">
+    <changeSet id="1749553564527-104" author="obscurites">
         <createIndex indexName="idx_dot_giam_gia_trang_thai" tableName="dot_giam_gia">
             <column name="trang_thai"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-118" author="obscurites">
+    <changeSet id="1749553564527-106" author="obscurites">
         <createIndex indexName="idx_gio_hang_chi_tiet_ngay_them" tableName="gio_hang_chi_tiet">
             <column name="ngay_tao"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-120" author="obscurites">
+    <changeSet id="1749553564527-108" author="obscurites">
         <createIndex indexName="idx_gio_hang_ngay_cap_nhat" tableName="gio_hang">
             <column name="ngay_cap_nhat"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-127" author="obscurites">
+    <changeSet id="1749553564527-110" author="obscurites">
+        <createIndex indexName="idx_hoa_don_audit_action" tableName="hoa_don_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-111" author="obscurites">
+        <createIndex indexName="idx_hoa_don_audit_timestamp" tableName="hoa_don_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-116" author="obscurites">
+        <createIndex indexName="idx_hoa_don_ma" tableName="hoa_don">
+            <column name="ma_hoa_don"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-117" author="obscurites">
         <createIndex indexName="idx_hoa_don_ngay_tao" tableName="hoa_don">
             <column name="ngay_tao"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-128" author="obscurites">
+    <changeSet id="1749553564527-118" author="obscurites">
         <createIndex indexName="idx_hoa_don_trang_thai" tableName="hoa_don">
             <column name="trang_thai_don_hang"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-131" author="obscurites">
+    <changeSet id="1749553564527-119" author="obscurites">
+        <createIndex indexName="idx_nguoi_dung_audit_action" tableName="nguoi_dung_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-120" author="obscurites">
+        <createIndex indexName="idx_nguoi_dung_audit_timestamp" tableName="nguoi_dung_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-121" author="obscurites">
+        <createIndex indexName="idx_nguoi_dung_email" tableName="nguoi_dung">
+            <column name="email"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-122" author="obscurites">
+        <createIndex indexName="idx_nguoi_dung_so_dien_thoai" tableName="nguoi_dung">
+            <column name="so_dien_thoai"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-123" author="obscurites">
         <createIndex indexName="idx_nguoi_dung_trang_thai" tableName="nguoi_dung">
             <column name="trang_thai"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-132" author="obscurites">
+    <changeSet id="1749553564527-124" author="obscurites">
         <createIndex indexName="idx_nguoi_dung_vai_tro" tableName="nguoi_dung">
             <column name="vai_tro"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-133" author="obscurites">
+    <changeSet id="1749553564527-125" author="obscurites">
+        <createIndex indexName="idx_phieu_giam_gia_audit_action" tableName="phieu_giam_gia_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-126" author="obscurites">
+        <createIndex indexName="idx_phieu_giam_gia_audit_timestamp" tableName="phieu_giam_gia_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-127" author="obscurites">
         <createIndex indexName="idx_phieu_giam_gia_nguoi_dung_da_su_dung" tableName="phieu_giam_gia_nguoi_dung">
             <column name="da_su_dung"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-134" author="obscurites">
+    <changeSet id="1749553564527-128" author="obscurites">
         <createIndex indexName="idx_phieu_giam_gia_nguoi_dung_ngay_nhan" tableName="phieu_giam_gia_nguoi_dung">
             <column name="ngay_nhan"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-135" author="obscurites">
+    <changeSet id="1749553564527-129" author="obscurites">
+        <createIndex indexName="idx_san_pham_audit_action" tableName="san_pham_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-130" author="obscurites">
+        <createIndex indexName="idx_san_pham_audit_timestamp" tableName="san_pham_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-131" author="obscurites">
+        <createIndex indexName="idx_san_pham_chi_tiet_active" tableName="san_pham_chi_tiet">
+            <column defaultValueBoolean="true" name="trang_thai"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-132" author="obscurites">
+        <createIndex indexName="idx_san_pham_chi_tiet_audit_action" tableName="san_pham_chi_tiet_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-133" author="obscurites">
+        <createIndex indexName="idx_san_pham_chi_tiet_audit_timestamp" tableName="san_pham_chi_tiet_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-135" author="obscurites">
+        <createIndex indexName="idx_san_pham_chi_tiet_sku" tableName="san_pham_chi_tiet">
+            <column name="sku"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-136" author="obscurites">
+        <createIndex indexName="idx_serial_number_audit_action" tableName="serial_number_audit_history">
+            <column name="hanh_dong"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-137" author="obscurites">
+        <createIndex indexName="idx_serial_number_audit_batch" tableName="serial_number_audit_history">
+            <column name="batch_operation_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-138" author="obscurites">
+        <createIndex indexName="idx_serial_number_audit_timestamp" tableName="serial_number_audit_history">
+            <column name="thoi_gian_thay_doi"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-139" author="obscurites">
+        <createIndex indexName="idx_serial_number_audit_user" tableName="serial_number_audit_history">
+            <column name="nguoi_thuc_hien"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-140" author="obscurites">
+        <createIndex indexName="idx_serial_number_channel" tableName="serial_number">
+            <column name="kenh_dat_truoc"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-141" author="obscurites">
+        <createIndex indexName="idx_serial_number_reservation" tableName="serial_number">
+            <column name="thoi_gian_dat_truoc"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-142" author="obscurites">
+        <createIndex indexName="idx_serial_number_status" tableName="serial_number">
+            <column name="trang_thai"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-143" author="obscurites">
+        <createIndex indexName="idx_serial_number_value" tableName="serial_number">
+            <column name="serial_number_value"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-145" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="hoa_don_chi_tiet_id" baseTableName="danh_gia"
                                  constraintName="FK_DANH_GIA_ON_HOA_DON_CHI_TIET" referencedColumnNames="id"
                                  referencedTableName="hoa_don_chi_tiet"/>
     </changeSet>
-    <changeSet id="1748665161152-136" author="obscurites">
+    <changeSet id="1749553564527-146" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="danh_gia"
                                  constraintName="FK_DANH_GIA_ON_NGUOI_DUNG" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
@@ -1147,7 +1209,7 @@
             <column name="nguoi_dung_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-137" author="obscurites">
+    <changeSet id="1749553564527-147" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_id" baseTableName="danh_gia"
                                  constraintName="FK_DANH_GIA_ON_SAN_PHAM" referencedColumnNames="id"
                                  referencedTableName="san_pham"/>
@@ -1156,7 +1218,7 @@
             <column name="san_pham_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-138" author="obscurites">
+    <changeSet id="1749553564527-148" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="danh_sach_yeu_thich"
                                  constraintName="FK_DANH_SACH_YEU_THICH_ON_NGUOI_DUNG" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
@@ -1165,7 +1227,7 @@
             <column name="nguoi_dung_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-139" author="obscurites">
+    <changeSet id="1749553564527-149" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_id" baseTableName="danh_sach_yeu_thich"
                                  constraintName="FK_DANH_SACH_YEU_THICH_ON_SAN_PHAM" referencedColumnNames="id"
                                  referencedTableName="san_pham"/>
@@ -1174,12 +1236,12 @@
             <column name="san_pham_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-140" author="obscurites">
+    <changeSet id="1749553564527-150" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="dia_chi"
                                  constraintName="FK_DIA_CHI_ON_NGUOI_DUNG" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-141" author="obscurites">
+    <changeSet id="1749553564527-151" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="gio_hang_id" baseTableName="gio_hang_chi_tiet"
                                  constraintName="FK_GIO_HANG_CHI_TIET_ON_GIO_HANG" referencedColumnNames="id"
                                  referencedTableName="gio_hang"/>
@@ -1188,7 +1250,7 @@
             <column name="gio_hang_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-142" author="obscurites">
+    <changeSet id="1749553564527-152" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_chi_tiet_id" baseTableName="gio_hang_chi_tiet"
                                  constraintName="FK_GIO_HANG_CHI_TIET_ON_SAN_PHAM_CHI_TIET" referencedColumnNames="id"
                                  referencedTableName="san_pham_chi_tiet"/>
@@ -1197,12 +1259,16 @@
             <column name="san_pham_chi_tiet_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-143" author="obscurites">
+    <changeSet id="1749553564527-153" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="gio_hang"
                                  constraintName="FK_GIO_HANG_ON_NGUOI_DUNG" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
+
+        <createIndex indexName="idx_gio_hang_nguoi_dung" tableName="gio_hang">
+            <column name="nguoi_dung_id"/>
+        </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-144" author="obscurites">
+    <changeSet id="1749553564527-154" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="hoa_don_id" baseTableName="hoa_don_chi_tiet"
                                  constraintName="FK_HOA_DON_CHI_TIET_ON_HOA_DON" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="hoa_don"/>
@@ -1211,7 +1277,7 @@
             <column name="hoa_don_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-145" author="obscurites">
+    <changeSet id="1749553564527-155" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_chi_tiet_id" baseTableName="hoa_don_chi_tiet"
                                  constraintName="FK_HOA_DON_CHI_TIET_ON_SAN_PHAM_CHI_TIET" onDelete="RESTRICT"
                                  referencedColumnNames="id" referencedTableName="san_pham_chi_tiet"/>
@@ -1220,7 +1286,7 @@
             <column name="san_pham_chi_tiet_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-146" author="obscurites">
+    <changeSet id="1749553564527-156" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="dia_chi_giao_hang_id" baseTableName="hoa_don"
                                  constraintName="FK_HOA_DON_ON_DIA_CHI_GIAO_HANG" referencedColumnNames="id"
                                  referencedTableName="dia_chi"/>
@@ -1229,7 +1295,7 @@
             <column name="dia_chi_giao_hang_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-147" author="obscurites">
+    <changeSet id="1749553564527-157" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="khach_hang_id" baseTableName="hoa_don"
                                  constraintName="FK_HOA_DON_ON_KHACH_HANG" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
@@ -1238,145 +1304,195 @@
             <column name="khach_hang_id"/>
         </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-148" author="obscurites">
+    <changeSet id="1749553564527-158" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nhan_vien_id" baseTableName="hoa_don"
                                  constraintName="FK_HOA_DON_ON_NHAN_VIEN" referencedColumnNames="id"
                                  referencedTableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-149" author="obscurites">
+    <changeSet id="1749553564527-159" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="hoa_don_id" baseTableName="hoa_don_phieu_giam_gia"
                                  constraintName="FK_HOA_DON_PHIEU_GIAM_GIA_ON_HOA_DON" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="hoa_don"/>
     </changeSet>
-    <changeSet id="1748665161152-150" author="obscurites">
+    <changeSet id="1749553564527-160" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="phieu_giam_gia_id" baseTableName="hoa_don_phieu_giam_gia"
                                  constraintName="FK_HOA_DON_PHIEU_GIAM_GIA_ON_PHIEU_GIAM_GIA" onDelete="RESTRICT"
                                  referencedColumnNames="id" referencedTableName="phieu_giam_gia"/>
     </changeSet>
-    <changeSet id="1748665161152-151" author="obscurites">
+    <changeSet id="1749553564527-161" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="hoa_don_id" baseTableName="hoa_don_thanh_toan"
                                  constraintName="FK_HOA_DON_THANH_TOAN_ON_HOA_DON" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="hoa_don"/>
     </changeSet>
-    <changeSet id="1748665161152-152" author="obscurites">
+    <changeSet id="1749553564527-162" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="thanh_toan_id" baseTableName="hoa_don_thanh_toan"
                                  constraintName="FK_HOA_DON_THANH_TOAN_ON_THANH_TOAN" onDelete="RESTRICT"
                                  referencedColumnNames="id" referencedTableName="thanh_toan"/>
     </changeSet>
-    <changeSet id="1748665161152-153" author="obscurites">
+    <changeSet id="1749553564527-163" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="phieu_giam_gia_nguoi_dung"
                                  constraintName="FK_PHIEU_GIAM_GIA_NGUOI_DUNG_ON_NGUOI_DUNG" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-154" author="obscurites">
+    <changeSet id="1749553564527-164" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="phieu_giam_gia_id" baseTableName="phieu_giam_gia_nguoi_dung"
                                  constraintName="FK_PHIEU_GIAM_GIA_NGUOI_DUNG_ON_PHIEU_GIAM_GIA" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="phieu_giam_gia"/>
     </changeSet>
-    <changeSet id="1748665161152-155" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="am_thanh_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_AM_THANH" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="am_thanh"/>
+    <changeSet id="1749553564527-165" author="obscurites">
+        <addForeignKeyConstraint baseColumnNames="bo_nho_id" baseTableName="san_pham_chi_tiet"
+                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_BO_NHO" onDelete="SET NULL"
+                                 referencedColumnNames="id" referencedTableName="bo_nho"/>
     </changeSet>
-    <changeSet id="1748665161152-156" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="ban_phim_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_BAN_PHIM" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="ban_phim"/>
-    </changeSet>
-    <changeSet id="1748665161152-157" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="bao_mat_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_BAO_MAT" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="bao_mat"/>
-    </changeSet>
-    <changeSet id="1748665161152-158" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="cong_giao_tiep_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_CONG_GIAO_TIEP" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="cong_giao_tiep"/>
-    </changeSet>
-    <changeSet id="1748665161152-159" author="obscurites">
+    <changeSet id="1749553564527-166" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="cpu_id" baseTableName="san_pham_chi_tiet"
                                  constraintName="FK_SAN_PHAM_CHI_TIET_ON_CPU" onDelete="SET NULL"
                                  referencedColumnNames="id" referencedTableName="cpu"/>
     </changeSet>
-    <changeSet id="1748665161152-160" author="obscurites">
+    <changeSet id="1749553564527-167" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="gpu_id" baseTableName="san_pham_chi_tiet"
                                  constraintName="FK_SAN_PHAM_CHI_TIET_ON_GPU" onDelete="SET NULL"
                                  referencedColumnNames="id" referencedTableName="gpu"/>
     </changeSet>
-    <changeSet id="1748665161152-161" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="he_dieu_hanh_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_HE_DIEU_HANH" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="he_dieu_hanh"/>
-    </changeSet>
-    <changeSet id="1748665161152-162" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="ket_noi_mang_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_KET_NOI_MANG" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="ket_noi_mang"/>
-    </changeSet>
-    <changeSet id="1748665161152-163" author="obscurites">
+    <changeSet id="1749553564527-168" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="man_hinh_id" baseTableName="san_pham_chi_tiet"
                                  constraintName="FK_SAN_PHAM_CHI_TIET_ON_MAN_HINH" onDelete="SET NULL"
                                  referencedColumnNames="id" referencedTableName="man_hinh"/>
     </changeSet>
-    <changeSet id="1748665161152-164" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="o_cung_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_O_CUNG" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="o_cung"/>
+    <changeSet id="1749553564527-169" author="obscurites">
+        <addForeignKeyConstraint baseColumnNames="mau_sac_id" baseTableName="san_pham_chi_tiet"
+                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_MAU_SAC" onDelete="SET NULL"
+                                 referencedColumnNames="id" referencedTableName="mau_sac"/>
     </changeSet>
-    <changeSet id="1748665161152-165" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="pin_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_PIN" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="pin"/>
-    </changeSet>
-    <changeSet id="1748665161152-166" author="obscurites">
+    <changeSet id="1749553564527-170" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="ram_id" baseTableName="san_pham_chi_tiet"
                                  constraintName="FK_SAN_PHAM_CHI_TIET_ON_RAM" onDelete="SET NULL"
                                  referencedColumnNames="id" referencedTableName="ram"/>
     </changeSet>
-    <changeSet id="1748665161152-167" author="obscurites">
+    <changeSet id="1749553564527-171" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_id" baseTableName="san_pham_chi_tiet"
                                  constraintName="FK_SAN_PHAM_CHI_TIET_ON_SAN_PHAM" onDelete="CASCADE"
                                  referencedColumnNames="id" referencedTableName="san_pham"/>
+
+        <createIndex indexName="idx_san_pham_chi_tiet_san_pham" tableName="san_pham_chi_tiet">
+            <column name="san_pham_id"/>
+        </createIndex>
     </changeSet>
-    <changeSet id="1748665161152-168" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="thiet_ke_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_THIET_KE" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="thiet_ke"/>
-    </changeSet>
-    <changeSet id="1748665161152-169" author="obscurites">
-        <addForeignKeyConstraint baseColumnNames="webcam_id" baseTableName="san_pham_chi_tiet"
-                                 constraintName="FK_SAN_PHAM_CHI_TIET_ON_WEBCAM" onDelete="SET NULL"
-                                 referencedColumnNames="id" referencedTableName="webcam"/>
-    </changeSet>
-    <changeSet id="1748665161152-170" author="obscurites">
+    <changeSet id="1749553564527-172" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="thuong_hieu_id" baseTableName="san_pham"
                                  constraintName="FK_SAN_PHAM_ON_THUONG_HIEU" onDelete="SET NULL"
                                  referencedColumnNames="id" referencedTableName="thuong_hieu"/>
     </changeSet>
-    <changeSet id="1748665161152-171" author="obscurites">
+    <changeSet id="1749553564527-173" author="obscurites">
+        <addForeignKeyConstraint baseColumnNames="san_pham_chi_tiet_id" baseTableName="serial_number"
+                                 constraintName="FK_SERIAL_NUMBER_ON_SAN_PHAM_CHI_TIET" onDelete="RESTRICT"
+                                 referencedColumnNames="id" referencedTableName="san_pham_chi_tiet"/>
+
+        <createIndex indexName="idx_serial_number_variant" tableName="serial_number">
+            <column name="san_pham_chi_tiet_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="1749553564527-174" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="nguoi_dung_id" baseTableName="thanh_toan"
                                  constraintName="FK_THANH_TOAN_ON_NGUOI_DUNG" onDelete="RESTRICT"
                                  referencedColumnNames="id" referencedTableName="nguoi_dung"/>
     </changeSet>
-    <changeSet id="1748665161152-172" author="obscurites">
+    <changeSet id="1749553564527-175" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="dot_giam_gia_id" baseTableName="san_pham_chi_tiet_dot_giam_gia"
                                  constraintName="fk_sanphachitiedotgiagia_on_dot_giam_gia" referencedColumnNames="id"
                                  referencedTableName="dot_giam_gia"/>
     </changeSet>
-    <changeSet id="1748665161152-173" author="obscurites">
+    <changeSet id="1749553564527-176" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_chi_tiet_id" baseTableName="san_pham_chi_tiet_dot_giam_gia"
                                  constraintName="fk_sanphachitiedotgiagia_on_san_pham_chi_tiet"
                                  referencedColumnNames="id" referencedTableName="san_pham_chi_tiet"/>
     </changeSet>
-    <changeSet id="1748665161152-174" author="obscurites">
+    <changeSet id="1749553564527-177" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="danh_muc_id" baseTableName="san_pham_danh_muc"
                                  constraintName="fk_sanphadanmuc_on_danh_muc" referencedColumnNames="id"
                                  referencedTableName="danh_muc"/>
     </changeSet>
-    <changeSet id="1748665161152-175" author="obscurites">
+    <changeSet id="1749553564527-178" author="obscurites">
         <addForeignKeyConstraint baseColumnNames="san_pham_id" baseTableName="san_pham_danh_muc"
                                  constraintName="fk_sanphadanmuc_on_san_pham" referencedColumnNames="id"
                                  referencedTableName="san_pham"/>
+    </changeSet>
+
+    <!-- ==================== INITIAL DATA INSERTION ==================== -->
+
+    <!-- Insert initial admin user if not exists -->
+    <changeSet id="insert-initial-admin-user" author="system">
+        <!-- Check if admin user already exists -->
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM nguoi_dung WHERE ma_nguoi_dung = 'ADM_Duyta001'
+            </sqlCheck>
+        </preConditions>
+
+        <comment>Insert initial admin user for system setup</comment>
+
+        <!-- Insert admin user -->
+        <insert tableName="nguoi_dung">
+            <column name="id" valueNumeric="1"/>
+            <column name="ma_nguoi_dung" value="ADM_Duyta001"/>
+            <column name="avatar" value="c4808b5b-a42b-4b65-aed2-3c79cb08fbf8_himmelfrieren.gif"/>
+            <column name="ho_ten" value="Trần Anh Duy"/>
+            <column name="gioi_tinh" value="NAM"/>
+            <column name="ngay_sinh" valueDate="2006-01-15"/>
+            <column name="email" value="anhduy.tran@gmail.com"/>
+            <column name="so_dien_thoai" value="0866028113"/>
+            <column name="cccd" value="001200000001"/>
+            <column name="vai_tro" value="ADMIN"/>
+            <column name="trang_thai" value="HOAT_DONG"/>
+            <column name="ngay_tao" valueComputed="CURRENT_TIMESTAMP"/>
+            <column name="ngay_cap_nhat" valueComputed="CURRENT_TIMESTAMP"/>
+            <column name="nguoi_tao" value="SYSTEM"/>
+            <column name="nguoi_cap_nhat" value="SYSTEM"/>
+            <!-- Default password: 123456 (bcrypt hash) - CHANGE THIS IN PRODUCTION -->
+            <column name="mat_khau" value="$2a$12$ZEao90fiGTjzS/3pg/WbgOBZ.vpceOmxay1G8Etn1VzZ4ZSYhtVF."/>
+        </insert>
+    </changeSet>
+
+    <!-- Insert initial admin address if not exists -->
+    <changeSet id="insert-initial-admin-address" author="system">
+        <!-- Check if admin address already exists -->
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM dia_chi WHERE nguoi_dung_id = 1 AND duong = '37 Lý Quốc Sư'
+            </sqlCheck>
+        </preConditions>
+
+        <comment>Insert initial address for admin user</comment>
+
+        <!-- Insert admin address -->
+        <insert tableName="dia_chi">
+            <column name="id" valueNumeric="1"/>
+            <column name="nguoi_dung_id" valueNumeric="1"/>
+            <column name="duong" value="37 Lý Quốc Sư"/>
+            <column name="phuong_xa" value="Phường Hàng Trống"/>
+            <column name="quan_huyen" value="Quận Hoàn Kiếm"/>
+            <column name="tinh_thanh" value="Thành phố Hà Nội"/>
+            <column name="quoc_gia" value="Việt Nam"/>
+            <column name="loai_dia_chi" value=""/>
+            <column name="la_mac_dinh" valueBoolean="true"/>
+            <column name="ngay_tao" valueComputed="CURRENT_TIMESTAMP"/>
+            <column name="ngay_cap_nhat" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <!-- Update sequence values to avoid conflicts -->
+    <changeSet id="update-sequences-after-initial-data" author="system">
+        <comment>Update sequence values to avoid ID conflicts</comment>
+
+        <!-- Update nguoi_dung sequence -->
+        <sql>
+            SELECT setval('nguoi_dung_id_seq', (SELECT COALESCE(MAX(id), 1) FROM nguoi_dung));
+        </sql>
+
+        <!-- Update dia_chi sequence -->
+        <sql>
+            SELECT setval('dia_chi_id_seq', (SELECT COALESCE(MAX(id), 1) FROM dia_chi));
+        </sql>
     </changeSet>
 
 </databaseChangeLog>

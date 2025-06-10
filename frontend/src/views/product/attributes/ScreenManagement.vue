@@ -14,6 +14,7 @@ const screenConfig = {
   dialogTitle: 'Thông tin Màn hình',
   icon: 'pi pi-tablet',
   fieldName: 'moTaManHinh',
-  fieldLabel: 'Mô tả Màn hình'
+  fieldLabel: 'Mô tả Màn hình',
+  codeFieldName: 'maManHinh'
 }
 </script>

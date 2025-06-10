@@ -23,7 +23,7 @@ export const useProductStore = defineStore('product', {
       cpu: null,
       ram: null,
       gpu: null,
-      priceRange: [0, 50000000],
+      priceRange: [0, 50000000], // Will be updated dynamically
       trangThai: null
     },
     serialNumbers: {},
@@ -346,6 +346,8 @@ export const useProductStore = defineStore('product', {
     },
 
     clearFilters() {
+      // Note: This method is kept for compatibility but components should use
+      // the useDynamicPricing composable for dynamic price ranges
       this.filters = {
         tenSanPham: '',
         maSanPham: '',
@@ -355,7 +357,7 @@ export const useProductStore = defineStore('product', {
         cpu: null,
         ram: null,
         gpu: null,
-        priceRange: [0, 50000000],
+        priceRange: [0, 50000000], // Components using useDynamicPricing will override this
         trangThai: null
       }
     },

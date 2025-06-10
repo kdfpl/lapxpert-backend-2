@@ -242,6 +242,15 @@
             <Badge :value="productForm.sanPhamChiTiets?.length || 0" severity="info" />
           </div>
 
+          <!-- Serial Number Validation Error -->
+          <div v-if="errors.serialNumbers" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-exclamation-triangle text-red-500"></i>
+              <span class="text-red-700 font-medium">Lỗi Serial Number:</span>
+            </div>
+            <p class="text-red-600 mt-1">{{ errors.serialNumbers }}</p>
+          </div>
+
           <div class="space-y-4">
             <!-- Variant Generation Tool -->
             <div class="bg-surface-50 p-4 rounded-lg">
@@ -301,7 +310,7 @@
                   <MultiSelect
                     v-model="selectedStorage"
                     :options="storage"
-                    optionLabel="moTaOCung"
+                    optionLabel="moTaBoNho"
                     placeholder="Chọn ổ cứng"
                     display="chip"
                   />
@@ -1126,7 +1135,7 @@ const generateVariants = async () => {
         cpu: current.cpus,
         ram: current.rams,
         gpu: current.gpus,
-        oCung: current.storage,
+        boNho: current.storage,
         manHinh: current.screens,
         giaBan: 0, // Will be set individually for each variant
         giaKhuyenMai: null,
@@ -1171,8 +1180,15 @@ const generateVariants = async () => {
       productForm.value.sanPhamChiTiets = variants
     }
 
-    // Ensure variant image previews array is properly sized
-    variantImagePreviews.value = new Array(productForm.value.sanPhamChiTiets.length).fill(null)
+    // Ensure variant image previews array is properly sized while preserving existing values
+    const currentLength = variantImagePreviews.value.length
+    const requiredLength = productForm.value.sanPhamChiTiets.length
+
+    if (requiredLength > currentLength) {
+      // Extend array with null values for new variants while preserving existing previews
+      const extensionArray = new Array(requiredLength - currentLength).fill(null)
+      variantImagePreviews.value.push(...extensionArray)
+    }
   }
 
   // Show appropriate toast messages
@@ -1427,6 +1443,18 @@ const manageSerialNumbers = async (variant) => {
   console.log(`Opening serial management for variant ${variant.id || 'new'} with ${variantSerialNumbers.value.length} serial numbers`)
 }
 
+// Helper function to check for cross-variant duplicates
+const checkCrossVariantDuplicates = (serialNumber) => {
+  return productForm.value.sanPhamChiTiets.some(variant => {
+    // Skip the current variant being edited
+    if (variant === selectedVariantForSerial.value) return false
+
+    return variant.serialNumbers?.some(serial =>
+      (serial.serialNumberValue || serial.serialNumber) === serialNumber
+    )
+  })
+}
+
 const addSerialNumber = () => {
   if (!newSerialNumber.value.trim()) return
 
@@ -1440,6 +1468,7 @@ const addSerialNumber = () => {
 
   const newSerials = []
   const duplicates = []
+  const crossVariantDuplicates = []
   const errors = []
 
   // Process each serial number
@@ -1454,8 +1483,16 @@ const addSerialNumber = () => {
       serial => serial.serialNumberValue === serialNumber
     )
 
+    // Check for cross-variant duplicates
+    const existsInOtherVariants = checkCrossVariantDuplicates(serialNumber)
+
     if (existsInCurrent || existsInBatch) {
       duplicates.push(serialNumber)
+      continue
+    }
+
+    if (existsInOtherVariants) {
+      crossVariantDuplicates.push(serialNumber)
       continue
     }
 
@@ -1505,8 +1542,18 @@ const addSerialNumber = () => {
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
-      detail: `${duplicates.length} serial number đã tồn tại: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`,
+      detail: `${duplicates.length} serial number đã tồn tại trong biến thể này: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`,
       life: 4000
+    })
+  }
+
+  // Show warnings for cross-variant duplicates
+  if (crossVariantDuplicates.length > 0) {
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: `${crossVariantDuplicates.length} serial number đã tồn tại ở biến thể khác: ${crossVariantDuplicates.slice(0, 3).join(', ')}${crossVariantDuplicates.length > 3 ? '...' : ''}`,
+      life: 6000
     })
   }
 
@@ -1562,16 +1609,29 @@ const saveSerialEdit = () => {
 
   // Check for duplicates if serial number value changed
   if (newValue !== currentValue) {
-    const exists = variantSerialNumbers.value.some(
+    // Check for duplicates within current variant
+    const existsInCurrent = variantSerialNumbers.value.some(
       (s, i) => i !== index && (s.serialNumberValue || s.serialNumber) === newValue
     )
 
-    if (exists) {
+    if (existsInCurrent) {
       toast.add({
         severity: 'warn',
         summary: 'Cảnh báo',
-        detail: 'Serial number đã tồn tại',
+        detail: 'Serial number đã tồn tại trong biến thể này',
         life: 3000
+      })
+      return
+    }
+
+    // Check for cross-variant duplicates
+    const existsInOtherVariants = checkCrossVariantDuplicates(newValue)
+    if (existsInOtherVariants) {
+      toast.add({
+        severity: 'error',
+        summary: 'Lỗi',
+        detail: 'Serial number đã tồn tại ở biến thể khác',
+        life: 4000
       })
       return
     }
@@ -2024,7 +2084,7 @@ const getVariantAttributeSignature = (variant) => {
     cpu: variant.cpu?.id || null,
     ram: variant.ram?.id || null,
     gpu: variant.gpu?.id || null,
-    oCung: variant.oCung?.id || null,
+    boNho: variant.boNho?.id || variant.oCung?.id || null,
     manHinh: variant.manHinh?.id || null
   }
   return JSON.stringify(attributes)
@@ -2108,9 +2168,14 @@ const applyBulkImage = async () => {
         }
       })
 
-      // Ensure variantImagePreviews array is properly sized
-      if (variantImagePreviews.value.length < productForm.value.sanPhamChiTiets.length) {
-        variantImagePreviews.value = new Array(productForm.value.sanPhamChiTiets.length).fill(null)
+      // Ensure variantImagePreviews array is properly sized while preserving existing values
+      const currentLength = variantImagePreviews.value.length
+      const requiredLength = productForm.value.sanPhamChiTiets.length
+
+      if (requiredLength > currentLength) {
+        // Extend array with null values for new variants while preserving existing previews
+        const extensionArray = new Array(requiredLength - currentLength).fill(null)
+        variantImagePreviews.value.push(...extensionArray)
       }
 
       // Apply to all variants in selected groups

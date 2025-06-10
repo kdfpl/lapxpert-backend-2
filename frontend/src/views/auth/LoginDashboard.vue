@@ -15,12 +15,21 @@ const checked = ref(false)
 const isLoading = ref(false)
 
 onMounted(() => {
-  // toast.add({
-  //   severity: 'info',
-  //   summary: 'Khởi tạo',
-  //   detail: 'Component đã được khởi tạo',
-  //   life: 3000,
-  // })
+  // Check for session expiration message
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('expired') === 'true') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Phiên đăng nhập hết hạn',
+      detail: 'Vui lòng đăng nhập lại để tiếp tục',
+      life: 5000,
+    })
+  }
+
+  // Check if user is already authenticated
+  if (AuthService.isAuthenticated()) {
+    router.push('/')
+  }
 })
 
 const isValidEmail = (email) => {
@@ -71,20 +80,45 @@ const handleLogin = async () => {
       life: 3000,
     })
 
+    // Clear any expired session parameters from URL
+    const url = new URL(window.location)
+    url.searchParams.delete('expired')
+    window.history.replaceState({}, '', url)
+
     router.push('/')
   } catch (error) {
     console.error('Login error:', error)
     console.error('Error response:', error.response)
 
-    const errorMessage =
-      error.response?.data?.message || 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.'
+    let errorMessage = 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.'
+    let errorSummary = 'Lỗi đăng nhập'
+
+    // Handle specific error codes from backend
+    if (error.response?.data?.code) {
+      const errorCode = error.response.data.code
+      switch (errorCode) {
+        case 'TOKEN_EXPIRED':
+        case 'TOKEN_INVALID':
+          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+          errorSummary = 'Phiên hết hạn'
+          break
+        case 'ACCOUNT_INACTIVE':
+          errorMessage = 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.'
+          errorSummary = 'Tài khoản bị khóa'
+          break
+        default:
+          errorMessage = error.response.data.message || errorMessage
+      }
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
 
     // Hiển thị thông báo lỗi
     toast.add({
       severity: 'error',
-      summary: 'Lỗi đăng nhập',
+      summary: errorSummary,
       detail: errorMessage,
-      life: 3000,
+      life: 5000,
     })
   } finally {
     isLoading.value = false

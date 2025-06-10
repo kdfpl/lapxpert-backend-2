@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class GpuDto implements Serializable {
     Long id;
+    String maGpu;
     String moTaGpu;
 }

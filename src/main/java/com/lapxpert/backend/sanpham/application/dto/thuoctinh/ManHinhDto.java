@@ -10,5 +10,6 @@ import java.io.Serializable;
 @Data
 public class ManHinhDto implements Serializable {
     Long id;
+    String maManHinh;
     String moTaManHinh;
 }

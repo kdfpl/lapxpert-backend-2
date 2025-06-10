@@ -480,6 +480,17 @@ public class SerialNumberController {
     }
 
     /**
+     * Get serial numbers for a specific order
+     */
+    @GetMapping("/order/{orderId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<SerialNumberDto>>> getSerialNumbersByOrder(@PathVariable String orderId) {
+        List<SerialNumber> serialNumbers = serialNumberRepository.findByDonHangDatTruoc(orderId);
+        List<SerialNumberDto> result = serialNumberMapper.toDtoList(serialNumbers);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
      * Check serial number availability
      */
     @GetMapping("/check-availability/{serialNumberValue}")

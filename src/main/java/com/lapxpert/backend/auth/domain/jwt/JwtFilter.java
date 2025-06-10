@@ -42,15 +42,37 @@ public class JwtFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            if (token != null && !token.isEmpty() && jwtUtil.isTokenValid(token)) {
-                String email = jwtUtil.extractEmail(token);
-                NguoiDung nguoiDung = repository.findByEmail(email).orElse(null);
+            if (token != null && !token.isEmpty()) {
+                try {
+                    if (jwtUtil.isTokenValid(token)) {
+                        String email = jwtUtil.extractEmail(token);
+                        NguoiDung nguoiDung = repository.findByEmail(email).orElse(null);
 
-                if (nguoiDung != null) {
-                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                            nguoiDung, null, List.of(new SimpleGrantedAuthority("ROLE_" + nguoiDung.getVaiTro()))
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                        if (nguoiDung != null && nguoiDung.isActive()) {
+                            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                                    nguoiDung, null, List.of(new SimpleGrantedAuthority("ROLE_" + nguoiDung.getVaiTro()))
+                            );
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        } else if (nguoiDung != null && !nguoiDung.isActive()) {
+                            // User exists but is inactive
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.getWriter().write("{\"error\":\"Account is inactive\",\"code\":\"ACCOUNT_INACTIVE\"}");
+                            response.setContentType("application/json");
+                            return;
+                        }
+                    } else {
+                        // Token is invalid or expired
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.getWriter().write("{\"error\":\"Token expired or invalid\",\"code\":\"TOKEN_EXPIRED\"}");
+                        response.setContentType("application/json");
+                        return;
+                    }
+                } catch (Exception e) {
+                    // Token parsing failed
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"error\":\"Invalid token format\",\"code\":\"TOKEN_INVALID\"}");
+                    response.setContentType("application/json");
+                    return;
                 }
             }
         }

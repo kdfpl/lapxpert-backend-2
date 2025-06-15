@@ -148,23 +148,23 @@
 import { ref } from 'vue'
 
 // Props
-const props = defineProps({
-  orderId: {
-    type: [String, Number],
-    required: true
-  },
-  auditHistory: {
-    type: Array,
-    default: () => []
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  }
-})
+// const props = defineProps({ // Currently unused
+//   orderId: {
+//     type: [String, Number],
+//     required: true
+//   },
+//   auditHistory: {
+//     type: Array,
+//     default: () => []
+//   },
+//   loading: {
+//     type: Boolean,
+//     default: false
+//   }
+// })
 
 // Emits
-const emit = defineEmits(['refresh', 'load-more'])
+// const emit = defineEmits(['refresh', 'load-more']) // Currently unused
 
 // Component state
 const loadingMore = ref(false)
@@ -287,16 +287,16 @@ const formatFieldValue = (field, value) => {
   return value
 }
 
-const formatJsonValues = (jsonString) => {
-  try {
-    const obj = JSON.parse(jsonString)
-    return Object.entries(obj)
-      .map(([key, value]) => `${getFieldDisplayName(key)}: ${formatFieldValue(key, value)}`)
-      .join('\n')
-  } catch (e) {
-    return jsonString
-  }
-}
+// const formatJsonValues = (jsonString) => { // Currently unused
+//   try {
+//     const obj = JSON.parse(jsonString)
+//     return Object.entries(obj)
+//       .map(([key, value]) => `${getFieldDisplayName(key)}: ${formatFieldValue(key, value)}`)
+//       .join('\n')
+//   } catch (e) {
+//     return jsonString
+//   }
+// }
 
 // Enhanced JSON parsing for better audit display
 const parseJsonValues = (jsonString) => {

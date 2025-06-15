@@ -349,7 +349,7 @@ const orderApi = {
    * @param {Object} paymentData - Additional payment data (transaction ID, etc.)
    * @returns {Promise<Object>} API response with updated order data
    */
-  async confirmPayment(orderId, paymentMethod, paymentData = {}) {
+  async confirmPayment(orderId, paymentMethod, _paymentData = {}) {
     try {
       const response = await privateApi.post(`${ORDER_BASE_URL}/${orderId}/confirm-payment`, null, {
         params: { phuongThucThanhToan: paymentMethod }

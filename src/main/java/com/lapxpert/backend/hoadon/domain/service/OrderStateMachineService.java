@@ -100,8 +100,11 @@ public class OrderStateMachineService {
         
         // Business rule validations
         if (newState == TrangThaiDonHang.DANG_XU_LY) {
-            // Can only move to processing if payment is confirmed (except for COD)
-            if (paymentMethod != PhuongThucThanhToan.COD && paymentStatus != TrangThaiThanhToan.DA_THANH_TOAN) {
+            // Can only move to processing if payment is confirmed (except for cash on delivery)
+            if (paymentMethod == PhuongThucThanhToan.TIEN_MAT && orderType == LoaiHoaDon.ONLINE) {
+                // Cash on delivery (former COD) - allow processing without payment confirmation
+                // Payment will be collected at delivery
+            } else if (paymentStatus != TrangThaiThanhToan.DA_THANH_TOAN) {
                 return StateTransitionResult.invalid("Cannot process order without confirmed payment");
             }
         }

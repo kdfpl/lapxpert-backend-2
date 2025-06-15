@@ -1,6 +1,6 @@
-package com.lapxpert.backend.thongke.application.service.impl;
+package com.lapxpert.backend.thongke.domain.service.impl;
 
-import com.lapxpert.backend.thongke.application.service.ThongKeService;
+import com.lapxpert.backend.thongke.domain.service.ThongKeService;
 import com.lapxpert.backend.thongke.domain.dto.*;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
@@ -215,17 +215,38 @@ public class ThongKeServiceImpl implements ThongKeService {
         
         Double tyLeTangTruongNam = calculateGrowthPercentage(tongDoanhThuNam, doanhThuNamTruoc);
         
-        // Generate quarter breakdown
+        // Generate quarter breakdown with growth calculation
         List<DoanhThuTheoThangDto.QuarterRevenueDto> doanhThuTheoQuy = new ArrayList<>();
+
+        // Calculate previous year quarterly revenue for growth comparison
+        Map<Integer, BigDecimal> previousYearMonthlyRevenue = previousYearOrders.stream()
+            .collect(Collectors.groupingBy(
+                order -> order.getNgayTao().atZone(java.time.ZoneOffset.UTC).toLocalDate().getMonthValue(),
+                Collectors.reducing(BigDecimal.ZERO, HoaDon::getTongThanhToan, BigDecimal::add)
+            ));
+
         for (int quarter = 1; quarter <= 4; quarter++) {
             int startMonth = (quarter - 1) * 3;
+
+            // Calculate current year quarter revenue
             BigDecimal quarterRevenue = data.subList(startMonth, startMonth + 3).stream()
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
+            // Calculate previous year quarter revenue for comparison
+            BigDecimal previousYearQuarterRevenue = BigDecimal.ZERO;
+            for (int month = startMonth + 1; month <= startMonth + 3; month++) {
+                previousYearQuarterRevenue = previousYearQuarterRevenue.add(
+                    previousYearMonthlyRevenue.getOrDefault(month, BigDecimal.ZERO)
+                );
+            }
+
+            // Calculate quarter-over-quarter growth
+            Double quarterGrowthPercentage = calculateGrowthPercentage(quarterRevenue, previousYearQuarterRevenue);
+
             doanhThuTheoQuy.add(DoanhThuTheoThangDto.QuarterRevenueDto.builder()
                 .quy(quarter)
                 .doanhThu(quarterRevenue)
-                .tyLeTangTruong(0.0) // TODO: Calculate quarter growth
+                .tyLeTangTruong(quarterGrowthPercentage)
                 .build());
         }
         

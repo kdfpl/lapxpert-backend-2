@@ -309,7 +309,7 @@
     <div class="card">
       <DataTable
         v-model:selection="selectedOrders"
-        :value="filteredOrders"
+        :value="sortedFilteredOrders"
         :loading="loading || orderStore.loading"
         paginator
         :rows="10"
@@ -322,16 +322,24 @@
         :globalFilterFields="['maHoaDon', 'khachHang.hoTen', 'nhanVien.hoTen']"
         scrollable
         scrollHeight="600px"
+        v-bind="getDataTableSortProps()"
+        @sort="onSort"
       >
         <template #header>
           <div class="flex justify-between items-center">
-            <div class="flex">
+            <div class="flex items-center gap-3">
               <IconField>
                 <InputIcon>
                   <i class="pi pi-search" />
                 </InputIcon>
                 <InputText v-model="filters.global.value" placeholder="Tìm kiếm..." />
               </IconField>
+
+              <!-- Sort Indicator -->
+              <div class="flex items-center gap-2 text-sm text-surface-600">
+                <i :class="getSortIndicator.icon"></i>
+                <span>{{ getSortIndicator.label }}</span>
+              </div>
             </div>
           </div>
         </template>
@@ -507,6 +515,18 @@
           </template>
         </Column>
 
+        <Column
+          field="ngayCapNhat"
+          header="Ngày cập nhật"
+          sortable
+          headerClass="!text-md"
+          class="!text-sm"
+        >
+          <template #body="{ data }">
+            {{ formatDateTime(data.ngayCapNhat) }}
+          </template>
+        </Column>
+
         <Column header="Hành động" headerClass="!text-md" class="!text-sm" style="width: 150px">
           <template #body="{ data }">
             <div class="flex gap-1">
@@ -618,11 +638,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeMount } from 'vue'
+import { ref, computed, onBeforeMount, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores/orderStore'
 import { useToast } from 'primevue/usetoast'
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 
 // PrimeVue Components
 import Toast from 'primevue/toast'
@@ -634,6 +655,20 @@ import OrderCancelDialog from '@/components/orders/OrderCancelDialog.vue'
 // --- 1. Store Access ---
 const orderStore = useOrderStore()
 const router = useRouter()
+const confirmDialog = inject('confirmDialog')
+
+// --- Auto-Sorting Composable ---
+const {
+  getDataTableSortProps,
+  onSort,
+  resetSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+})
 
 // --- 2. State ---
 
@@ -772,6 +807,11 @@ const filteredOrders = computed(() => {
     })
   }
   return data
+})
+
+// Apply auto-sorting to filtered orders
+const sortedFilteredOrders = computed(() => {
+  return applySorting(filteredOrders.value)
 })
 
 // Order status and type options
@@ -928,7 +968,7 @@ const shouldShowDeleteButton = (order) => {
 
 
 // Batch Operations
-const confirmCancelMultipleOrders = () => {
+const confirmCancelMultipleOrders = async () => {
   if (!selectedOrders.value || selectedOrders.value.length === 0) {
     toast.add({
       severity: 'warn',
@@ -950,6 +990,17 @@ const confirmCancelMultipleOrders = () => {
     })
     return
   }
+
+  // Show initial confirmation before opening detailed dialog
+  const confirmed = await confirmDialog.showConfirmDialog({
+    title: 'Hủy nhiều đơn hàng',
+    message: `Bạn có chắc chắn muốn hủy ${selectedOrders.value.length} đơn hàng đã chọn?\n\nHành động này không thể hoàn tác và sẽ ảnh hưởng đến:\n• Tồn kho sản phẩm\n• Báo cáo doanh thu\n• Lịch sử đơn hàng`,
+    severity: 'warn',
+    confirmLabel: 'Tiếp tục hủy',
+    cancelLabel: 'Hủy bỏ'
+  })
+
+  if (!confirmed) return
 
   batchCancelReason.value = ''
   batchCancelDialogVisible.value = true
@@ -1001,6 +1052,17 @@ const cancelMultipleOrders = async () => {
 
 // Export functionality
 const exportOrders = async () => {
+  // Show confirmation dialog before export
+  const confirmed = await confirmDialog.showConfirmDialog({
+    title: 'Xuất danh sách đơn hàng',
+    message: `Bạn có chắc chắn muốn xuất ${filteredOrders.value.length} đơn hàng ra file Excel?\n\nFile sẽ bao gồm tất cả thông tin đơn hàng hiện đang hiển thị theo bộ lọc đã chọn.`,
+    severity: 'info',
+    confirmLabel: 'Xuất Excel',
+    cancelLabel: 'Hủy bỏ'
+  })
+
+  if (!confirmed) return
+
   exportLoading.value = true
   try {
     await orderStore.exportOrders(filteredOrders.value)

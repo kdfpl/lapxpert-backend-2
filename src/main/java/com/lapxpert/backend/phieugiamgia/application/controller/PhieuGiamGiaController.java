@@ -5,6 +5,7 @@ import com.lapxpert.backend.nguoidung.domain.service.NguoiDungService;
 import com.lapxpert.backend.phieugiamgia.application.dto.PhieuGiamGiaDto;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaAuditHistory;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
+import com.lapxpert.backend.phieugiamgia.domain.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -219,6 +220,30 @@ public class PhieuGiamGiaController {
         } catch (Exception e) {
             log.error("Error getting top vouchers: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
+    /**
+     * Get intelligent voucher recommendations with cross-category comparison and customer analysis
+     * POST /api/v1/phieu-giam-gia/intelligent-recommendations
+     */
+    @PostMapping("/intelligent-recommendations")
+    public ResponseEntity<IntelligentRecommendationResult> getIntelligentRecommendations(
+            @RequestBody IntelligentRecommendationRequest request,
+            @AuthenticationPrincipal NguoiDung currentUser) {
+        try {
+            IntelligentRecommendationResult result = phieuGiamGiaService.getIntelligentVoucherRecommendations(
+                request.getCustomerId(),
+                request.getOrderTotal(),
+                request.getOrderItems()
+            );
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting intelligent recommendations: {}", e.getMessage(), e);
+            IntelligentRecommendationResult errorResult = IntelligentRecommendationResult.noRecommendations(
+                "Lỗi hệ thống khi tạo gợi ý thông minh"
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
 
@@ -438,6 +463,23 @@ public class PhieuGiamGiaController {
         // Getters and setters
         public boolean isEligible() { return eligible; }
         public void setEligible(boolean eligible) { this.eligible = eligible; }
+    }
+
+    /**
+     * Request DTO for intelligent recommendations
+     */
+    public static class IntelligentRecommendationRequest {
+        private Long customerId;
+        private BigDecimal orderTotal;
+        private List<OrderItemInfo> orderItems;
+
+        // Getters and setters
+        public Long getCustomerId() { return customerId; }
+        public void setCustomerId(Long customerId) { this.customerId = customerId; }
+        public BigDecimal getOrderTotal() { return orderTotal; }
+        public void setOrderTotal(BigDecimal orderTotal) { this.orderTotal = orderTotal; }
+        public List<OrderItemInfo> getOrderItems() { return orderItems; }
+        public void setOrderItems(List<OrderItemInfo> orderItems) { this.orderItems = orderItems; }
     }
 
 }

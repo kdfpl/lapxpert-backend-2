@@ -1,4 +1,4 @@
-import { privateApi, publicApi } from './axiosAPI'
+import { privateApi } from './axiosAPI'
 
 // Note: SerialNumberController uses /api/v1/serial-numbers
 // privateApi base URL is already /api/v1, so we just need /serial-numbers

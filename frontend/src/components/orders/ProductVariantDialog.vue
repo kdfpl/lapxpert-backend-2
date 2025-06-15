@@ -402,21 +402,32 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between">
           <label class="font-semibold">Serial Numbers có sẵn:</label>
-          <Badge :value="availableSerialNumbers.length" severity="info" />
+          <Badge :value="filteredSerialNumbers.length" severity="info" />
         </div>
 
-        <div v-if="availableSerialNumbers.length === 0" class="text-center py-8 text-surface-500">
+        <!-- Serial Number Search -->
+        <div class="mb-3">
+          <InputText
+            v-model="serialFilterQuery"
+            placeholder="Tìm kiếm serial number..."
+            fluid
+            class="w-full"
+          />
+        </div>
+
+        <div v-if="filteredSerialNumbers.length === 0" class="text-center py-8 text-surface-500">
           <i class="pi pi-exclamation-triangle text-2xl mb-2"></i>
-          <p>Không có serial number nào có sẵn cho phiên bản này</p>
+          <p v-if="availableSerialNumbers.length === 0">Không có serial number nào có sẵn cho phiên bản này</p>
+          <p v-else>Không tìm thấy serial number nào phù hợp với từ khóa tìm kiếm</p>
         </div>
 
         <DataTable
           v-else
           v-model:selection="selectedSerialNumbers"
-          :value="availableSerialNumbers"
+          :value="filteredSerialNumbers"
           selectionMode="multiple"
           dataKey="id"
-          :paginator="availableSerialNumbers.length > 10"
+          :paginator="filteredSerialNumbers.length > 10"
           :rows="10"
           class="p-datatable-sm"
           showGridlines
@@ -454,6 +465,9 @@
       <div class="flex justify-between items-center w-full">
         <div v-if="selectedSerialNumbers.length > 0" class="text-sm text-surface-600">
           Đã chọn {{ selectedSerialNumbers.length }} serial numbers
+        </div>
+        <div v-else-if="serialFilterQuery" class="text-sm text-surface-600">
+          Hiển thị {{ filteredSerialNumbers.length }} / {{ availableSerialNumbers.length }} serial numbers
         </div>
         <div class="flex gap-2">
           <Button
@@ -531,12 +545,14 @@ const { products } = storeToRefs(productStore)
 const loading = ref(false)
 const variantSerialNumbers = ref(new Map()) // Cache for variant serial numbers
 const usedSerialNumbers = ref(new Set()) // Track serial numbers that have been added to cart
+const preventSyncOverride = ref(false) // Flag to prevent race conditions during immediate updates
 
 // Serial number selection dialog state
 const serialDialogVisible = ref(false)
 const selectedVariantForSerial = ref(null)
 const availableSerialNumbers = ref([])
 const selectedSerialNumbers = ref([])
+const serialFilterQuery = ref('')
 
 
 
@@ -610,6 +626,13 @@ const filteredVariants = computed(() => {
       const storage = (variant.oCung || variant.ocung)?.moTaOCung?.toLowerCase() || ''
       const screen = variant.manHinh?.moTaManHinh?.toLowerCase() || ''
 
+      // Search in serial numbers (check cached serial numbers for this variant)
+      const cachedSerials = variantSerialNumbers.value.get(variant.id) || []
+      const hasMatchingSerial = cachedSerials.some(serial => {
+        const serialValue = (serial.serialNumberValue || serial.serialNumber || '').toLowerCase()
+        return serialValue.includes(query)
+      })
+
       return productName.includes(query) ||
              productCode.includes(query) ||
              variantSku.includes(query) ||
@@ -619,7 +642,8 @@ const filteredVariants = computed(() => {
              gpu.includes(query) ||
              color.includes(query) ||
              storage.includes(query) ||
-             screen.includes(query)
+             screen.includes(query) ||
+             hasMatchingSerial
     })
   }
 
@@ -684,6 +708,19 @@ const hasActiveFilters = computed(() => {
          (filters.value.searchQuery && filters.value.searchQuery.trim())
 })
 
+// Filtered serial numbers for the dialog
+const filteredSerialNumbers = computed(() => {
+  if (!serialFilterQuery.value?.trim()) {
+    return availableSerialNumbers.value
+  }
+
+  const query = serialFilterQuery.value.toLowerCase().trim()
+  return availableSerialNumbers.value.filter(serial => {
+    const serialValue = (serial.serialNumberValue || serial.serialNumber || '').toLowerCase()
+    return serialValue.includes(query)
+  })
+})
+
 // Methods
 const getColorValue = (colorName) => {
   const colorMap = {
@@ -732,15 +769,17 @@ const getVariantDisplayName = (variant) => {
 const selectSerialNumbers = async (variant) => {
   selectedVariantForSerial.value = variant
 
-  // Load serial numbers for this variant
+  // Load fresh serial numbers for this variant to get current availability
   try {
     const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variant.id)
+
     // Filter out serials that are available AND not already used in cart
     availableSerialNumbers.value = serialNumbers.filter(serial => {
       const serialValue = serial.serialNumberValue || serial.serialNumber
       return serial.trangThai === 'AVAILABLE' && !usedSerialNumbers.value.has(serialValue)
     })
     selectedSerialNumbers.value = []
+    serialFilterQuery.value = '' // Clear search filter
     serialDialogVisible.value = true
   } catch (error) {
     console.error('Error loading serial numbers:', error)
@@ -786,6 +825,12 @@ const confirmSerialSelection = async () => {
 
       // Track this serial number as used to update available count
       usedSerialNumbers.value.add(serialValue)
+
+      // Set flag to prevent sync override for a short period
+      preventSyncOverride.value = true
+      setTimeout(() => {
+        preventSyncOverride.value = false
+      }, 200)
     }
 
     // Close the serial selection dialog
@@ -810,6 +855,8 @@ const confirmSerialSelection = async () => {
     })
   }
 }
+
+
 
 
 
@@ -852,18 +899,46 @@ const clearAllFilters = () => {
   }
 }
 
+// Simple cross-tab sync: refresh serial numbers when needed
+const refreshSerialNumbersForCrossTabs = async () => {
+  // Clear the cache to force fresh data from API
+  variantSerialNumbers.value.clear()
+
+  // Reload all serial numbers to get current availability
+  await loadAllSerialNumbers()
+}
+
 // Sync used serial numbers with current cart items (legacy method for compatibility)
 const syncUsedSerialNumbersWithCart = () => {
-  // This method is now deprecated in favor of backend reservations
-  // Keep for compatibility but functionality moved to backend
+  // Request parent to send current cart data for serial number tracking
   emit('request-cart-sync')
+
+  // Refresh serial numbers to get current cross-tab state
+  refreshSerialNumbersForCrossTabs()
 }
 
 // Method to receive cart data from parent (legacy for compatibility)
-const updateUsedSerialNumbers = () => {
-  // This method is now deprecated in favor of backend reservations
-  // Keep for compatibility but clear the tracking since backend handles it
+const updateUsedSerialNumbers = (cartItems = []) => {
+  // Skip update if we're in the middle of an immediate update to prevent race conditions
+  if (preventSyncOverride.value) {
+    return
+  }
+
+  // Simply update tracking to match current cart items
+  // This is the authoritative source of truth for what's actually in the cart
   usedSerialNumbers.value.clear()
+
+  if (Array.isArray(cartItems)) {
+    cartItems.forEach(item => {
+      // Check for serial number in the correct location: item.sanPhamChiTiet.serialNumber
+      if (item.sanPhamChiTiet?.serialNumber) {
+        usedSerialNumbers.value.add(item.sanPhamChiTiet.serialNumber)
+      }
+    })
+  }
+
+  // Refresh serial numbers to get current cross-tab state
+  refreshSerialNumbersForCrossTabs()
 }
 
 // Expose method for parent to call

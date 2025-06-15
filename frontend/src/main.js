@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import AuthService from '@/apis/auth'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 
 import Aura from '@primeuix/themes/aura'
 import PrimeVue from 'primevue/config'
@@ -32,9 +33,13 @@ app.use(PrimeVue, {
 app.use(ToastService)
 app.use(ConfirmationService)
 
+// Provide global confirm dialog for custom ConfirmDialog component
+const globalConfirmDialog = useConfirmDialog()
+app.provide('confirmDialog', globalConfirmDialog)
+
 app.directive('tooltip', Tooltip)
 
-app.config.errorHandler = (err, vm, info) => {
+app.config.errorHandler = (err, _vm, _info) => {
   console.error('Global error:', err)
 }
 

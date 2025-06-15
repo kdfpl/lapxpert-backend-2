@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast'
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api'
 import { useDiscountStore } from '@/stores/discountstore'
 import discountService from '@/apis/discount'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 
 // PrimeVue Components
 import Toast from 'primevue/toast'
@@ -14,6 +15,18 @@ import Textarea from 'primevue/textarea'
 const discountStore = useDiscountStore()
 // --- Router ---
 const router = useRouter()
+
+// --- Auto-Sorting Composable ---
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+})
 
 // --- 2. State ---
 
@@ -152,6 +165,11 @@ const filteredDiscounts = computed(() => {
     })
   }
   return data
+})
+
+// Apply auto-sorting to filtered discounts
+const sortedFilteredDiscounts = computed(() => {
+  return applySorting(filteredDiscounts.value)
 })
 
 // Function to reset filters to their initial state
@@ -744,7 +762,7 @@ async function restoreDiscount(discountData) {
     <!-- Enhanced Discount DataTable with Performance Optimization -->
     <DataTable
       v-model:selection="selectedDiscounts"
-      :value="filteredDiscounts"
+      :value="sortedFilteredDiscounts"
       :loading="isLoading || discountStore.loading"
       paginator
       :rows="10"
@@ -757,16 +775,24 @@ async function restoreDiscount(discountData) {
       :globalFilterFields="['maDotGiamGia', 'tenDotGiamGia']"
       scrollable
       scrollHeight="600px"
+      v-bind="getDataTableSortProps()"
+      @sort="onSort"
     >
       <template #header>
         <div class="flex justify-between items-center">
-          <div class="flex">
+          <div class="flex items-center gap-3">
             <IconField>
               <InputIcon>
                 <i class="pi pi-search" />
               </InputIcon>
               <InputText v-model="filters['global'].value" placeholder="Tìm kiếm..." />
             </IconField>
+
+            <!-- Sort Indicator -->
+            <div class="flex items-center gap-2 text-sm text-surface-600">
+              <i :class="getSortIndicator.icon"></i>
+              <span>{{ getSortIndicator.label }}</span>
+            </div>
           </div>
         </div>
       </template>
@@ -868,6 +894,30 @@ async function restoreDiscount(discountData) {
               :severity="discountStore.getStatusSeverity(data.trangThai)"
             />
           </div>
+        </template>
+      </Column>
+
+      <Column
+        field="ngayTao"
+        header="Ngày tạo"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayTao) }}
+        </template>
+      </Column>
+
+      <Column
+        field="ngayCapNhat"
+        header="Ngày cập nhật"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayCapNhat) }}
         </template>
       </Column>
 

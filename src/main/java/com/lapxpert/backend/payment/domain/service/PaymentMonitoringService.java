@@ -5,7 +5,10 @@ import com.lapxpert.backend.hoadon.domain.entity.HoaDonAuditHistory;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonRepository;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonAuditHistoryRepository;
 import com.lapxpert.backend.hoadon.domain.enums.TrangThaiThanhToan;
+import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
+import com.lapxpert.backend.sanpham.domain.service.SerialNumberService;
+import com.lapxpert.backend.common.service.EmailService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +24,20 @@ import java.util.List;
 @Slf4j
 @Service
 public class PaymentMonitoringService {
-    
+
     private final HoaDonRepository hoaDonRepository;
     private final HoaDonAuditHistoryRepository auditHistoryRepository;
-    
-    public PaymentMonitoringService(HoaDonRepository hoaDonRepository, 
-                                  HoaDonAuditHistoryRepository auditHistoryRepository) {
+    private final SerialNumberService serialNumberService;
+    private final EmailService emailService;
+
+    public PaymentMonitoringService(HoaDonRepository hoaDonRepository,
+                                  HoaDonAuditHistoryRepository auditHistoryRepository,
+                                  SerialNumberService serialNumberService,
+                                  EmailService emailService) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
+        this.serialNumberService = serialNumberService;
+        this.emailService = emailService;
     }
     
     /**
@@ -76,16 +85,105 @@ public class PaymentMonitoringService {
             );
             auditHistoryRepository.save(auditEntry);
             
-            // TODO: Implement timeout handling logic
-            // - Release inventory reservations
-            // - Send notification to customer
-            // - Update order status if appropriate
+            // Release inventory reservations for this order
+            releaseOrderInventoryReservations(order);
+
+            // Send notification to customer about payment timeout
+            sendPaymentTimeoutNotification(order);
+
+            // Update order status to cancelled due to payment timeout
+            updateOrderStatusForTimeout(order);
             
         } catch (Exception e) {
             log.error("Failed to handle payment timeout for order {}: {}", order.getId(), e.getMessage());
         }
     }
     
+    /**
+     * Release inventory reservations for a timed-out order
+     */
+    private void releaseOrderInventoryReservations(HoaDon order) {
+        try {
+            // Get reserved serial number IDs for this order
+            List<Long> reservedSerialNumberIds = serialNumberService.getReservedSerialNumberIdsForOrder(
+                order.getId().toString()
+            );
+
+            if (!reservedSerialNumberIds.isEmpty()) {
+                // Release the reservations
+                serialNumberService.releaseReservations(
+                    reservedSerialNumberIds,
+                    "SYSTEM",
+                    "Payment timeout - Releasing inventory reservations"
+                );
+                log.info("Released {} inventory reservations for timed-out order {}",
+                    reservedSerialNumberIds.size(), order.getId());
+            } else {
+                log.debug("No inventory reservations found for order {}", order.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to release inventory reservations for order {}: {}", order.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Send payment timeout notification to customer
+     */
+    private void sendPaymentTimeoutNotification(HoaDon order) {
+        try {
+            if (order.getKhachHang() != null && order.getKhachHang().getEmail() != null) {
+                String customerEmail = order.getKhachHang().getEmail();
+                String customerName = order.getKhachHang().getHoTen() != null ?
+                    order.getKhachHang().getHoTen() : "Quý khách";
+
+                String subject = "Thông báo hết hạn thanh toán đơn hàng #" + order.getId();
+                String text = String.format(
+                    "Chào %s,\n\n" +
+                    "Đơn hàng #%s của bạn đã hết hạn thanh toán sau 30 phút.\n" +
+                    "Đơn hàng đã được hủy tự động và các sản phẩm đã được trả về kho.\n\n" +
+                    "Nếu bạn vẫn muốn mua các sản phẩm này, vui lòng tạo đơn hàng mới.\n\n" +
+                    "Xin lỗi vì sự bất tiện này.\n\n" +
+                    "Trân trọng,\nLapXpert Team",
+                    customerName,
+                    order.getId()
+                );
+
+                emailService.sendEmail(customerEmail, subject, text);
+                log.info("Sent payment timeout notification to customer {} for order {}",
+                    customerEmail, order.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send payment timeout notification for order {}: {}",
+                order.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Update order status to cancelled due to payment timeout
+     */
+    private void updateOrderStatusForTimeout(HoaDon order) {
+        try {
+            // Update order status to cancelled
+            order.setTrangThaiDonHang(TrangThaiDonHang.DA_HUY);
+            order.setTrangThaiThanhToan(TrangThaiThanhToan.THANH_TOAN_LOI);
+            hoaDonRepository.save(order);
+
+            // Create audit entry for status change
+            HoaDonAuditHistory statusAuditEntry = HoaDonAuditHistory.createEntry(
+                order.getId(),
+                createAuditValues(order),
+                "SYSTEM",
+                "Order cancelled due to payment timeout"
+            );
+            auditHistoryRepository.save(statusAuditEntry);
+
+            log.info("Updated order {} status to cancelled due to payment timeout", order.getId());
+        } catch (Exception e) {
+            log.error("Failed to update order status for timed-out order {}: {}",
+                order.getId(), e.getMessage());
+        }
+    }
+
     /**
      * Create audit values for order
      */

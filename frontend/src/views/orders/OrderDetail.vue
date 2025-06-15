@@ -1088,8 +1088,9 @@ const getOrderTypeInfo = (type) => {
 const getPaymentMethodLabel = (method) => {
   const methodMap = {
     'TIEN_MAT': 'Tiền mặt',
-    'COD': 'Thanh toán khi nhận hàng',
     'VNPAY': 'VNPay',
+    'MOMO': 'MoMo',
+    'VIETQR': 'VietQR',
     'CHUYEN_KHOAN': 'Chuyển khoản'
   }
   return methodMap[method] || method || 'Không xác định'
@@ -1189,18 +1190,11 @@ const handleImageError = (event) => {
 
 // Load serial numbers for the order
 const loadOrderSerialNumbers = async () => {
-  if (!order.value?.id) {
-    console.log('No order ID available for loading serial numbers')
-    return
-  }
-
-  console.log('=== Loading serial numbers for order ID:', order.value.id)
+  if (!order.value?.id) return
 
   try {
     const serialNumbers = await serialNumberApi.getSerialNumbersByOrder(order.value.id.toString())
-    console.log('API response for serial numbers:', serialNumbers)
     orderSerialNumbers.value = serialNumbers || []
-    console.log('Set orderSerialNumbers.value to:', orderSerialNumbers.value)
   } catch (error) {
     console.warn('Error loading serial numbers for order:', error)
     orderSerialNumbers.value = []
@@ -1209,27 +1203,17 @@ const loadOrderSerialNumbers = async () => {
 
 // Get serial numbers for a specific order item
 const getSerialNumbers = (orderItem) => {
-  console.log('=== DEBUG getSerialNumbers ===')
-  console.log('orderItem:', orderItem)
-  console.log('orderItem.sanPhamChiTietId:', orderItem.sanPhamChiTietId)
-  console.log('orderSerialNumbers.value:', orderSerialNumbers.value)
-  console.log('orderSerialNumbers.value.length:', orderSerialNumbers.value.length)
-
   // Use sanPhamChiTietId directly from the order item (not from nested object)
   const variantId = orderItem.sanPhamChiTietId || orderItem.sanPhamChiTiet?.id
 
   if (!variantId || !orderSerialNumbers.value.length) {
-    console.log('Early return: missing variantId or no serial numbers loaded')
     return []
   }
 
   // Filter serial numbers that belong to this specific product variant
-  const variantSerialNumbers = orderSerialNumbers.value.filter(sn => {
-    console.log(`Comparing sn.sanPhamChiTietId (${sn.sanPhamChiTietId}) === variantId (${variantId})`)
-    return sn.sanPhamChiTietId === variantId
-  })
-
-  console.log('variantSerialNumbers:', variantSerialNumbers)
+  const variantSerialNumbers = orderSerialNumbers.value.filter(sn =>
+    sn.sanPhamChiTietId === variantId
+  )
 
   // Extract the serial number values and limit to the quantity ordered
   const serialNumberValues = variantSerialNumbers
@@ -1237,7 +1221,6 @@ const getSerialNumbers = (orderItem) => {
     .map(sn => sn.serialNumberValue)
     .filter(sn => sn && sn.trim())
 
-  console.log('Final serialNumberValues:', serialNumberValues)
   return serialNumberValues
 }
 

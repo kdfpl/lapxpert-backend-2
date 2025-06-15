@@ -23,8 +23,7 @@ import java.util.List;
 public class PaymentMethodValidationService {
 
     // Business configuration constants
-    private static final BigDecimal CASH_LIMIT_AMOUNT = new BigDecimal("10000000"); // 10M VND
-    private static final BigDecimal COD_LIMIT_AMOUNT = new BigDecimal("5000000");   // 5M VND
+    private static final BigDecimal CASH_LIMIT_AMOUNT = new BigDecimal("10000000"); // 10M VND (includes COD consolidated)
     private static final BigDecimal VNPAY_MIN_AMOUNT = new BigDecimal("10000");     // 10K VND
     private static final LocalTime BUSINESS_START = LocalTime.of(8, 0);            // 8:00 AM
     private static final LocalTime BUSINESS_END = LocalTime.of(22, 0);             // 10:00 PM
@@ -132,19 +131,28 @@ public class PaymentMethodValidationService {
 
         switch (phuongThucThanhToan) {
             case TIEN_MAT:
-                if (loaiHoaDon == LoaiHoaDon.ONLINE) {
-                    errors.add("Thanh toán tiền mặt chỉ khả dụng cho đơn hàng tại quầy (POS)");
-                }
-                break;
-            case COD:
-                if (loaiHoaDon == LoaiHoaDon.TAI_QUAY && hoaDon.getDiaChiGiaoHang() == null) {
-                    warnings.add("COD thường được sử dụng cho đơn hàng có giao hàng");
+                // TIEN_MAT now includes both cash payments and cash on delivery (consolidated from COD)
+                // Allow for both POS and delivery scenarios
+                if (loaiHoaDon == LoaiHoaDon.ONLINE && hoaDon.getDiaChiGiaoHang() == null) {
+                    errors.add("Thanh toán tiền mặt cho đơn hàng online yêu cầu địa chỉ giao hàng");
                 }
                 break;
             case VNPAY:
                 // VNPAY is flexible for both order types
                 if (loaiHoaDon == LoaiHoaDon.TAI_QUAY) {
                     warnings.add("VNPAY cho đơn hàng POS có thể cần thêm thời gian xử lý");
+                }
+                break;
+            case MOMO:
+                // MoMo e-wallet payment is flexible for both order types
+                if (loaiHoaDon == LoaiHoaDon.TAI_QUAY) {
+                    warnings.add("MoMo cho đơn hàng POS có thể cần thêm thời gian xử lý");
+                }
+                break;
+            case VIETQR:
+                // VietQR bank transfer payment is flexible for both order types
+                if (loaiHoaDon == LoaiHoaDon.TAI_QUAY) {
+                    warnings.add("VietQR cho đơn hàng POS có thể cần thêm thời gian xử lý");
                 }
                 break;
         }
@@ -163,22 +171,29 @@ public class PaymentMethodValidationService {
 
         switch (phuongThucThanhToan) {
             case TIEN_MAT:
+                // TIEN_MAT now includes both cash and COD scenarios
                 if (tongThanhToan.compareTo(CASH_LIMIT_AMOUNT) > 0) {
-                    errors.add(String.format("Thanh toán tiền mặt không được vượt quá %s VND", 
+                    errors.add(String.format("Thanh toán tiền mặt không được vượt quá %s VND",
                                             formatCurrency(CASH_LIMIT_AMOUNT)));
                 } else if (tongThanhToan.compareTo(new BigDecimal("1000000")) > 0) {
                     warnings.add("Số tiền lớn - khuyến nghị sử dụng phương thức thanh toán điện tử");
                 }
                 break;
-            case COD:
-                if (tongThanhToan.compareTo(COD_LIMIT_AMOUNT) > 0) {
-                    errors.add(String.format("Thanh toán COD không được vượt quá %s VND", 
-                                            formatCurrency(COD_LIMIT_AMOUNT)));
-                }
-                break;
             case VNPAY:
                 if (tongThanhToan.compareTo(VNPAY_MIN_AMOUNT) < 0) {
-                    errors.add(String.format("Thanh toán VNPAY yêu cầu tối thiểu %s VND", 
+                    errors.add(String.format("Thanh toán VNPAY yêu cầu tối thiểu %s VND",
+                                            formatCurrency(VNPAY_MIN_AMOUNT)));
+                }
+                break;
+            case MOMO:
+                if (tongThanhToan.compareTo(VNPAY_MIN_AMOUNT) < 0) {
+                    errors.add(String.format("Thanh toán MoMo yêu cầu tối thiểu %s VND",
+                                            formatCurrency(VNPAY_MIN_AMOUNT)));
+                }
+                break;
+            case VIETQR:
+                if (tongThanhToan.compareTo(VNPAY_MIN_AMOUNT) < 0) {
+                    errors.add(String.format("Thanh toán VietQR yêu cầu tối thiểu %s VND",
                                             formatCurrency(VNPAY_MIN_AMOUNT)));
                 }
                 break;
@@ -219,18 +234,23 @@ public class PaymentMethodValidationService {
                                              List<String> errors, List<String> warnings) {
         switch (phuongThucThanhToan) {
             case TIEN_MAT:
-                // Cash payment specific validations
-                break;
-            case COD:
-                if (hoaDon.getDiaChiGiaoHang() == null) {
-                    errors.add("COD yêu cầu địa chỉ giao hàng");
+                // Cash payment specific validations (includes COD scenarios)
+                if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE && hoaDon.getDiaChiGiaoHang() == null) {
+                    errors.add("Thanh toán tiền mặt cho đơn hàng online yêu cầu địa chỉ giao hàng");
                 }
-                if (hoaDon.getNguoiNhanSdt() == null || hoaDon.getNguoiNhanSdt().trim().isEmpty()) {
-                    warnings.add("Khuyến nghị có số điện thoại người nhận cho COD");
+                if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE &&
+                    (hoaDon.getNguoiNhanSdt() == null || hoaDon.getNguoiNhanSdt().trim().isEmpty())) {
+                    warnings.add("Khuyến nghị có số điện thoại người nhận cho thanh toán tiền mặt khi giao hàng");
                 }
                 break;
             case VNPAY:
                 // Additional VNPAY specific validations can be added here
+                break;
+            case MOMO:
+                // Additional MoMo specific validations can be added here
+                break;
+            case VIETQR:
+                // Additional VietQR specific validations can be added here
                 break;
         }
     }
@@ -254,7 +274,7 @@ public class PaymentMethodValidationService {
             if (tongThanhToan.compareTo(new BigDecimal("500000")) > 0) {
                 return "Khuyến nghị sử dụng VNPAY cho đơn hàng online có giá trị cao";
             } else {
-                return "COD hoặc VNPAY đều phù hợp cho đơn hàng này";
+                return "Tiền mặt khi giao hàng hoặc VNPAY đều phù hợp cho đơn hàng này";
             }
         } else {
             if (tongThanhToan.compareTo(new BigDecimal("1000000")) > 0) {
@@ -271,11 +291,17 @@ public class PaymentMethodValidationService {
     private String generateConfirmationRecommendation(HoaDon hoaDon, PhuongThucThanhToan phuongThucThanhToan) {
         switch (phuongThucThanhToan) {
             case TIEN_MAT:
-                return "Xác nhận đã nhận đủ tiền mặt từ khách hàng";
-            case COD:
-                return "Xác nhận khi shipper đã thu tiền thành công";
+                if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
+                    return "Xác nhận khi shipper đã thu tiền thành công";
+                } else {
+                    return "Xác nhận đã nhận đủ tiền mặt từ khách hàng";
+                }
             case VNPAY:
                 return "Xác nhận sau khi nhận được thông báo thanh toán thành công từ VNPAY";
+            case MOMO:
+                return "Xác nhận sau khi nhận được thông báo thanh toán thành công từ MoMo";
+            case VIETQR:
+                return "Xác nhận sau khi nhận được thông báo chuyển khoản thành công từ ngân hàng";
             default:
                 return "Xác nhận thanh toán sau khi hoàn tất giao dịch";
         }

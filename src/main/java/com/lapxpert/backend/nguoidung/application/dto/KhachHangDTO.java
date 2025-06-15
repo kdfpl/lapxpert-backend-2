@@ -5,6 +5,7 @@ import com.lapxpert.backend.nguoidung.domain.entity.GioiTinh;
 import com.lapxpert.backend.nguoidung.domain.entity.TrangThaiNguoiDung;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -38,4 +39,10 @@ public class KhachHangDTO {
     private TrangThaiNguoiDung trangThai;
 
     private List<DiaChiDto> diaChis;
+
+    // Audit fields
+    private Instant ngayTao;
+    private Instant ngayCapNhat;
+    private String nguoiTao;
+    private String nguoiCapNhat;
 }

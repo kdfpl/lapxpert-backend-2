@@ -171,7 +171,7 @@
   <div class="card">
     <DataTable
       v-model:selection="selectedProducts"
-      :value="productsWithPriceFields"
+      :value="sortedProductsWithPriceFields"
       :loading="loading"
       paginator
       :rows="10"
@@ -182,14 +182,22 @@
       class="p-datatable-sm"
       showGridlines
       :rowHover="true"
+      v-bind="getDataTableSortProps()"
+      @sort="onSort"
     >
       <template #header>
         <div class="space-y-4">
           <!-- Main header row -->
           <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
               <span class="text-lg font-semibold">Danh sách sản phẩm</span>
               <Badge :value="filteredProducts.length" severity="info" outlined />
+
+              <!-- Sort Indicator -->
+              <div class="flex items-center gap-2 text-sm text-surface-600">
+                <i :class="getSortIndicator.icon"></i>
+                <span>{{ getSortIndicator.label }}</span>
+              </div>
             </div>
 
             <div class="flex gap-2">
@@ -376,6 +384,30 @@
         </template>
       </Column>
 
+      <Column
+        field="ngayTao"
+        header="Ngày tạo"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayTao) }}
+        </template>
+      </Column>
+
+      <Column
+        field="ngayCapNhat"
+        header="Ngày cập nhật"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayCapNhat) }}
+        </template>
+      </Column>
+
       <Column header="Thao tác" style="width: 12rem">
         <template #body="{ data }">
           <div class="flex gap-2">
@@ -472,6 +504,7 @@ import { useProductStore } from '@/stores/productstore'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductFilters } from '@/composables/useProductFilters'
 import { useDynamicPricing } from '@/composables/useDynamicPricing'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 import { debounce } from 'lodash-es'
 import storageApi from '@/apis/storage'
 import inventoryApi from '@/apis/inventoryApi'
@@ -486,6 +519,18 @@ const attributeStore = useAttributeStore()
 // Use composables for filters and dynamic pricing
 const { filters, filteredProducts, clearFilters: clearFiltersComposable } = useProductFilters()
 const dynamicPricing = useDynamicPricing()
+
+// Auto-Sorting Composable
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+})
 
 // Component state
 const loading = ref(false)
@@ -508,15 +553,6 @@ const inventoryData = ref(new Map()) // Cache for inventory data by variant ID
 const categories = computed(() => attributeStore.category)
 const brands = computed(() => attributeStore.brand)
 
-// Enhanced products with computed price fields for sorting
-const productsWithPriceFields = computed(() => {
-  return filteredProducts.value.map(product => ({
-    ...product,
-    minPrice: product.sanPhamChiTiets?.length ? getMinPrice(product.sanPhamChiTiets) : 0,
-    maxPrice: product.sanPhamChiTiets?.length ? getMaxPrice(product.sanPhamChiTiets) : 0
-  }))
-})
-
 // Methods
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -527,6 +563,17 @@ const formatCurrency = (amount) => {
 
 const formatNumber = (amount) => {
   return new Intl.NumberFormat('vi-VN').format(amount)
+}
+
+const formatDateTime = (date) => {
+  if (!date) return ''
+  return new Intl.DateTimeFormat('vi-VN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(date))
 }
 
 const getMinPrice = (variants) => {
@@ -839,6 +886,20 @@ const fetchInventoryData = async () => {
     console.error('Error fetching inventory data:', error)
   }
 }
+
+// Computed property to add price fields to products
+const productsWithPriceFields = computed(() => {
+  return filteredProducts.value.map(product => ({
+    ...product,
+    minPrice: product.sanPhamChiTiets?.length ? getMinPrice(product.sanPhamChiTiets) : 0,
+    maxPrice: product.sanPhamChiTiets?.length ? getMaxPrice(product.sanPhamChiTiets) : 0
+  }))
+})
+
+// Apply auto-sorting to products with price fields
+const sortedProductsWithPriceFields = computed(() => {
+  return applySorting(productsWithPriceFields.value)
+})
 
 const refreshData = async () => {
   loading.value = true

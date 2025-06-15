@@ -13,7 +13,10 @@ import com.lapxpert.backend.sanpham.domain.entity.thuoctinh.DanhMuc;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamAuditHistoryRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
+// TODO: Import CacheKeyBuilder for consistent cache key management
+// import com.lapxpert.backend.common.cache.CacheKeyBuilder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
@@ -99,7 +102,7 @@ public class SanPhamService {
         return sanPhamMapper.toDto(savedSanPham);
     }
 
-//    @Cacheable(value = "sanPhamList")
+    @Cacheable(value = "sanPhamList")
     @Transactional(readOnly = true)
     public List<SanPhamDto> findAll() {
         List<SanPham> entities = sanPhamRepository.findAll();
@@ -145,7 +148,7 @@ public class SanPhamService {
         return dto;
     }
 
-//    @Cacheable(value = "activeSanPhamList")
+    @Cacheable(value = "activeSanPhamList")
     @Transactional(readOnly = true)
     public List<SanPhamDto> getActiveProducts() {
         List<SanPham> entities = sanPhamRepository.findAllByTrangThai(true);

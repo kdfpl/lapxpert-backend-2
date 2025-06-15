@@ -8,6 +8,8 @@ import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
 import com.lapxpert.backend.hoadon.domain.service.ReceiptPreviewService;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.vnpay.domain.VNPayService;
+import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
+import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,11 +28,17 @@ public class HoaDonController {
     private final HoaDonService hoaDonService;
     private final ReceiptPreviewService receiptPreviewService;
     private final VNPayService vnPayService;
+    private final MoMoGatewayService moMoGatewayService;
+    private final VietQRGatewayService vietQRGatewayService;
 
-    public HoaDonController(HoaDonService hoaDonService, ReceiptPreviewService receiptPreviewService, VNPayService vnPayService) {
+    public HoaDonController(HoaDonService hoaDonService, ReceiptPreviewService receiptPreviewService,
+                           VNPayService vnPayService, MoMoGatewayService moMoGatewayService,
+                           VietQRGatewayService vietQRGatewayService) {
         this.hoaDonService = hoaDonService;
         this.receiptPreviewService = receiptPreviewService;
         this.vnPayService = vnPayService;
+        this.moMoGatewayService = moMoGatewayService;
+        this.vietQRGatewayService = vietQRGatewayService;
     }
 
     // Lấy tất cả hóa đơn hoặc lọc theo trạng thái giao hàng
@@ -147,8 +155,105 @@ public class HoaDonController {
         return ResponseEntity.ok(response);
     }
 
+    // Endpoint để xử lý thanh toán MoMo cho đơn hàng cụ thể
+    @PostMapping("/{orderId}/momo-payment")
+    public ResponseEntity<Map<String, String>> processMoMoPayment(
+            @PathVariable Long orderId,
+            @RequestBody MoMoPaymentRequest momoRequest,
+            @AuthenticationPrincipal NguoiDung currentUser,
+            HttpServletRequest request) {
+
+        // Security check: user can only process payment for their own orders
+        HoaDonDto order = hoaDonService.getHoaDonByIdSecure(orderId, currentUser);
+
+        // Validate order can be paid
+        if (order.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Đơn hàng đã được thanh toán");
+        }
+
+        // Create MoMo payment URL with order correlation
+        String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+        String clientIp = getClientIpAddress(request);
+        String momoUrl = moMoGatewayService.createPaymentUrl(orderId, momoRequest.getAmount(),
+                                                            momoRequest.getOrderInfo(), baseUrl, clientIp);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("paymentUrl", momoUrl);
+        response.put("orderId", orderId.toString());
+        response.put("paymentMethod", "MOMO");
+        return ResponseEntity.ok(response);
+    }
+
+    // Endpoint để xử lý thanh toán VietQR cho đơn hàng cụ thể
+    @PostMapping("/{orderId}/vietqr-payment")
+    public ResponseEntity<Map<String, Object>> processVietQRPayment(
+            @PathVariable Long orderId,
+            @RequestBody VietQRPaymentRequest vietqrRequest,
+            @AuthenticationPrincipal NguoiDung currentUser,
+            HttpServletRequest request) {
+
+        // Security check: user can only process payment for their own orders
+        HoaDonDto order = hoaDonService.getHoaDonByIdSecure(orderId, currentUser);
+
+        // Validate order can be paid
+        if (order.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Đơn hàng đã được thanh toán");
+        }
+
+        // Create VietQR payment instructions with order correlation
+        String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+        String clientIp = getClientIpAddress(request);
+
+        // Generate VietQR payment instructions
+        Map<String, Object> paymentInstructions = vietQRGatewayService.generatePaymentInstructions(
+            orderId.toString(), vietqrRequest.getAmount());
+
+        // Add QR URL
+        String qrUrl = vietQRGatewayService.createPaymentUrl(orderId, vietqrRequest.getAmount(),
+                                                            vietqrRequest.getOrderInfo(), baseUrl, clientIp);
+        paymentInstructions.put("qrUrl", qrUrl);
+        paymentInstructions.put("orderId", orderId.toString());
+        paymentInstructions.put("paymentMethod", "VIETQR");
+
+        return ResponseEntity.ok(paymentInstructions);
+    }
+
     // DTO class for VNPay payment request
     public static class VNPayPaymentRequest {
+        private int amount;
+        private String orderInfo;
+        private String returnUrl;
+
+        // Getters and setters
+        public int getAmount() { return amount; }
+        public void setAmount(int amount) { this.amount = amount; }
+
+        public String getOrderInfo() { return orderInfo; }
+        public void setOrderInfo(String orderInfo) { this.orderInfo = orderInfo; }
+
+        public String getReturnUrl() { return returnUrl; }
+        public void setReturnUrl(String returnUrl) { this.returnUrl = returnUrl; }
+    }
+
+    // DTO class for MoMo payment request
+    public static class MoMoPaymentRequest {
+        private int amount;
+        private String orderInfo;
+        private String returnUrl;
+
+        // Getters and setters
+        public int getAmount() { return amount; }
+        public void setAmount(int amount) { this.amount = amount; }
+
+        public String getOrderInfo() { return orderInfo; }
+        public void setOrderInfo(String orderInfo) { this.orderInfo = orderInfo; }
+
+        public String getReturnUrl() { return returnUrl; }
+        public void setReturnUrl(String returnUrl) { this.returnUrl = returnUrl; }
+    }
+
+    // DTO class for VietQR payment request
+    public static class VietQRPaymentRequest {
         private int amount;
         private String orderInfo;
         private String returnUrl;

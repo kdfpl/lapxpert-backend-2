@@ -163,7 +163,7 @@ const validationError = ref('')
 const availablePaymentMethods = computed(() => {
   const methods = []
 
-  // TIEN_MAT - Only for TAI_QUAY orders
+  // TIEN_MAT - Available for both order types (consolidated with COD)
   if (props.orderType === 'TAI_QUAY') {
     methods.push({
       value: 'TIEN_MAT',
@@ -174,14 +174,12 @@ const availablePaymentMethods = computed(() => {
       badge: { text: 'Tức thì', severity: 'success' },
       additionalInfo: 'Thanh toán ngay lập tức, đơn hàng hoàn thành'
     })
-  }
-
-  // COD - Available when delivery is enabled
-  if (props.hasDelivery) {
+  } else if (props.hasDelivery) {
+    // Online orders with delivery - cash on delivery (former COD)
     methods.push({
-      value: 'COD',
-      label: 'Thanh toán khi nhận hàng',
-      description: 'Thanh toán khi giao hàng',
+      value: 'TIEN_MAT',
+      label: 'Tiền mặt khi giao hàng',
+      description: 'Thanh toán bằng tiền mặt khi nhận hàng',
       icon: 'pi pi-money-bill',
       available: true,
       badge: { text: 'Khi giao', severity: 'info' },
@@ -189,24 +187,43 @@ const availablePaymentMethods = computed(() => {
     })
   } else if (props.orderType === 'ONLINE') {
     methods.push({
-      value: 'COD',
-      label: 'Thanh toán khi nhận hàng',
-      description: 'Thanh toán khi giao hàng',
+      value: 'TIEN_MAT',
+      label: 'Tiền mặt khi giao hàng',
+      description: 'Thanh toán bằng tiền mặt khi nhận hàng',
       icon: 'pi pi-money-bill',
       available: false,
-      unavailableReason: 'Cần bật giao hàng để sử dụng COD'
+      unavailableReason: 'Cần bật giao hàng để sử dụng thanh toán tiền mặt'
     })
   }
 
   // VNPAY - Available for both order types
   methods.push({
     value: 'VNPAY',
-    label: 'Chuyển khoản',
+    label: 'VNPay',
     description: 'Thanh toán qua ví điện tử VNPay',
     icon: 'pi pi-credit-card',
     available: true,
-    badge: { text: 'Trực tuyến', severity: 'primary' },
     additionalInfo: 'Hỗ trợ thẻ ATM, Internet Banking, QR Code'
+  })
+
+  // MOMO - Available for both order types
+  methods.push({
+    value: 'MOMO',
+    label: 'MoMo',
+    description: 'Thanh toán qua ví điện tử MoMo',
+    icon: 'pi pi-mobile',
+    available: true,
+    additionalInfo: 'Thanh toán nhanh chóng qua ứng dụng MoMo'
+  })
+
+  // VIETQR - Available for both order types
+  methods.push({
+    value: 'VIETQR',
+    label: 'VietQR',
+    description: 'Chuyển khoản ngân hàng qua QR Code',
+    icon: 'pi pi-qrcode',
+    available: true,
+    additionalInfo: 'Chuyển khoản trực tiếp qua QR Code ngân hàng'
   })
 
   return methods
@@ -225,23 +242,30 @@ const selectedMethodInfo = computed(() => {
       ],
       processingTime: 'Ngay lập tức'
     },
-    'COD': {
-      instructions: [
-        'Đơn hàng sẽ được chuẩn bị và đóng gói',
-        'Shipper sẽ liên hệ trước khi giao hàng',
-        'Khách hàng thanh toán khi nhận hàng',
-        'Kiểm tra hàng hóa trước khi thanh toán'
-      ],
-      processingTime: '1-3 ngày làm việc'
-    },
+
     'VNPAY': {
       instructions: [
         'Chuyển hướng đến cổng thanh toán VNPay',
         'Chọn phương thức thanh toán (ATM, Internet Banking, QR)',
         'Nhập thông tin thanh toán theo hướng dẫn',
         'Xác nhận giao dịch và hoàn tất thanh toán'
-      ],
-      processingTime: '1-5 phút'
+      ]
+    },
+    'MOMO': {
+      instructions: [
+        'Chuyển hướng đến ứng dụng MoMo',
+        'Đăng nhập vào tài khoản MoMo của bạn',
+        'Xác nhận thông tin thanh toán',
+        'Nhập mã PIN hoặc xác thực sinh trắc học'
+      ]
+    },
+    'VIETQR': {
+      instructions: [
+        'Mở ứng dụng ngân hàng trên điện thoại',
+        'Quét mã QR được hiển thị',
+        'Xác nhận thông tin chuyển khoản',
+        'Nhập mã PIN và hoàn tất giao dịch'
+      ]
     }
   }
 

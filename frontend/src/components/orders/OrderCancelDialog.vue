@@ -223,7 +223,7 @@ const cancelOrder = async () => {
       emit('cancelled', result)
       closeDialog()
     }
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',

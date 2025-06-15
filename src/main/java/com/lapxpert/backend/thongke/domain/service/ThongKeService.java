@@ -1,4 +1,4 @@
-package com.lapxpert.backend.thongke.application.service;
+package com.lapxpert.backend.thongke.domain.service;
 
 import com.lapxpert.backend.thongke.domain.dto.*;
 

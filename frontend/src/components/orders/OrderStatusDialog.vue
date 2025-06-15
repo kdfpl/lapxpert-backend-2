@@ -141,10 +141,10 @@ const submitted = ref(false)
 // Computed properties
 const availableStatuses = computed(() => {
   if (!props.order) return []
-  
+
   const currentStatus = props.order.trangThaiDonHang
   const allStatuses = orderStore.orderStatuses
-  
+
   // Define status flow rules
   const statusFlow = {
     'CHO_XAC_NHAN': ['DA_XAC_NHAN', 'DA_HUY'],
@@ -158,10 +158,10 @@ const availableStatuses = computed(() => {
     'THAT_BAI': ['CHO_XAC_NHAN'],
     'HOAN_TIEN': []
   }
-  
+
   const allowedStatuses = statusFlow[currentStatus] || []
-  
-  return allStatuses.filter(status => 
+
+  return allStatuses.filter(status =>
     allowedStatuses.includes(status.value)
   )
 })
@@ -172,7 +172,7 @@ const requiresReason = computed(() => {
 
 const statusWarning = computed(() => {
   if (!selectedStatus.value) return null
-  
+
   const warnings = {
     'DA_HUY': {
       severity: 'warn',
@@ -195,7 +195,7 @@ const statusWarning = computed(() => {
       message: 'Hoàn tiền cần xác nhận từ bộ phận tài chính.'
     }
   }
-  
+
   return warnings[selectedStatus.value] || null
 })
 
@@ -224,20 +224,20 @@ const closeDialog = () => {
 
 const updateStatus = async () => {
   submitted.value = true
-  
+
   if (!selectedStatus.value || (requiresReason.value && !reason.value)) {
     return
   }
-  
+
   loading.value = true
-  
+
   try {
     const result = await orderStore.updateOrderStatus(
       props.order.id,
       selectedStatus.value,
       reason.value
     )
-    
+
     if (result) {
       toast.add({
         severity: 'success',
@@ -245,11 +245,11 @@ const updateStatus = async () => {
         detail: 'Cập nhật trạng thái đơn hàng thành công',
         life: 3000
       })
-      
+
       emit('updated', result)
       closeDialog()
     }
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',
@@ -351,11 +351,11 @@ const getOrderTypeLabel = (type) => {
     width: 95vw !important;
     margin: 1rem;
   }
-  
+
   .dialog-content {
     padding: 0.5rem;
   }
-  
+
   :deep(.p-dialog-footer) {
     padding: 1rem 0.5rem;
   }

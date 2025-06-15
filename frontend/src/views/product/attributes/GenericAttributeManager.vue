@@ -233,7 +233,7 @@ const refreshData = async () => {
     const getAllMethod = getApiMethod('getAll')
     const response = await getAllMethod()
     items.value = response.data || []
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',
@@ -313,7 +313,7 @@ const saveItem = async () => {
 
     hideDialog()
     await refreshData()
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',
@@ -354,7 +354,7 @@ const deleteItem = async (item) => {
       life: 3000,
     })
     await refreshData()
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',
@@ -395,7 +395,7 @@ const deleteSelectedItems = async () => {
     })
     selectedItems.value = []
     await refreshData()
-  } catch (error) {
+  } catch (_error) {
     toast.add({
       severity: 'error',
       summary: 'Lỗi',

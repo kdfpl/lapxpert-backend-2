@@ -27,7 +27,8 @@ const AuthService = {
             } else {
               localStorage.setItem("nguoiDung", JSON.stringify(user));
             }
-          } catch (fetchError) {
+          } catch {
+            // If fetching complete user data fails, fall back to basic user data
             localStorage.setItem("nguoiDung", JSON.stringify(user));
           }
         } else {

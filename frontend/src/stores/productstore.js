@@ -235,7 +235,7 @@ export const useProductStore = defineStore('product', {
 
     async createProductWithVariants(productData) {
       try {
-        const result = await productService.addMultipleProduct(productData)
+        const result = await productService.addProduct(productData)
         await this.fetchProducts(true) // Refresh to get complete data
         return result
       } catch (error) {

@@ -83,10 +83,10 @@
           <label class="payment-detail-label">Mã giao dịch</label>
           <div class="payment-detail-value font-mono">
             {{ transactionId }}
-            <Button 
-              icon="pi pi-copy" 
-              severity="secondary" 
-              text 
+            <Button
+              icon="pi pi-copy"
+              severity="secondary"
+              text
               size="small"
               @click="copyTransactionId"
               v-tooltip="'Sao chép mã giao dịch'"
@@ -110,23 +110,23 @@
         <i class="pi pi-cog text-primary"></i>
         <span class="font-semibold">Thao tác thanh toán</span>
       </div>
-      
+
       <div class="flex flex-wrap gap-3">
         <!-- Confirm Payment -->
-        <Button 
+        <Button
           v-if="canConfirmPayment"
-          label="Xác nhận thanh toán" 
-          icon="pi pi-check" 
+          label="Xác nhận thanh toán"
+          icon="pi pi-check"
           severity="success"
           :loading="processing"
           @click="confirmPayment"
         />
 
         <!-- Process Refund -->
-        <Button 
+        <Button
           v-if="canProcessRefund"
-          label="Hoàn tiền" 
-          icon="pi pi-undo" 
+          label="Hoàn tiền"
+          icon="pi pi-undo"
           severity="warn"
           outlined
           :loading="processing"
@@ -134,20 +134,20 @@
         />
 
         <!-- Update Status -->
-        <Button 
+        <Button
           v-if="canUpdateStatus"
-          label="Cập nhật trạng thái" 
-          icon="pi pi-refresh" 
+          label="Cập nhật trạng thái"
+          icon="pi pi-refresh"
           severity="secondary"
           outlined
           @click="showUpdateDialog = true"
         />
 
         <!-- View Receipt -->
-        <Button 
+        <Button
           v-if="canViewReceipt"
-          label="Xem hóa đơn" 
-          icon="pi pi-file-pdf" 
+          label="Xem hóa đơn"
+          icon="pi pi-file-pdf"
           severity="info"
           outlined
           @click="viewReceipt"
@@ -161,7 +161,7 @@
         <i class="pi pi-history text-primary"></i>
         <span class="font-semibold">Lịch sử thanh toán</span>
       </div>
-      
+
       <Timeline :value="paymentHistory" class="w-full">
         <template #marker="{ item }">
           <div class="flex items-center justify-center w-8 h-8 rounded-full border-2"
@@ -169,7 +169,7 @@
             <i :class="getHistoryIcon(item.status)" class="text-sm"></i>
           </div>
         </template>
-        
+
         <template #content="{ item }">
           <div class="space-y-2">
             <div class="flex justify-between items-start">
@@ -195,48 +195,48 @@
     </div>
 
     <!-- Update Status Dialog -->
-    <Dialog 
-      v-model:visible="showUpdateDialog" 
-      modal 
+    <Dialog
+      v-model:visible="showUpdateDialog"
+      modal
       header="Cập nhật trạng thái thanh toán"
       class="w-full max-w-md"
     >
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-2">Trạng thái mới</label>
-          <Dropdown 
-            v-model="newStatus" 
-            :options="availableStatuses" 
-            option-label="label" 
+          <Dropdown
+            v-model="newStatus"
+            :options="availableStatuses"
+            option-label="label"
             option-value="value"
             placeholder="Chọn trạng thái"
             class="w-full"
           />
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium mb-2">Ghi chú</label>
-          <Textarea 
-            v-model="statusNote" 
-            rows="3" 
+          <Textarea
+            v-model="statusNote"
+            rows="3"
             placeholder="Nhập ghi chú (tùy chọn)"
             class="w-full"
           />
         </div>
       </div>
-      
+
       <template #footer>
-        <Button 
-          label="Hủy" 
-          severity="secondary" 
-          outlined 
-          @click="showUpdateDialog = false" 
+        <Button
+          label="Hủy"
+          severity="secondary"
+          outlined
+          @click="showUpdateDialog = false"
         />
-        <Button 
-          label="Cập nhật" 
+        <Button
+          label="Cập nhật"
           :disabled="!newStatus"
           :loading="processing"
-          @click="updatePaymentStatus" 
+          @click="updatePaymentStatus"
         />
       </template>
     </Dialog>
@@ -345,7 +345,7 @@ const statusInfo = computed(() => {
       icon: 'pi pi-undo'
     }
   }
-  
+
   return statusMap[props.paymentStatus] || {
     title: 'Không xác định',
     description: 'Trạng thái thanh toán không xác định',
@@ -362,7 +362,7 @@ const statusIconClass = computed(() => {
     'THANH_TOAN_MOT_PHAN': 'bg-blue-100 text-blue-600 border-blue-300',
     'HOAN_TIEN': 'bg-gray-100 text-gray-600 border-gray-300'
   }
-  
+
   return classMap[props.paymentStatus] || 'bg-gray-100 text-gray-600 border-gray-300'
 })
 
@@ -372,19 +372,23 @@ const paymentMethodInfo = computed(() => {
       label: 'Tiền mặt',
       icon: 'pi pi-wallet'
     },
-    'COD': {
-      label: 'Thanh toán khi nhận hàng',
-      icon: 'pi pi-money-bill'
-    },
     'VNPAY': {
       label: 'VNPay',
       icon: 'pi pi-credit-card'
+    },
+    'MOMO': {
+      label: 'MoMo',
+      icon: 'pi pi-mobile'
+    },
+    'VIETQR': {
+      label: 'VietQR',
+      icon: 'pi pi-qrcode'
     }
   }
-  
-  return methodMap[props.paymentMethod] || { 
-    label: 'Không xác định', 
-    icon: 'pi pi-question-circle' 
+
+  return methodMap[props.paymentMethod] || {
+    label: 'Không xác định',
+    icon: 'pi pi-question-circle'
   }
 })
 
@@ -475,7 +479,7 @@ const getHistoryMarkerClass = (status) => {
     'error': 'bg-red-100 border-red-300 text-red-600',
     'info': 'bg-blue-100 border-blue-300 text-blue-600'
   }
-  
+
   return classMap[status] || 'bg-gray-100 border-gray-300 text-gray-600'
 }
 
@@ -486,7 +490,7 @@ const getHistoryIcon = (status) => {
     'error': 'pi pi-times',
     'info': 'pi pi-info-circle'
   }
-  
+
   return iconMap[status] || 'pi pi-circle'
 }
 </script>

@@ -179,7 +179,7 @@
     <!-- Variants DataTable -->
     <DataTable
       v-model:selection="selectedVariants"
-      :value="filteredVariants"
+      :value="sortedFilteredVariants"
       :loading="loading"
       paginator
       :rows="10"
@@ -187,12 +187,15 @@
       dataKey="id"
       selectionMode="multiple"
       class="p-datatable-sm"
+      showGridlines
+      v-bind="getDataTableSortProps()"
+      @sort="onSort"
     >
       <template #header>
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-2">
             <span class="text-lg font-semibold">Danh sách biến thể</span>
-            <Badge :value="filteredVariants?.length || 0" severity="info" />
+            <Badge :value="sortedFilteredVariants?.length || 0" severity="info" />
           </div>
 
           <div class="flex gap-2">
@@ -327,6 +330,18 @@
             :value="data.trangThai ? 'Hoạt động' : 'Không hoạt động'"
             :severity="data.trangThai ? 'success' : 'danger'"
           />
+        </template>
+      </Column>
+
+      <Column field="ngayTao" header="Ngày tạo" sortable>
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayTao) }}
+        </template>
+      </Column>
+
+      <Column field="ngayCapNhat" header="Ngày cập nhật" sortable>
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayCapNhat) }}
         </template>
       </Column>
 
@@ -765,6 +780,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductStore } from '@/stores/productstore'
 import { useDynamicPricing } from '@/composables/useDynamicPricing'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 import { debounce } from 'lodash-es'
 import serialNumberApi from '@/apis/serialNumberApi'
 import storageApi from '@/apis/storage'
@@ -787,6 +803,18 @@ const confirm = useConfirm()
 const attributeStore = useAttributeStore()
 const productStore = useProductStore()
 const dynamicPricing = useDynamicPricing()
+
+// Auto-Sorting Composable
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+})
 
 // Component state
 const loading = ref(false)
@@ -924,6 +952,11 @@ const filteredVariants = computed(() => {
   return filtered
 })
 
+// Apply auto-sorting to filtered variants
+const sortedFilteredVariants = computed(() => {
+  return applySorting(filteredVariants.value)
+})
+
 // Computed property for SKU preview
 const skuPreview = computed(() => {
   if (!variantForm.value.mauSac && !variantForm.value.cpu && !variantForm.value.ram) {
@@ -943,6 +976,17 @@ const formatCurrency = (amount) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
+}
+
+const formatDateTime = (date) => {
+  if (!date) return ''
+  return new Intl.DateTimeFormat('vi-VN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(date))
 }
 
 const getColorValue = (colorName) => {

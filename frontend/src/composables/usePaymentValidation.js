@@ -5,7 +5,7 @@ import { computed } from 'vue'
  * Provides sophisticated validation rules for different order types and contexts
  */
 export function usePaymentValidation() {
-  
+
   /**
    * Payment method definitions with enhanced metadata
    */
@@ -14,30 +14,17 @@ export function usePaymentValidation() {
       value: 'TIEN_MAT',
       label: 'Tiền mặt',
       icon: 'pi pi-money-bill',
-      description: 'Thanh toán bằng tiền mặt tại quầy',
-      allowedChannels: ['TAI_QUAY'], // Only POS
+      description: 'Thanh toán bằng tiền mặt (tại quầy hoặc khi giao hàng)',
+      allowedChannels: ['TAI_QUAY', 'ONLINE'], // Both channels - includes former COD
       requiresOnlineGateway: false,
-      instantConfirmation: true,
+      instantConfirmation: true, // For POS, false for delivery
       supportedCurrencies: ['VND'],
       minimumAmount: 0,
-      maximumAmount: 50000000, // 50 million VND limit for cash
-      processingTime: 'Tức thì',
+      maximumAmount: 50000000, // 50 million VND limit for cash (consolidated limit)
+      processingTime: 'Tức thì (POS) hoặc khi giao hàng (Online)',
       fees: 0
     },
-    {
-      value: 'COD',
-      label: 'Thanh toán khi nhận hàng',
-      icon: 'pi pi-truck',
-      description: 'Thanh toán bằng tiền mặt khi nhận hàng',
-      allowedChannels: ['ONLINE', 'TAI_QUAY'], // Both channels
-      requiresOnlineGateway: false,
-      instantConfirmation: false,
-      supportedCurrencies: ['VND'],
-      minimumAmount: 0,
-      maximumAmount: 20000000, // 20 million VND limit for COD
-      processingTime: 'Khi giao hàng',
-      fees: 0
-    },
+
     {
       value: 'VNPAY',
       label: 'VNPay',
@@ -75,7 +62,7 @@ export function usePaymentValidation() {
    * @returns {Array} Available payment methods
    */
   const getAvailablePaymentMethods = (orderType, context = {}) => {
-    const { amount = 0, customerType = 'REGULAR', isDelivery = false } = context
+    const { amount = 0, isDelivery = false } = context
 
     return paymentMethods.value.filter(method => {
       // Check if method is allowed for this channel
@@ -94,13 +81,7 @@ export function usePaymentValidation() {
         return true
       }
 
-      if (method.value === 'COD') {
-        // COD requires delivery for online orders
-        if (orderType === 'ONLINE' && !isDelivery) {
-          return false
-        }
-        return true
-      }
+
 
       return true
     })
@@ -115,7 +96,7 @@ export function usePaymentValidation() {
    */
   const validatePaymentMethod = (paymentMethod, orderType, context = {}) => {
     const method = paymentMethods.value.find(m => m.value === paymentMethod)
-    
+
     if (!method) {
       return {
         isValid: false,
@@ -126,7 +107,7 @@ export function usePaymentValidation() {
 
     const errors = []
     const warnings = []
-    const { amount = 0, isDelivery = false, customerInfo = null } = context
+    const { amount = 0, isDelivery = false } = context
 
     // Channel validation
     if (!method.allowedChannels.includes(orderType)) {
@@ -143,17 +124,13 @@ export function usePaymentValidation() {
     }
 
     // Business rule validation
-    if (paymentMethod === 'COD' && orderType === 'ONLINE' && !isDelivery) {
-      errors.push('Thanh toán khi nhận hàng chỉ áp dụng cho đơn hàng giao tận nơi')
-    }
-
-    if (paymentMethod === 'TIEN_MAT' && orderType === 'ONLINE') {
-      errors.push('Thanh toán tiền mặt chỉ áp dụng cho đơn hàng tại quầy')
+    if (paymentMethod === 'TIEN_MAT' && orderType === 'ONLINE' && !isDelivery) {
+      errors.push('Thanh toán tiền mặt cho đơn hàng online chỉ áp dụng cho đơn hàng giao tận nơi')
     }
 
     // Warnings for high amounts
-    if (paymentMethod === 'COD' && amount > 10000000) {
-      warnings.push('Đơn hàng COD có giá trị cao, khuyến nghị sử dụng phương thức thanh toán trực tuyến')
+    if (paymentMethod === 'TIEN_MAT' && amount > 10000000) {
+      warnings.push('Đơn hàng tiền mặt có giá trị cao, khuyến nghị sử dụng phương thức thanh toán trực tuyến')
     }
 
     if (paymentMethod === 'TIEN_MAT' && amount > 20000000) {
@@ -188,12 +165,12 @@ export function usePaymentValidation() {
     if (!method) return 0
 
     if (method.fees === 0) return 0
-    
+
     // Percentage-based fee
     if (method.fees < 1) {
       return Math.round(amount * method.fees)
     }
-    
+
     // Fixed fee
     return method.fees
   }
@@ -224,7 +201,7 @@ export function usePaymentValidation() {
         if (method.value === 'TIEN_MAT') score += 20 // Prefer cash for POS
       } else {
         if (method.value === 'VNPAY') score += 15 // Prefer online payment for online orders
-        if (isDelivery && method.value === 'COD') score += 10 // COD good for delivery
+        if (isDelivery && method.value === 'TIEN_MAT') score += 10 // Cash on delivery good for delivery
       }
 
       return { ...method, recommendationScore: score }
@@ -258,8 +235,8 @@ export function usePaymentValidation() {
       return true
     }
 
-    // High-value COD orders need verification
-    if (paymentMethod === 'COD' && amount > 15000000) {
+    // High-value cash on delivery orders need verification
+    if (paymentMethod === 'TIEN_MAT' && amount > 15000000) {
       return true
     }
 
@@ -269,7 +246,7 @@ export function usePaymentValidation() {
   return {
     // Data
     paymentMethods,
-    
+
     // Methods
     getAvailablePaymentMethods,
     validatePaymentMethod,

@@ -488,7 +488,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useOrderStore } from '@/stores/orderStore'
@@ -516,6 +516,7 @@ const router = useRouter()
 const toast = useToast()
 const orderStore = useOrderStore()
 const customerStore = useCustomerStore()
+const confirmDialog = inject('confirmDialog')
 
 // State
 const loading = ref(true)
@@ -1086,7 +1087,7 @@ const removeItem = (index) => {
   syncCartWithDialog()
 }
 
-const showUpdateConfirmation = () => {
+const showUpdateConfirmation = async () => {
   if (!canUpdateOrder.value) {
     toast.add({
       severity: 'warn',
@@ -1097,7 +1098,11 @@ const showUpdateConfirmation = () => {
     return
   }
 
-  // For now, directly update. We can add a confirmation dialog later if needed
+  // Show detailed confirmation dialog using specialized template
+  const confirmed = await confirmDialog.showOrderUpdateConfirm(editForm.value)
+
+  if (!confirmed) return
+
   updateOrder()
 }
 

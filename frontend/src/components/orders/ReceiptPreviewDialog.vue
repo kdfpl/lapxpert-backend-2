@@ -191,10 +191,7 @@ const printing = ref(false)
 const error = ref(null)
 
 // Computed properties
-const isVisible = computed({
-  get: () => props.visible,
-  set: (value) => emit('update:visible', value)
-})
+// isVisible removed - not used in template, dialogVisible is used instead
 
 // Watchers
 watch(() => props.visible, (newValue) => {
@@ -296,8 +293,9 @@ const formatCurrency = (amount) => {
 const getPaymentMethodLabel = (method) => {
   const methodMap = {
     'TIEN_MAT': 'Tiền mặt',
-    'COD': 'Thanh toán khi nhận hàng',
     'VNPAY': 'VNPay',
+    'MOMO': 'MoMo',
+    'VIETQR': 'VietQR',
     'CHUYEN_KHOAN': 'Chuyển khoản'
   }
   return methodMap[method] || method

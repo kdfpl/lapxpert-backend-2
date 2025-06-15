@@ -1,11 +1,10 @@
 import { ref, computed, watch } from 'vue'
 import { useProductStore } from '@/stores/productstore'
-import { useAttributeStore } from '@/stores/attributestore'
+// import { useAttributeStore } from '@/stores/attributestore' // Currently unused
 import { useDynamicPricing } from './useDynamicPricing'
 
 export function useProductFilters() {
   const productStore = useProductStore()
-  const attributeStore = useAttributeStore()
   const { defaultPriceRange } = useDynamicPricing()
 
   const filters = ref({
@@ -78,7 +77,6 @@ export function useProductFilters() {
 
     // Price range filter - enhanced to handle dual-price structure properly
     if (filters.value.priceRange && filters.value.priceRange.length === 2) {
-      const beforeCount = products.length
       products = products.filter(p => {
         // If product has no variants, include it in the results (don't filter out)
         // This allows products without pricing to be visible

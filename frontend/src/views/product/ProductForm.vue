@@ -906,7 +906,7 @@ const auditHistory = ref([])
 
 // Image upload state
 const uploadingImages = ref([])
-const imagePreviewUrls = ref(new Array(5).fill(null)) // For immediate image previews (5 slots)
+const imagePreviewUrls = ref(Array.from({ length: 5 }, () => null)) // For immediate image previews (5 slots)
 const variantImagePreviews = ref([]) // For variant image previews
 
 // Variant generation state - 8 Core Attributes Only
@@ -1186,7 +1186,7 @@ const generateVariants = async () => {
 
     if (requiredLength > currentLength) {
       // Extend array with null values for new variants while preserving existing previews
-      const extensionArray = new Array(requiredLength - currentLength).fill(null)
+      const extensionArray = Array.from({ length: requiredLength - currentLength }, () => null)
       variantImagePreviews.value.push(...extensionArray)
     }
   }
@@ -1360,7 +1360,7 @@ const removeImage = (index) => {
 
   const filteredPreviews = imagePreviewUrls.value.filter(url => url !== null && url !== undefined)
   // Re-initialize with 5 slots and place filtered previews at the beginning
-  imagePreviewUrls.value = new Array(5).fill(null)
+  imagePreviewUrls.value = Array.from({ length: 5 }, () => null)
   filteredPreviews.forEach((url, i) => {
     if (i < 5) imagePreviewUrls.value[i] = url
   })
@@ -2174,7 +2174,7 @@ const applyBulkImage = async () => {
 
       if (requiredLength > currentLength) {
         // Extend array with null values for new variants while preserving existing previews
-        const extensionArray = new Array(requiredLength - currentLength).fill(null)
+        const extensionArray = Array.from({ length: requiredLength - currentLength }, () => null)
         variantImagePreviews.value.push(...extensionArray)
       }
 
@@ -2382,7 +2382,7 @@ const loadProduct = async () => {
         Object.assign(productForm.value, productData)
 
         // Initialize image previews for existing product images
-        imagePreviewUrls.value = new Array(5).fill(null) // Initialize with 5 slots
+        imagePreviewUrls.value = Array.from({ length: 5 }, () => null) // Initialize with 5 slots
         if (productData.hinhAnh && productData.hinhAnh.length > 0) {
           // Load presigned URLs for existing images
           for (let i = 0; i < productData.hinhAnh.length; i++) {
@@ -2399,7 +2399,7 @@ const loadProduct = async () => {
 
         // Initialize variant image previews
         if (productData.sanPhamChiTiets && productData.sanPhamChiTiets.length > 0) {
-          variantImagePreviews.value = new Array(productData.sanPhamChiTiets.length).fill(null)
+          variantImagePreviews.value = Array.from({ length: productData.sanPhamChiTiets.length }, () => null)
           // Load presigned URLs for existing variant images
           for (let i = 0; i < productData.sanPhamChiTiets.length; i++) {
             const variant = productData.sanPhamChiTiets[i]

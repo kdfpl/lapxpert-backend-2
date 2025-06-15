@@ -1,5 +1,6 @@
 package com.lapxpert.backend.danhgia.domain.service;
 
+import com.lapxpert.backend.common.cache.CacheInvalidationService;
 import com.lapxpert.backend.common.enums.TrangThaiDanhGia;
 import com.lapxpert.backend.danhgia.application.dto.CreateReviewDto;
 import com.lapxpert.backend.danhgia.application.dto.DanhGiaDto;
@@ -50,6 +51,7 @@ public class DanhGiaService {
     private final ReviewEligibilityService eligibilityService;
     private final ReviewBusinessRules businessRules;
     private final ProductRatingCacheService ratingCacheService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     // ==================== CORE CRUD OPERATIONS ====================
 
@@ -89,8 +91,8 @@ public class DanhGiaService {
         // 6. Save review
         DanhGia savedReview = danhGiaRepository.save(danhGia);
 
-        // 7. Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(createDto.getSanPhamId());
+        // 7. Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(createDto.getSanPhamId());
 
         log.info("Created review {} with status {} for product {} by user {}",
                 savedReview.getId(), moderationStatus, createDto.getSanPhamId(), createDto.getNguoiDungId());
@@ -130,8 +132,8 @@ public class DanhGiaService {
 
         DanhGia savedReview = danhGiaRepository.save(existingReview);
 
-        // Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(existingReview.getSanPham().getId());
+        // Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(existingReview.getSanPham().getId());
 
         log.info("Updated review {} with new status {}", reviewId, moderationStatus);
 
@@ -165,8 +167,8 @@ public class DanhGiaService {
         review.setTrangThai(TrangThaiDanhGia.DA_AN);
         danhGiaRepository.save(review);
 
-        // Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(review.getSanPham().getId());
+        // Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(review.getSanPham().getId());
 
         log.info("Soft deleted review {} with reason: {}", reviewId, reason);
     }
@@ -395,8 +397,8 @@ public class DanhGiaService {
         review.setTrangThai(TrangThaiDanhGia.DA_DUYET);
         DanhGia savedReview = danhGiaRepository.save(review);
 
-        // Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(review.getSanPham().getId());
+        // Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(review.getSanPham().getId());
 
         log.info("Approved review {}", reviewId);
         return danhGiaMapper.toDto(savedReview);
@@ -426,8 +428,8 @@ public class DanhGiaService {
         review.setTrangThai(TrangThaiDanhGia.BI_TU_CHOI);
         DanhGia savedReview = danhGiaRepository.save(review);
 
-        // Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(review.getSanPham().getId());
+        // Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(review.getSanPham().getId());
 
         log.info("Rejected review {} with reason: {}", reviewId, reason);
         return danhGiaMapper.toDto(savedReview);
@@ -449,8 +451,8 @@ public class DanhGiaService {
         review.setTrangThai(TrangThaiDanhGia.DA_AN);
         DanhGia savedReview = danhGiaRepository.save(review);
 
-        // Invalidate product rating cache
-        ratingCacheService.invalidateProductRating(review.getSanPham().getId());
+        // Invalidate review-related caches
+        cacheInvalidationService.invalidateReviewData(review.getSanPham().getId());
 
         log.info("Hidden review {}", reviewId);
         return danhGiaMapper.toDto(savedReview);

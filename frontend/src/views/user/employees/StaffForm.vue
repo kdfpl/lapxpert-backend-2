@@ -881,7 +881,7 @@ const formatJsonData = (jsonString) => {
     return Object.entries(data)
       .map(([key, value]) => `${key}: ${value}`)
       .join(', ')
-  } catch (error) {
+  } catch (_error) {
     return jsonString
   }
 }
@@ -1043,8 +1043,8 @@ onMounted(async () => {
       }
 
       // Khởi tạo districts và wards với đúng số lượng địa chỉ
-      districts.value = new Array(form.value.diaChis.length).fill().map(() => [])
-      wards.value = new Array(form.value.diaChis.length).fill().map(() => [])
+      districts.value = Array.from({ length: form.value.diaChis.length }, () => [])
+      wards.value = Array.from({ length: form.value.diaChis.length }, () => [])
 
       // Load ảnh đại diện nếu có
       if (staffData.avatar) {

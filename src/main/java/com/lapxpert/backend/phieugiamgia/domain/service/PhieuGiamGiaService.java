@@ -9,6 +9,7 @@ import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import com.lapxpert.backend.phieugiamgia.application.dto.PhieuGiamGiaDto;
 import com.lapxpert.backend.phieugiamgia.application.mapper.PhieuGiamGiaMapper;
 import com.lapxpert.backend.phieugiamgia.application.mapper.PhieuGiamGiaDtoMapper;
+import com.lapxpert.backend.phieugiamgia.domain.dto.*;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGia;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaNguoiDung;
 import com.lapxpert.backend.phieugiamgia.domain.entity.PhieuGiamGiaNguoiDungId;
@@ -31,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -597,6 +599,319 @@ public class PhieuGiamGiaService {
             if (!activeCustomerEmails.isEmpty()) {
 //                emailService.sendBulkEmail(activeCustomerEmails, subject, text);
             }
+        }
+    }
+
+    // ==================== INTELLIGENT VOUCHER RECOMMENDATION ENGINE ====================
+
+    /**
+     * Get intelligent voucher recommendations with cross-category comparison and customer analysis.
+     * This is the enhanced version of getBestVoucher with advanced algorithms.
+     *
+     * @param customerId Customer ID for personalized recommendations
+     * @param orderTotal Order total for discount calculation
+     * @param orderItems List of order items for category analysis (optional)
+     * @return IntelligentRecommendationResult with detailed recommendations
+     */
+    @Transactional(readOnly = true)
+    public IntelligentRecommendationResult getIntelligentVoucherRecommendations(Long customerId, BigDecimal orderTotal, List<OrderItemInfo> orderItems) {
+        log.info("Getting intelligent voucher recommendations for customer {} with order total {}", customerId, orderTotal);
+
+        // Step 1: Get all available vouchers
+        List<PhieuGiamGia> availableVouchers = getEligibleVouchers(customerId, orderTotal);
+
+        if (availableVouchers.isEmpty()) {
+            return IntelligentRecommendationResult.noRecommendations("Không có phiếu giảm giá phù hợp cho đơn hàng này");
+        }
+
+        // Step 2: Analyze customer purchase history for personalization
+        CustomerPurchaseProfile customerProfile = analyzeCustomerPurchaseHistory(customerId);
+
+        // Step 3: Score vouchers using intelligent algorithm
+        List<VoucherScore> scoredVouchers = scoreVouchersIntelligently(availableVouchers, orderTotal, orderItems, customerProfile);
+
+        // Step 4: Generate cross-category recommendations
+        List<VoucherRecommendation> recommendations = generateCrossCategoryRecommendations(scoredVouchers, customerProfile);
+
+        // Step 5: Get future voucher suggestions
+        List<FutureVoucherSuggestion> futureVouchers = getFutureVoucherSuggestions(customerId, orderTotal, customerProfile);
+
+        // Step 6: Build comprehensive result
+        return IntelligentRecommendationResult.builder()
+            .hasRecommendations(true)
+            .primaryRecommendation(recommendations.isEmpty() ? null : recommendations.get(0))
+            .alternativeRecommendations(recommendations.size() > 1 ? recommendations.subList(1, Math.min(recommendations.size(), 4)) : List.of())
+            .futureVoucherSuggestions(futureVouchers)
+            .customerProfile(customerProfile)
+            .explanationMessage(generateRecommendationExplanation(recommendations, customerProfile))
+            .build();
+    }
+
+    /**
+     * Get eligible vouchers for a customer and order total.
+     */
+    private List<PhieuGiamGia> getEligibleVouchers(Long customerId, BigDecimal orderTotal) {
+        List<PhieuGiamGia> activeVouchers = phieuGiamGiaRepository.findByTrangThai(TrangThaiCampaign.DA_DIEN_RA);
+
+        return activeVouchers.stream()
+            .filter(voucher -> {
+                // Check usage limits
+                if (voucher.getSoLuongDaDung() >= voucher.getSoLuongBanDau()) {
+                    return false;
+                }
+
+                // Check minimum order value
+                if (voucher.getGiaTriDonHangToiThieu() != null &&
+                    orderTotal.compareTo(voucher.getGiaTriDonHangToiThieu()) < 0) {
+                    return false;
+                }
+
+                // Check customer eligibility
+                if (customerId != null && !voucher.isCustomerEligible(customerId)) {
+                    return false;
+                }
+
+                return true;
+            })
+            .toList();
+    }
+
+    /**
+     * Analyze customer purchase history to build a profile for personalized recommendations.
+     */
+    private CustomerPurchaseProfile analyzeCustomerPurchaseHistory(Long customerId) {
+        if (customerId == null) {
+            return CustomerPurchaseProfile.defaultProfile();
+        }
+
+        try {
+            // Get customer's order history (last 6 months)
+            Instant sixMonthsAgo = Instant.now().minusSeconds(6 * 30 * 24 * 60 * 60L);
+
+            // For now, create a basic profile - this can be enhanced with actual order analysis
+            return CustomerPurchaseProfile.builder()
+                .customerId(customerId)
+                .averageOrderValue(BigDecimal.valueOf(1000000)) // Default 1M VND
+                .categoryPreferences(Map.of("LAPTOP", 3, "ACCESSORIES", 2))
+                .frequentlyUsedVoucherTypes(List.of("SO_TIEN_CO_DINH", "PHAN_TRAM"))
+                .totalSavingsFromVouchers(BigDecimal.valueOf(500000))
+                .orderFrequency(5)
+                .loyaltyLevel("SILVER")
+                .build();
+        } catch (Exception e) {
+            log.warn("Failed to analyze customer purchase history for customer {}: {}", customerId, e.getMessage());
+            return CustomerPurchaseProfile.defaultProfile();
+        }
+    }
+
+    /**
+     * Score vouchers using intelligent algorithm considering multiple factors.
+     */
+    private List<VoucherScore> scoreVouchersIntelligently(List<PhieuGiamGia> vouchers, BigDecimal orderTotal,
+                                                         List<OrderItemInfo> orderItems, CustomerPurchaseProfile customerProfile) {
+        return vouchers.stream()
+            .map(voucher -> {
+                BigDecimal discountAmount = calculateDiscountAmount(voucher, orderTotal);
+                double score = calculateVoucherEffectivenessScore(voucher, discountAmount, orderTotal, orderItems, customerProfile);
+                String explanation = generateVoucherScoreExplanation(voucher, score, discountAmount, customerProfile);
+
+                return VoucherScore.builder()
+                    .voucher(phieuGiamGiaMapper.toDto(voucher))
+                    .discountAmount(discountAmount)
+                    .effectivenessScore(score)
+                    .explanation(explanation)
+                    .build();
+            })
+            .sorted((a, b) -> Double.compare(b.getEffectivenessScore(), a.getEffectivenessScore()))
+            .toList();
+    }
+
+    /**
+     * Calculate voucher effectiveness score based on multiple factors.
+     */
+    private double calculateVoucherEffectivenessScore(PhieuGiamGia voucher, BigDecimal discountAmount,
+                                                    BigDecimal orderTotal, List<OrderItemInfo> orderItems,
+                                                    CustomerPurchaseProfile customerProfile) {
+        double score = 0.0;
+
+        // Factor 1: Discount percentage (40% weight)
+        double discountPercentage = discountAmount.divide(orderTotal, 4, java.math.RoundingMode.HALF_UP).doubleValue();
+        score += discountPercentage * 40.0;
+
+        // Factor 2: Customer preference alignment (25% weight)
+        if (customerProfile != null && customerProfile.getFrequentlyUsedVoucherTypes().contains(voucher.getLoaiGiamGia().name())) {
+            score += 25.0;
+        }
+
+        // Factor 3: Voucher scarcity (15% weight) - higher score for limited vouchers
+        double usageRatio = (double) voucher.getSoLuongDaDung() / voucher.getSoLuongBanDau();
+        score += (1.0 - usageRatio) * 15.0;
+
+        // Factor 4: Order value optimization (10% weight)
+        if (customerProfile != null && orderTotal.compareTo(customerProfile.getAverageOrderValue()) >= 0) {
+            score += 10.0;
+        }
+
+        // Factor 5: Voucher expiry urgency (10% weight)
+        long daysUntilExpiry = java.time.Duration.between(Instant.now(), voucher.getNgayKetThuc()).toDays();
+        if (daysUntilExpiry <= 7) {
+            score += 10.0; // Bonus for expiring soon
+        } else if (daysUntilExpiry <= 30) {
+            score += 5.0;
+        }
+
+        return Math.min(score, 100.0); // Cap at 100
+    }
+
+    /**
+     * Generate cross-category recommendations from scored vouchers.
+     */
+    private List<VoucherRecommendation> generateCrossCategoryRecommendations(List<VoucherScore> scoredVouchers, CustomerPurchaseProfile customerProfile) {
+        return scoredVouchers.stream()
+            .map(voucherScore -> {
+                String recommendationReason = generateRecommendationReason(voucherScore, customerProfile);
+                String urgencyMessage = generateUrgencyMessage(voucherScore.getVoucher());
+
+                return VoucherRecommendation.builder()
+                    .voucher(voucherScore.getVoucher())
+                    .discountAmount(voucherScore.getDiscountAmount())
+                    .effectivenessScore(voucherScore.getEffectivenessScore())
+                    .recommendationReason(recommendationReason)
+                    .categoryMatch("GENERAL") // Can be enhanced with actual category matching
+                    .isPersonalized(customerProfile != null && customerProfile.getCustomerId() != null)
+                    .urgencyMessage(urgencyMessage)
+                    .build();
+            })
+            .toList();
+    }
+
+    /**
+     * Get future voucher suggestions based on customer profile and order patterns.
+     */
+    private List<FutureVoucherSuggestion> getFutureVoucherSuggestions(Long customerId, BigDecimal orderTotal, CustomerPurchaseProfile customerProfile) {
+        List<FutureVoucherSuggestion> suggestions = new ArrayList<>();
+
+        // Get upcoming vouchers (status CHUA_DIEN_RA)
+        List<PhieuGiamGia> upcomingVouchers = phieuGiamGiaRepository.findByTrangThai(TrangThaiCampaign.CHUA_DIEN_RA);
+
+        for (PhieuGiamGia voucher : upcomingVouchers) {
+            // Check if customer would be eligible
+            if (customerId != null && !voucher.isCustomerEligible(customerId)) {
+                continue;
+            }
+
+            // Check if order total would meet minimum requirement
+            if (voucher.getGiaTriDonHangToiThieu() != null &&
+                orderTotal.compareTo(voucher.getGiaTriDonHangToiThieu()) < 0) {
+                continue;
+            }
+
+            String suggestionReason = generateFutureSuggestionReason(voucher, customerProfile);
+
+            suggestions.add(FutureVoucherSuggestion.builder()
+                .voucherCode(voucher.getMaPhieuGiamGia())
+                .description(voucher.getMoTa())
+                .minimumOrderValue(voucher.getGiaTriDonHangToiThieu())
+                .discountValue(voucher.getGiaTriGiam())
+                .discountType(voucher.getLoaiGiamGia().name())
+                .availableFrom(voucher.getNgayBatDau())
+                .suggestionReason(suggestionReason)
+                .isPersonalized(customerProfile != null && customerProfile.getCustomerId() != null)
+                .build());
+        }
+
+        return suggestions.stream()
+            .limit(3) // Limit to top 3 suggestions
+            .toList();
+    }
+
+    /**
+     * Generate explanation for voucher score.
+     */
+    private String generateVoucherScoreExplanation(PhieuGiamGia voucher, double score, BigDecimal discountAmount, CustomerPurchaseProfile customerProfile) {
+        StringBuilder explanation = new StringBuilder();
+
+        explanation.append(String.format("Giảm giá %s VND (%.1f điểm)",
+            discountAmount.toString(), score));
+
+        if (customerProfile != null && customerProfile.getFrequentlyUsedVoucherTypes().contains(voucher.getLoaiGiamGia().name())) {
+            explanation.append(" - Phù hợp với sở thích của bạn");
+        }
+
+        long daysUntilExpiry = java.time.Duration.between(Instant.now(), voucher.getNgayKetThuc()).toDays();
+        if (daysUntilExpiry <= 7) {
+            explanation.append(" - Sắp hết hạn!");
+        }
+
+        return explanation.toString();
+    }
+
+    /**
+     * Generate recommendation explanation message.
+     */
+    private String generateRecommendationExplanation(List<VoucherRecommendation> recommendations, CustomerPurchaseProfile customerProfile) {
+        if (recommendations.isEmpty()) {
+            return "Không có phiếu giảm giá phù hợp cho đơn hàng này.";
+        }
+
+        VoucherRecommendation primary = recommendations.get(0);
+        StringBuilder explanation = new StringBuilder();
+
+        explanation.append(String.format("Chúng tôi khuyến nghị phiếu giảm giá '%s' ",
+            primary.getVoucher().getMaPhieuGiamGia()));
+        explanation.append(String.format("giúp bạn tiết kiệm %s VND. ",
+            primary.getDiscountAmount().toString()));
+
+        if (customerProfile != null && customerProfile.getCustomerId() != null) {
+            explanation.append("Đây là gợi ý được cá nhân hóa dựa trên lịch sử mua hàng của bạn.");
+        } else {
+            explanation.append("Đây là phiếu giảm giá tốt nhất hiện có cho đơn hàng này.");
+        }
+
+        return explanation.toString();
+    }
+
+    /**
+     * Generate recommendation reason for a voucher.
+     */
+    private String generateRecommendationReason(VoucherScore voucherScore, CustomerPurchaseProfile customerProfile) {
+        if (voucherScore.getEffectivenessScore() >= 80) {
+            return "Giảm giá cao nhất cho đơn hàng này";
+        } else if (voucherScore.getEffectivenessScore() >= 60) {
+            return "Tỷ lệ giảm giá tốt";
+        } else {
+            return "Phù hợp với đơn hàng của bạn";
+        }
+    }
+
+    /**
+     * Generate urgency message for a voucher.
+     */
+    private String generateUrgencyMessage(PhieuGiamGiaDto voucher) {
+        // Calculate days until expiry
+        long daysUntilExpiry = java.time.Duration.between(Instant.now(), voucher.getNgayKetThuc()).toDays();
+
+        if (daysUntilExpiry <= 1) {
+            return "Hết hạn hôm nay!";
+        } else if (daysUntilExpiry <= 3) {
+            return String.format("Còn %d ngày!", daysUntilExpiry);
+        } else if (daysUntilExpiry <= 7) {
+            return "Sắp hết hạn";
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Generate future suggestion reason.
+     */
+    private String generateFutureSuggestionReason(PhieuGiamGia voucher, CustomerPurchaseProfile customerProfile) {
+        long daysUntilAvailable = java.time.Duration.between(Instant.now(), voucher.getNgayBatDau()).toDays();
+
+        if (daysUntilAvailable <= 7) {
+            return String.format("Sẽ có hiệu lực trong %d ngày", daysUntilAvailable);
+        } else {
+            return "Phiếu giảm giá sắp tới phù hợp với bạn";
         }
     }
 

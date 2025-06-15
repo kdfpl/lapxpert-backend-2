@@ -2,16 +2,24 @@ package com.lapxpert.backend.hoadon.domain.service;
 
 import com.lapxpert.backend.hoadon.domain.dto.HoaDonDto;
 import com.lapxpert.backend.hoadon.domain.dto.HoaDonChiTietDto;
+import com.lapxpert.backend.hoadon.domain.dto.PaymentSummaryDto;
+import com.lapxpert.backend.hoadon.domain.dto.PaymentDetailDto;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDonAuditHistory;
 import com.lapxpert.backend.hoadon.domain.entity.HoaDonChiTiet;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDonThanhToan;
+import com.lapxpert.backend.hoadon.domain.entity.HoaDonThanhToanId;
+import com.lapxpert.backend.hoadon.domain.entity.ThanhToan;
 import com.lapxpert.backend.hoadon.domain.mapper.HoaDonMapper;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonRepository;
 import com.lapxpert.backend.hoadon.domain.repository.HoaDonAuditHistoryRepository;
+import com.lapxpert.backend.hoadon.domain.repository.HoaDonThanhToanRepository;
+import com.lapxpert.backend.hoadon.domain.repository.ThanhToanRepository;
 import com.lapxpert.backend.hoadon.domain.enums.LoaiHoaDon;
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
 import com.lapxpert.backend.hoadon.domain.enums.TrangThaiThanhToan;
+import com.lapxpert.backend.hoadon.domain.enums.TrangThaiGiaoDich;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
 import com.lapxpert.backend.nguoidung.domain.entity.VaiTro;
@@ -25,14 +33,18 @@ import com.lapxpert.backend.sanpham.domain.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
 import com.lapxpert.backend.vnpay.domain.VNPayService;
 import com.lapxpert.backend.payment.domain.service.PaymentServiceFactory;
+import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
+import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -40,6 +52,8 @@ public class HoaDonService {
 
     private final HoaDonRepository hoaDonRepository;
     private final HoaDonAuditHistoryRepository auditHistoryRepository;
+    private final HoaDonThanhToanRepository hoaDonThanhToanRepository;
+    private final ThanhToanRepository thanhToanRepository;
     private final HoaDonMapper hoaDonMapper;
     private final NguoiDungRepository nguoiDungRepository;
     private final DiaChiRepository diaChiRepository;
@@ -50,10 +64,14 @@ public class HoaDonService {
     private final KiemTraTrangThaiHoaDonService kiemTraTrangThaiService;
     private final PaymentMethodValidationService paymentValidationService;
     private final VNPayService vnPayService;
+    private final MoMoGatewayService moMoGatewayService;
+    private final VietQRGatewayService vietQRGatewayService;
     private final PaymentServiceFactory paymentServiceFactory;
 
     public HoaDonService(HoaDonRepository hoaDonRepository,
                          HoaDonAuditHistoryRepository auditHistoryRepository,
+                         HoaDonThanhToanRepository hoaDonThanhToanRepository,
+                         ThanhToanRepository thanhToanRepository,
                          HoaDonMapper hoaDonMapper,
                          NguoiDungRepository nguoiDungRepository,
                          DiaChiRepository diaChiRepository,
@@ -64,9 +82,13 @@ public class HoaDonService {
                          KiemTraTrangThaiHoaDonService kiemTraTrangThaiService,
                          PaymentMethodValidationService paymentValidationService,
                          VNPayService vnPayService,
+                         MoMoGatewayService moMoGatewayService,
+                         VietQRGatewayService vietQRGatewayService,
                          PaymentServiceFactory paymentServiceFactory) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
+        this.hoaDonThanhToanRepository = hoaDonThanhToanRepository;
+        this.thanhToanRepository = thanhToanRepository;
         this.hoaDonMapper = hoaDonMapper;
         this.nguoiDungRepository = nguoiDungRepository;
         this.diaChiRepository = diaChiRepository;
@@ -77,6 +99,8 @@ public class HoaDonService {
         this.kiemTraTrangThaiService = kiemTraTrangThaiService;
         this.paymentValidationService = paymentValidationService;
         this.vnPayService = vnPayService;
+        this.moMoGatewayService = moMoGatewayService;
+        this.vietQRGatewayService = vietQRGatewayService;
         this.paymentServiceFactory = paymentServiceFactory;
     }
 
@@ -141,24 +165,29 @@ public class HoaDonService {
                 // For POS orders, khachHang remains null (walk-in customer)
             }
 
-            // Step 4: Set employee (nhanVien) - prioritize DTO nhanVienId, fallback to currentUser if staff/admin
+            // Step 4: Set employee (nhanVien) - simple automatic assignment
             if (hoaDonDto.getNhanVienId() != null) {
                 // Use explicit staff member ID from DTO
-                // Use findByIdWithAddresses to eagerly load addresses and avoid LazyInitializationException
                 NguoiDung nhanVien = nguoiDungRepository.findByIdWithAddresses(hoaDonDto.getNhanVienId())
                     .orElseThrow(() -> new EntityNotFoundException("Nhân viên không tồn tại với ID: " + hoaDonDto.getNhanVienId()));
                 hoaDon.setNhanVien(nhanVien);
-            } else if (currentUser != null && (currentUser.getVaiTro() == VaiTro.STAFF || currentUser.getVaiTro() == VaiTro.ADMIN)) {
-                // Auto-assign current user as staff member if they are staff or admin
-                // For currentUser, also eagerly load addresses if needed for DTO mapping
-                NguoiDung staffWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
-                    .orElse(currentUser); // Fallback to currentUser if not found (shouldn't happen)
-                hoaDon.setNhanVien(staffWithAddresses);
             } else {
-                // For online orders by customers, nhanVien can be null
-                // For POS orders, this should not happen as staff should be logged in
-                if (hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
-                    log.warn("POS order created without staff member assignment. CurrentUser: {}",
+                // Simple automatic assignment: assign current user for TAI_QUAY orders, null for ONLINE
+                if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY && currentUser != null &&
+                    (currentUser.getVaiTro() == VaiTro.STAFF || currentUser.getVaiTro() == VaiTro.ADMIN)) {
+                    // Assign current staff/admin user to POS orders
+                    NguoiDung staffWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
+                        .orElse(currentUser);
+                    hoaDon.setNhanVien(staffWithAddresses);
+                    log.info("Auto-assigned current user {} to TAI_QUAY order", currentUser.getEmail());
+                } else if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
+                    // Online orders don't need staff assignment
+                    hoaDon.setNhanVien(null);
+                    log.debug("ONLINE order - no staff assignment needed");
+                } else {
+                    // TAI_QUAY order without valid staff user
+                    hoaDon.setNhanVien(null);
+                    log.warn("TAI_QUAY order created without valid staff user. CurrentUser: {}",
                             currentUser != null ? currentUser.getVaiTro() : "null");
                 }
             }
@@ -201,6 +230,25 @@ public class HoaDonService {
                 "Tạo hóa đơn mới"
             );
             auditHistoryRepository.save(auditEntry);
+
+            // Step 8.6: Create audit entry for automatic staff assignment if applicable
+            if (savedHoaDon.getNhanVien() != null && hoaDonDto.getNhanVienId() == null) {
+                // This was an automatic assignment - create simple audit entry
+                String assignmentReason = String.format("Tự động gán nhân viên %s cho đơn hàng %s",
+                    savedHoaDon.getNhanVien().getHoTen(), savedHoaDon.getLoaiHoaDon().name());
+                HoaDonAuditHistory staffAssignmentAudit = HoaDonAuditHistory.createEntry(
+                    savedHoaDon.getId(),
+                    createAuditValues(savedHoaDon),
+                    savedHoaDon.getNguoiTao(),
+                    assignmentReason
+                );
+                auditHistoryRepository.save(staffAssignmentAudit);
+            }
+
+            // Step 8.7: Create specific audit entry for TAI_QUAY order status logic
+            if (savedHoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
+                createTaiQuayOrderStatusAuditEntry(savedHoaDon);
+            }
 
             // Step 9: For POS orders with immediate payment, confirm the sale
             if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY &&
@@ -417,9 +465,8 @@ public class HoaDonService {
         } else if (hoaDon.getTrangThaiDonHang() == null) {
             // Set default status only if not provided by DTO
             if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
-                // POS orders default to pending confirmation
-                hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
-                log.debug("Setting default POS order status: CHO_XAC_NHAN");
+                // Enhanced TAI_QUAY order status logic based on shipping requirements
+                setTaiQuayOrderStatus(hoaDon);
             } else {
                 // Online orders start as pending confirmation
                 hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
@@ -440,6 +487,50 @@ public class HoaDonService {
     }
 
     /**
+     * Set appropriate order status for TAI_QUAY orders based on shipping requirements.
+     * TAI_QUAY orders with shipping enabled are set to DA_XAC_NHAN status.
+     * TAI_QUAY orders without shipping (pickup) maintain CHO_XAC_NHAN status.
+     */
+    private void setTaiQuayOrderStatus(HoaDon hoaDon) {
+        // Check if order has shipping enabled (delivery address is set)
+        boolean hasShipping = hoaDon.getDiaChiGiaoHang() != null;
+
+        if (hasShipping) {
+            // TAI_QUAY orders with shipping enabled are automatically confirmed
+            hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DA_XAC_NHAN);
+            log.info("TAI_QUAY order with shipping automatically set to DA_XAC_NHAN status");
+        } else {
+            // TAI_QUAY orders without shipping (pickup at store) start as pending confirmation
+            hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
+            log.info("TAI_QUAY order for pickup at store set to CHO_XAC_NHAN status");
+        }
+    }
+
+    /**
+     * Create audit entry for TAI_QUAY order status logic with Vietnamese messages.
+     */
+    private void createTaiQuayOrderStatusAuditEntry(HoaDon hoaDon) {
+        boolean hasShipping = hoaDon.getDiaChiGiaoHang() != null;
+        String auditMessage;
+
+        if (hasShipping) {
+            auditMessage = "Đơn hàng tại quầy có giao hàng - tự động chuyển trạng thái thành DA_XAC_NHAN";
+        } else {
+            auditMessage = "Đơn hàng tại quầy lấy tại cửa hàng - thiết lập trạng thái CHO_XAC_NHAN";
+        }
+
+        HoaDonAuditHistory statusAuditEntry = HoaDonAuditHistory.createEntry(
+            hoaDon.getId(),
+            createAuditValues(hoaDon),
+            hoaDon.getNguoiTao(),
+            auditMessage
+        );
+        auditHistoryRepository.save(statusAuditEntry);
+
+        log.info("Created TAI_QUAY order status audit entry for order {} - {}", hoaDon.getId(), auditMessage);
+    }
+
+    /**
      * Validate payment method is appropriate for order type.
      * Updated to support flexible payment scenarios.
      */
@@ -448,11 +539,11 @@ public class HoaDonService {
         // This can be enhanced later when payment method is added to the DTO
 
         if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
-            // POS orders can use TIEN_MAT, COD (for delivery), or VNPAY
-            log.debug("POS order supports TIEN_MAT, COD, or VNPAY payment methods");
+            // POS orders can use TIEN_MAT or VNPAY
+            log.debug("POS order supports TIEN_MAT or VNPAY payment methods");
         } else if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
-            // Online orders can use COD or VNPAY (TIEN_MAT requires physical presence)
-            log.debug("Online order supports COD or VNPAY payment methods");
+            // Online orders can use TIEN_MAT (cash on delivery) or VNPAY
+            log.debug("Online order supports TIEN_MAT (cash on delivery) or VNPAY payment methods");
         }
     }
 
@@ -763,8 +854,16 @@ public class HoaDonService {
         // Define valid transitions
         switch (fromStatus) {
             case CHUA_THANH_TOAN:
-                if (toStatus != TrangThaiThanhToan.DA_THANH_TOAN &&
+                if (toStatus != TrangThaiThanhToan.THANH_TOAN_MOT_PHAN &&
+                    toStatus != TrangThaiThanhToan.DA_THANH_TOAN &&
                     toStatus != TrangThaiThanhToan.THANH_TOAN_LOI) {
+                    throw new IllegalArgumentException("Invalid payment status transition from " + fromStatus + " to " + toStatus);
+                }
+                break;
+            case THANH_TOAN_MOT_PHAN:
+                if (toStatus != TrangThaiThanhToan.DA_THANH_TOAN &&
+                    toStatus != TrangThaiThanhToan.THANH_TOAN_LOI &&
+                    toStatus != TrangThaiThanhToan.CHUA_THANH_TOAN) {
                     throw new IllegalArgumentException("Invalid payment status transition from " + fromStatus + " to " + toStatus);
                 }
                 break;
@@ -776,6 +875,7 @@ public class HoaDonService {
                 break;
             case THANH_TOAN_LOI:
                 if (toStatus != TrangThaiThanhToan.CHUA_THANH_TOAN &&
+                    toStatus != TrangThaiThanhToan.THANH_TOAN_MOT_PHAN &&
                     toStatus != TrangThaiThanhToan.DA_THANH_TOAN) {
                     throw new IllegalArgumentException("Invalid payment status transition from " + fromStatus + " to " + toStatus);
                 }
@@ -797,12 +897,16 @@ public class HoaDonService {
      */
     private void handlePaymentStatusChange(HoaDon hoaDon, TrangThaiThanhToan oldStatus, TrangThaiThanhToan newStatus) {
         // Handle inventory implications
-        if (oldStatus == TrangThaiThanhToan.CHUA_THANH_TOAN && newStatus == TrangThaiThanhToan.DA_THANH_TOAN) {
+        if ((oldStatus == TrangThaiThanhToan.CHUA_THANH_TOAN || oldStatus == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN)
+            && newStatus == TrangThaiThanhToan.DA_THANH_TOAN) {
             // Payment confirmed - finalize inventory sale
             confirmInventorySale(hoaDon);
         } else if (newStatus == TrangThaiThanhToan.DA_HOAN_TIEN) {
             // Refund processed - release inventory back to available
             releaseInventoryForRefund(hoaDon);
+        } else if (newStatus == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN) {
+            // Partial payment - keep inventory reserved but don't finalize sale yet
+            log.info("Order {} moved to partial payment status - inventory remains reserved", hoaDon.getId());
         }
     }
 
@@ -857,11 +961,14 @@ public class HoaDonService {
 
         // Update order status based on payment method and order type
         if (phuongThucThanhToan == PhuongThucThanhToan.TIEN_MAT) {
-            // Cash payments complete immediately (POS only)
-            hoaDon.setTrangThaiDonHang(TrangThaiDonHang.HOAN_THANH);
-        } else if (phuongThucThanhToan == PhuongThucThanhToan.COD) {
-            // COD payments happen at delivery, so order moves to delivered status
-            hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DA_GIAO_HANG);
+            // Cash payments - handle both POS and delivery scenarios
+            if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
+                // POS cash payments complete immediately
+                hoaDon.setTrangThaiDonHang(TrangThaiDonHang.HOAN_THANH);
+            } else {
+                // Online orders with cash payment (former COD) - payment happens at delivery
+                hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DA_GIAO_HANG);
+            }
         } else if (phuongThucThanhToan == PhuongThucThanhToan.VNPAY) {
             // VNPAY payments are processed immediately, move to processing for fulfillment
             if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
@@ -889,16 +996,15 @@ public class HoaDonService {
      * Updated to support flexible payment scenarios based on business requirements.
      */
     private void validatePaymentMethodForConfirmation(HoaDon hoaDon, PhuongThucThanhToan phuongThucThanhToan) {
-        // TIEN_MAT requires physical presence - only allowed for POS orders
-        if (phuongThucThanhToan == PhuongThucThanhToan.TIEN_MAT && hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
-            throw new IllegalArgumentException("Cash payment (TIEN_MAT) requires physical presence and is not available for online orders");
+        // TIEN_MAT now supports both POS and delivery scenarios (consolidated from COD)
+        if (phuongThucThanhToan == PhuongThucThanhToan.TIEN_MAT) {
+            if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE && hoaDon.getDiaChiGiaoHang() == null) {
+                throw new IllegalArgumentException("Cash payment for online orders requires delivery address");
+            }
+            log.debug("Cash payment accepted for {} order", hoaDon.getLoaiHoaDon());
         }
 
-        // COD and VNPAY are flexible and can be used with both order types
-        if (phuongThucThanhToan == PhuongThucThanhToan.COD) {
-            log.debug("COD payment accepted for {} order", hoaDon.getLoaiHoaDon());
-        }
-
+        // VNPAY and other digital payment methods are flexible for both order types
         if (phuongThucThanhToan == PhuongThucThanhToan.VNPAY) {
             log.debug("VNPAY payment accepted for {} order", hoaDon.getLoaiHoaDon());
         }
@@ -1318,5 +1424,238 @@ public class HoaDonService {
 
         log.info("VNPay payment URL created for order {} with amount {}", orderId, amount);
         return vnpayUrl;
+    }
+
+    // ==================== MIXED PAYMENT SCENARIOS SUPPORT ====================
+
+    /**
+     * Add a payment to an order, supporting mixed payment scenarios.
+     * Automatically calculates payment completion and updates order status.
+     */
+    @Transactional
+    public HoaDonDto addPaymentToOrder(Long orderId, BigDecimal paymentAmount, PhuongThucThanhToan paymentMethod,
+                                      String transactionRef, String notes, NguoiDung currentUser) {
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+            .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        // Validate payment can be added
+        validatePaymentAddition(hoaDon, paymentAmount);
+
+        // Create payment record
+        ThanhToan thanhToan = createPaymentRecord(paymentAmount, paymentMethod, transactionRef, notes, currentUser);
+        thanhToan = thanhToanRepository.save(thanhToan);
+
+        // Link payment to order
+        HoaDonThanhToan hoaDonThanhToan = new HoaDonThanhToan();
+        HoaDonThanhToanId id = new HoaDonThanhToanId();
+        id.setHoaDonId(orderId);
+        id.setThanhToanId(thanhToan.getId());
+        hoaDonThanhToan.setId(id);
+        hoaDonThanhToan.setHoaDon(hoaDon);
+        hoaDonThanhToan.setThanhToan(thanhToan);
+        hoaDonThanhToan.setSoTienApDung(paymentAmount);
+
+        hoaDonThanhToanRepository.save(hoaDonThanhToan);
+
+        // Update order payment status based on total payments
+        updateOrderPaymentStatus(hoaDon);
+
+        // Create audit entry
+        String auditMessage = String.format("Payment added - Method: %s, Amount: %s, Transaction: %s",
+                                           paymentMethod, paymentAmount, transactionRef);
+        HoaDonAuditHistory auditEntry = HoaDonAuditHistory.createEntry(
+            orderId,
+            createAuditValues(hoaDon),
+            currentUser != null ? currentUser.getEmail() : "SYSTEM",
+            auditMessage
+        );
+        auditHistoryRepository.save(auditEntry);
+
+        log.info("Payment added to order {} - Method: {}, Amount: {}", orderId, paymentMethod, paymentAmount);
+        return hoaDonMapper.toDto(hoaDon);
+    }
+
+    /**
+     * Get payment summary for an order including all payment methods used.
+     */
+    @Transactional(readOnly = true)
+    public PaymentSummaryDto getOrderPaymentSummary(Long orderId) {
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+            .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        List<HoaDonThanhToan> payments = hoaDonThanhToanRepository.findByHoaDonIdWithPaymentDetails(orderId);
+        BigDecimal totalPaid = hoaDonThanhToanRepository.calculateTotalPaidAmount(orderId);
+        BigDecimal remainingAmount = hoaDon.getTongThanhToan().subtract(totalPaid);
+
+        return PaymentSummaryDto.builder()
+            .orderId(orderId)
+            .orderTotal(hoaDon.getTongThanhToan())
+            .totalPaid(totalPaid)
+            .remainingAmount(remainingAmount.max(BigDecimal.ZERO))
+            .paymentStatus(hoaDon.getTrangThaiThanhToan())
+            .payments(payments.stream()
+                .map(this::mapToPaymentDetailDto)
+                .toList())
+            .build();
+    }
+
+    /**
+     * Validate if a payment can be added to an order.
+     */
+    private void validatePaymentAddition(HoaDon hoaDon, BigDecimal paymentAmount) {
+        if (hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Cannot add payment to fully paid order");
+        }
+
+        if (hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_HOAN_TIEN) {
+            throw new IllegalStateException("Cannot add payment to refunded order");
+        }
+
+        if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be greater than zero");
+        }
+
+        // Check if payment would exceed order total
+        BigDecimal currentPaid = hoaDonThanhToanRepository.calculateTotalPaidAmount(hoaDon.getId());
+        BigDecimal newTotal = currentPaid.add(paymentAmount);
+
+        if (newTotal.compareTo(hoaDon.getTongThanhToan()) > 0) {
+            BigDecimal maxAllowed = hoaDon.getTongThanhToan().subtract(currentPaid);
+            throw new IllegalArgumentException(
+                String.format("Payment amount %s would exceed order total. Maximum allowed: %s",
+                            paymentAmount, maxAllowed));
+        }
+    }
+
+    /**
+     * Create a payment record.
+     */
+    private ThanhToan createPaymentRecord(BigDecimal amount, PhuongThucThanhToan paymentMethod,
+                                        String transactionRef, String notes, NguoiDung currentUser) {
+        ThanhToan thanhToan = new ThanhToan();
+        thanhToan.setNguoiDung(currentUser);
+        thanhToan.setMaGiaoDich(transactionRef);
+        thanhToan.setGiaTri(amount);
+        thanhToan.setGhiChu(notes);
+        thanhToan.setThoiGianThanhToan(Instant.now());
+        thanhToan.setTrangThaiGiaoDich(TrangThaiGiaoDich.THANH_CONG);
+        thanhToan.setPhuongThucThanhToan(paymentMethod);
+
+        return thanhToan;
+    }
+
+    /**
+     * Update order payment status based on total payments received.
+     */
+    private void updateOrderPaymentStatus(HoaDon hoaDon) {
+        BigDecimal totalPaid = hoaDonThanhToanRepository.calculateTotalPaidAmount(hoaDon.getId());
+        BigDecimal orderTotal = hoaDon.getTongThanhToan();
+
+        TrangThaiThanhToan oldStatus = hoaDon.getTrangThaiThanhToan();
+        TrangThaiThanhToan newStatus;
+
+        if (totalPaid.compareTo(BigDecimal.ZERO) == 0) {
+            newStatus = TrangThaiThanhToan.CHUA_THANH_TOAN;
+        } else if (totalPaid.compareTo(orderTotal) >= 0) {
+            newStatus = TrangThaiThanhToan.DA_THANH_TOAN;
+        } else {
+            newStatus = TrangThaiThanhToan.THANH_TOAN_MOT_PHAN;
+        }
+
+        if (!oldStatus.equals(newStatus)) {
+            hoaDon.setTrangThaiThanhToan(newStatus);
+            hoaDonRepository.save(hoaDon);
+
+            // Handle payment status change implications
+            handlePaymentStatusChange(hoaDon, oldStatus, newStatus);
+
+            log.info("Order {} payment status updated from {} to {} (Paid: {}/{})",
+                    hoaDon.getId(), oldStatus, newStatus, totalPaid, orderTotal);
+        }
+    }
+
+    /**
+     * Map HoaDonThanhToan to PaymentDetailDto.
+     */
+    private PaymentDetailDto mapToPaymentDetailDto(HoaDonThanhToan hoaDonThanhToan) {
+        ThanhToan thanhToan = hoaDonThanhToan.getThanhToan();
+        return PaymentDetailDto.builder()
+            .paymentId(thanhToan.getId())
+            .amount(hoaDonThanhToan.getSoTienApDung())
+            .paymentMethod(thanhToan.getPhuongThucThanhToan())
+            .transactionRef(thanhToan.getMaGiaoDich())
+            .paymentTime(thanhToan.getThoiGianThanhToan())
+            .status(thanhToan.getTrangThaiGiaoDich())
+            .notes(thanhToan.getGhiChu())
+            .createdAt(hoaDonThanhToan.getNgayTao())
+            .build();
+    }
+
+    /**
+     * Create MoMo payment URL for a specific order.
+     * This method integrates MoMo payment with order management.
+     */
+    @Transactional
+    public String createMoMoPayment(Long orderId, int amount, String orderInfo, String baseUrl, String clientIp) {
+        // Validate order exists and is in correct state
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+            .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        // Validate order can be paid
+        if (hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Order has already been paid");
+        }
+
+        // Create MoMo payment URL using order ID as transaction reference
+        String momoUrl = moMoGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
+
+        // Create audit entry for payment attempt
+        String auditMessage = String.format("MoMo payment initiated - Amount: %d, OrderInfo: %s", amount, orderInfo);
+        HoaDonAuditHistory auditEntry = HoaDonAuditHistory.createEntry(
+            orderId,
+            createAuditValues(hoaDon),
+            hoaDon.getNguoiTao(),
+            auditMessage
+        );
+        auditHistoryRepository.save(auditEntry);
+
+        log.info("MoMo payment URL created for order {} with amount {}", orderId, amount);
+        return momoUrl;
+    }
+
+    /**
+     * Create VietQR payment for a specific order.
+     * This method integrates VietQR bank transfer payment with order management.
+     */
+    @Transactional
+    public Map<String, Object> createVietQRPayment(Long orderId, int amount, String orderInfo, String baseUrl, String clientIp) {
+        // Validate order exists and is in correct state
+        HoaDon hoaDon = hoaDonRepository.findById(orderId)
+            .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        // Validate order can be paid
+        if (hoaDon.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_THANH_TOAN) {
+            throw new IllegalStateException("Order has already been paid");
+        }
+
+        // Generate VietQR payment instructions
+        Map<String, Object> paymentInstructions = vietQRGatewayService.generatePaymentInstructions(orderId.toString(), amount);
+
+        // Add QR URL
+        String qrUrl = vietQRGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
+        paymentInstructions.put("qrUrl", qrUrl);
+
+        // Create audit entry for payment attempt
+        String auditMessage = String.format("VietQR payment initiated - Amount: %d, OrderInfo: %s", amount, orderInfo);
+        HoaDonAuditHistory auditEntry = HoaDonAuditHistory.createEntry(
+            orderId,
+            createAuditValues(hoaDon),
+            hoaDon.getNguoiTao(),
+            auditMessage
+        );
+        auditHistoryRepository.save(auditEntry);
+
+        log.info("VietQR payment instructions created for order {} with amount {}", orderId, amount);
+        return paymentInstructions;
     }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useLayout } from '@/layout/composables/layout'
 import ThongKeService from '@/apis/dashboard'

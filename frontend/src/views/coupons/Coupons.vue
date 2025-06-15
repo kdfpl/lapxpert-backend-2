@@ -270,7 +270,7 @@
     <!-- Voucher DataTable -->
     <DataTable
       v-model:selection="selectedVouchers"
-      :value="filteredVouchers"
+      :value="sortedFilteredVouchers"
       :loading="store.loading"
       paginator
       :rows="10"
@@ -281,6 +281,8 @@
       class="p-datatable-sm"
       currentPageReportTemplate="Hiển thị {first} đến {last} trong tổng số {totalRecords} phiếu"
       :globalFilterFields="['maPhieuGiamGia', 'moTa', 'loaiGiamGia']"
+      v-bind="getDataTableSortProps()"
+      @sort="onSort"
     >
       <template #header>
         <div class="flex justify-between items-center">
@@ -426,6 +428,30 @@
             :value="store.getStatusLabel(data.trangThai)"
             :severity="store.getStatusSeverity(data.trangThai)"
           />
+        </template>
+      </Column>
+
+      <Column
+        field="ngayTao"
+        header="Ngày tạo"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayTao) }}
+        </template>
+      </Column>
+
+      <Column
+        field="ngayCapNhat"
+        header="Ngày cập nhật"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDateTime(data.ngayCapNhat) }}
         </template>
       </Column>
 
@@ -625,6 +651,7 @@ import { usePhieuGiamGiaStore } from '@/stores/couponstore';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
+import { useDataTableSorting } from '@/composables/useDataTableSorting';
 
 // PrimeVue Components
 import Toast from 'primevue/toast';
@@ -636,6 +663,18 @@ import phieuGiamGiaApi from '@/apis/coupon.js';
 const store = usePhieuGiamGiaStore();
 const router = useRouter();
 const toast = useToast();
+
+// Auto-Sorting Composable
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+});
 
 // Define the initial structure for filters (following DiscountList.vue pattern)
 const initialFilters = {
@@ -839,16 +878,12 @@ const filteredVouchers = computed(() => {
     });
   }
 
-  // Sort by status priority (Active, Upcoming, Ended, Cancelled)
-  return data.sort((a, b) => {
-    const order = {
-      DA_DIEN_RA: 1,
-      CHUA_DIEN_RA: 2,
-      KET_THUC: 3,
-      BI_HUY: 4
-    };
-    return order[a.trangThai] - order[b.trangThai];
-  });
+  return data;
+});
+
+// Apply auto-sorting to filtered vouchers
+const sortedFilteredVouchers = computed(() => {
+  return applySorting(filteredVouchers.value);
 });
 
 // Selection state for batch operations

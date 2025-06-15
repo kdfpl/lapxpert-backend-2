@@ -8,7 +8,7 @@
     />
     <div v-if="showProgress" class="status-progress mt-1">
       <div class="progress-bar">
-        <div 
+        <div
           class="progress-fill"
           :style="{ width: `${progressPercentage}%` }"
           :class="`progress-${statusInfo.severity}`"
@@ -54,9 +54,9 @@ const progressPercentage = computed(() => {
     'DA_GIAO_HANG',    // 90%
     'HOAN_THANH'       // 100%
   ]
-  
+
   const currentIndex = statusOrder.indexOf(props.status)
-  
+
   if (currentIndex === -1) {
     // Handle special statuses
     switch (props.status) {
@@ -70,15 +70,11 @@ const progressPercentage = computed(() => {
         return 0
     }
   }
-  
+
   return Math.round(((currentIndex + 1) / statusOrder.length) * 100)
 })
 
-const tagClass = computed(() => {
-  const baseClass = 'status-tag'
-  const sizeClass = `status-tag-${props.size}`
-  return `${baseClass} ${sizeClass}`
-})
+// tagClass computed property removed - not used in template
 </script>
 
 <style scoped>
@@ -278,18 +274,18 @@ const tagClass = computed(() => {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
   }
-  
+
   .status-tag-large {
     font-size: 0.875rem;
     padding: 0.375rem 0.75rem;
   }
-  
+
   .status-progress {
     flex-direction: column;
     align-items: stretch;
     gap: 0.25rem;
   }
-  
+
   .progress-text {
     text-align: center;
     min-width: auto;
@@ -313,11 +309,11 @@ const tagClass = computed(() => {
     color: black !important;
     border: 1px solid black !important;
   }
-  
+
   .progress-bar {
     border: 1px solid black;
   }
-  
+
   .progress-fill {
     background: black !important;
   }

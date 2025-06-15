@@ -12,7 +12,7 @@ import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
-import Select from 'primevue/select'
+// import Select from 'primevue/select' // Currently unused
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -241,17 +241,17 @@ const getAuditBorderColor = (action) => {
   return colorMap[action] || 'border-surface-400 bg-surface-50'
 }
 
-const formatJsonData = (jsonString) => {
-  if (!jsonString) return ''
-  try {
-    const data = JSON.parse(jsonString)
-    return Object.entries(data)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join(', ')
-  } catch {
-    return jsonString
-  }
-}
+// const formatJsonData = (jsonString) => { // Currently unused
+//   if (!jsonString) return ''
+//   try {
+//     const data = JSON.parse(jsonString)
+//     return Object.entries(data)
+//       .map(([key, value]) => `${key}: ${value}`)
+//       .join(', ')
+//   } catch {
+//     return jsonString
+//   }
+// }
 
 // Enhanced parseAuditChanges following CrudCoupons pattern - only show changed fields
 const parseAuditChangesEnhanced = (oldValuesJson, newValuesJson) => {
@@ -319,31 +319,31 @@ const parseAuditChangesEnhanced = (oldValuesJson, newValuesJson) => {
   }
 }
 
-// Enhanced parseCreateAuditValues following StaffForm/CustomerForm patterns
-const parseCreateAuditValuesEnhanced = (newValuesJson) => {
-  if (!newValuesJson) return []
+// Enhanced parseCreateAuditValues following StaffForm/CustomerForm patterns - Currently unused
+// const parseCreateAuditValuesEnhanced = (newValuesJson) => {
+//   if (!newValuesJson) return []
 
-  try {
-    const newValues = JSON.parse(newValuesJson)
-    const fields = []
+//   try {
+//     const newValues = JSON.parse(newValuesJson)
+//     const fields = []
 
-    // Process each field
-    for (const [field, value] of Object.entries(newValues)) {
-      if (value !== null && value !== undefined) {
-        fields.push({
-          field: field,
-          fieldName: getFieldDisplayName(field),
-          value: formatAuditValue(field, value)
-        })
-      }
-    }
+//     // Process each field
+//     for (const [field, value] of Object.entries(newValues)) {
+//       if (value !== null && value !== undefined) {
+//         fields.push({
+//           field: field,
+//           fieldName: getFieldDisplayName(field),
+//           value: formatAuditValue(field, value)
+//         })
+//       }
+//     }
 
-    return fields
-  } catch (error) {
-    console.error('Error parsing create audit values:', error)
-    return []
-  }
-}
+//     return fields
+//   } catch (error) {
+//     console.error('Error parsing create audit values:', error)
+//     return []
+//   }
+// }
 
 const getAuditIcon = (action) => {
   const iconMap = {
@@ -390,26 +390,26 @@ const getProductStatusSeverity = (status) => {
   return severityMap[status] || 'secondary'
 }
 
-// Campaign status helper functions (for DotGiamGia)
-const getCampaignStatusLabel = (trangThai) => {
-  const labelMap = {
-    CHUA_DIEN_RA: 'Chưa diễn ra',
-    DA_DIEN_RA: 'Đã diễn ra',
-    KET_THUC: 'Kết thúc',
-    BI_HUY: 'Bị hủy',
-  }
-  return labelMap[trangThai] || 'Không xác định'
-}
+// Campaign status helper functions (for DotGiamGia) - Currently unused
+// const getCampaignStatusLabel = (trangThai) => {
+//   const labelMap = {
+//     CHUA_DIEN_RA: 'Chưa diễn ra',
+//     DA_DIEN_RA: 'Đã diễn ra',
+//     KET_THUC: 'Kết thúc',
+//     BI_HUY: 'Bị hủy',
+//   }
+//   return labelMap[trangThai] || 'Không xác định'
+// }
 
-const getCampaignStatusSeverity = (trangThai) => {
-  const severityMap = {
-    CHUA_DIEN_RA: 'warn',
-    DA_DIEN_RA: 'success',
-    KET_THUC: 'danger',
-    BI_HUY: 'secondary',
-  }
-  return severityMap[trangThai] || null
-}
+// const getCampaignStatusSeverity = (trangThai) => {
+//   const severityMap = {
+//     CHUA_DIEN_RA: 'warn',
+//     DA_DIEN_RA: 'success',
+//     KET_THUC: 'danger',
+//     BI_HUY: 'secondary',
+//   }
+//   return severityMap[trangThai] || null
+// }
 
 // Color mapping function following ProductVariantManager.vue patterns
 const getColorValue = (colorName) => {

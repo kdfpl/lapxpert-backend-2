@@ -379,7 +379,7 @@ const processPayment = async () => {
         return
       }
     } else {
-      // For TIEN_MAT and COD, confirm payment directly
+      // For TIEN_MAT (including cash on delivery), confirm payment directly
       paymentResponse = await orderApi.confirmPayment(
         props.orderData.orderId,
         selectedPaymentMethod.value,
@@ -476,8 +476,9 @@ const completeWorkflow = () => {
 const getPaymentMethodLabel = (method) => {
   const labelMap = {
     'TIEN_MAT': 'Tiền mặt',
-    'COD': 'Thanh toán khi nhận hàng',
-    'VNPAY': 'VNPay'
+    'VNPAY': 'VNPay',
+    'MOMO': 'MoMo',
+    'VIETQR': 'VietQR'
   }
   return labelMap[method] || method
 }

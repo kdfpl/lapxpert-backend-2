@@ -197,7 +197,7 @@ onMounted(() => {
 const loadRecentOrders = async () => {
   try {
     // Use dashboard service to get recent orders
-    const response = await ThongKeService.layDashboardSummary()
+    await ThongKeService.layDashboardSummary()
 
     // Create sample recent orders data for display
     // In a real implementation, you would have a specific API for recent orders

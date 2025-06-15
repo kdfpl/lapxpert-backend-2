@@ -548,8 +548,8 @@
         const customer = await customerStore.fetchCustomerById(customerId.value)
 
         // Khởi tạo districts và wards với mảng rỗng cho mỗi địa chỉ
-        districts.value = new Array(customer.diaChis.length).fill().map(() => [])
-        wards.value = new Array(customer.diaChis.length).fill().map(() => [])
+        districts.value = Array.from({ length: customer.diaChis.length }, () => [])
+        wards.value = Array.from({ length: customer.diaChis.length }, () => [])
 
         form.value = {
           avatar: customer.avatar,
@@ -623,7 +623,7 @@
 
         // Load audit history after loading customer data
         await loadAuditHistory()
-      } catch (error) {
+      } catch (_error) {
         console.error('Error loading customer:', error)
         toast.add({
           severity: 'error',

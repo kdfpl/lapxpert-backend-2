@@ -198,7 +198,7 @@ export const useOrderStore = defineStore('order', () => {
     const tabIndex = orderTabs.value.findIndex(tab => tab.id === tabId)
     if (tabIndex === -1) return
 
-    const tab = orderTabs.value[tabIndex]
+    // const tab = orderTabs.value[tabIndex] // Currently unused
 
     // Release any reserved inventory for this tab
     if (reservedInventory.value.has(tabId)) {

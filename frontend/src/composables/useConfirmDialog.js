@@ -13,7 +13,7 @@ export function useConfirmDialog() {
   const confirmLabel = ref('Xác nhận')
   const cancelLabel = ref('Hủy bỏ')
   const isLoading = ref(false)
-  
+
   // Promise resolver for async confirmation
   let resolvePromise = null
 
@@ -35,7 +35,7 @@ export function useConfirmDialog() {
       confirmLabel.value = options.confirmLabel || 'Xác nhận'
       cancelLabel.value = options.cancelLabel || 'Hủy bỏ'
       isLoading.value = false
-      
+
       resolvePromise = resolve
       isVisible.value = true
     })
@@ -127,6 +127,65 @@ export function useConfirmDialog() {
     }
   }
 
+  /**
+   * Order-specific confirmation dialog templates
+   */
+  const showOrderCreationConfirm = (orderData) => {
+    const productCount = orderData.sanPhamList?.length || 0
+    const customerName = orderData.khachHang?.hoTen || 'Khách lẻ'
+    const totalAmount = orderData.tongThanhToan || 0
+    const paymentMethod = orderData.phuongThucThanhToan || 'TIEN_MAT'
+    const hasDelivery = orderData.giaohang ? 'Có' : 'Không'
+
+    return showConfirmDialog({
+      title: 'Xác nhận tạo đơn hàng',
+      message: `Bạn có chắc chắn muốn tạo đơn hàng với thông tin sau?\n\n• Khách hàng: ${customerName}\n• Số sản phẩm: ${productCount}\n• Tổng tiền: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}\n• Thanh toán: ${paymentMethod}\n• Giao hàng: ${hasDelivery}`,
+      severity: 'success',
+      confirmLabel: 'Tạo đơn hàng',
+      cancelLabel: 'Hủy bỏ'
+    })
+  }
+
+  const showOrderUpdateConfirm = (orderData) => {
+    const productCount = orderData.sanPhamList?.length || 0
+    const totalAmount = orderData.tongThanhToan || 0
+    const customerName = orderData.khachHang?.hoTen || 'Chưa chọn'
+    const hasDelivery = orderData.giaohang ? 'Có' : 'Không'
+
+    return showConfirmDialog({
+      title: 'Xác nhận cập nhật đơn hàng',
+      message: `Bạn có chắc chắn muốn cập nhật đơn hàng ${orderData.maHoaDon}?\n\nThông tin sẽ được cập nhật:\n• ${productCount} sản phẩm\n• Tổng tiền: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}\n• Khách hàng: ${customerName}\n• Giao hàng: ${hasDelivery}`,
+      severity: 'info',
+      confirmLabel: 'Cập nhật đơn hàng',
+      cancelLabel: 'Hủy bỏ'
+    })
+  }
+
+  const showOrderCancelConfirm = (orderData) => {
+    const totalAmount = orderData.tongThanhToan || 0
+    const customerName = orderData.khachHang?.hoTen || 'Khách lẻ'
+
+    return showConfirmDialog({
+      title: 'Xác nhận hủy đơn hàng',
+      message: `Bạn có chắc chắn muốn hủy đơn hàng ${orderData.maHoaDon}?\n\n• Khách hàng: ${customerName}\n• Tổng tiền: ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}\n\nHành động này không thể hoàn tác và sẽ:\n• Hoàn trả tồn kho\n• Cập nhật báo cáo\n• Ghi nhận lịch sử hủy`,
+      severity: 'warn',
+      confirmLabel: 'Xác nhận hủy',
+      cancelLabel: 'Giữ đơn hàng'
+    })
+  }
+
+  const showTabCloseConfirm = (tabData) => {
+    const productCount = tabData.sanPhamList?.length || 0
+
+    return showConfirmDialog({
+      title: 'Đóng tab đơn hàng',
+      message: `Tab "${tabData.maHoaDon}" có ${productCount} sản phẩm chưa được thanh toán.\n\nBạn có chắc chắn muốn đóng tab này? Tất cả dữ liệu sẽ bị mất.`,
+      severity: 'warn',
+      confirmLabel: 'Đóng tab',
+      cancelLabel: 'Hủy bỏ'
+    })
+  }
+
   return {
     // State
     isVisible,
@@ -136,7 +195,7 @@ export function useConfirmDialog() {
     confirmLabel,
     cancelLabel,
     isLoading,
-    
+
     // Methods
     showConfirmDialog,
     handleConfirm,
@@ -144,6 +203,12 @@ export function useConfirmDialog() {
     setLoading,
     getButtonSeverity,
     getDialogIcon,
-    getIconColorClass
+    getIconColorClass,
+
+    // Order-specific templates
+    showOrderCreationConfirm,
+    showOrderUpdateConfirm,
+    showOrderCancelConfirm,
+    showTabCloseConfirm
   }
 }

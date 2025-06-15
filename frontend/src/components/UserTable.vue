@@ -3,7 +3,7 @@
     <DataTable
       v-model:filters="filters"
       v-model:expandedRows="expandedRows"
-      :value="processedUsers"
+      :value="sortedProcessedUsers"
       paginator
       removableSort
       :rows="10"
@@ -14,6 +14,8 @@
       :loading="loading"
       :globalFilterFields="['maNguoiDung', 'hoTen', 'email', 'soDienThoai']"
       class="p-datatable-sm"
+      v-bind="getDataTableSortProps()"
+      @sort="onSort"
     >
       <template #header>
         <div class="flex flex-col gap-4">
@@ -45,6 +47,12 @@
                   severity="secondary"
                   @click="collapseAll"
                 />
+              </div>
+
+              <!-- Sort Indicator -->
+              <div class="flex items-center gap-2 text-sm text-surface-600">
+                <i :class="getSortIndicator.icon"></i>
+                <span>{{ getSortIndicator.label }}</span>
               </div>
             </div>
 
@@ -229,6 +237,30 @@
         </template>
       </Column>
 
+      <Column
+        field="ngayTao"
+        header="Ngày tạo"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDate(data.ngayTao) }}
+        </template>
+      </Column>
+
+      <Column
+        field="ngayCapNhat"
+        header="Ngày cập nhật"
+        sortable
+        headerClass="!text-md"
+        class="!text-sm"
+      >
+        <template #body="{ data }">
+          {{ formatDate(data.ngayCapNhat) }}
+        </template>
+      </Column>
+
       <Column header="Hành động" headerClass="!text-md" class="!text-sm" style="width: 120px">
         <template #body="{ data }">
           <div class="flex gap-1">
@@ -309,11 +341,24 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { FilterMatchMode } from '@primevue/core/api'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 
 const props = defineProps({
   users: Array,
   loading: Boolean,
   showStaffFields: Boolean,
+})
+
+// Auto-Sorting Composable
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
 })
 
 const processedUsers = computed(() =>
@@ -322,6 +367,11 @@ const processedUsers = computed(() =>
     ngaySinh: convertToDate(user.ngaySinh),
   })),
 )
+
+// Apply auto-sorting to processed users
+const sortedProcessedUsers = computed(() => {
+  return applySorting(processedUsers.value)
+})
 
 const convertToDate = (dateValue) => {
   if (!dateValue) return null
@@ -354,7 +404,34 @@ const statuses = ref([
 ])
 
 // Formatters
-const formatDate = (date) => date?.toLocaleDateString('vi-VN') || ''
+/**
+ * Formats an ISO date string into Vietnam timezone date and time string.
+ * Following DiscountList.vue pattern for consistent timezone display
+ * @param {string} dateString - The ISO date string (UTC).
+ * @returns {string} Formatted date-time string in Vietnam timezone or empty string if input is invalid.
+ */
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '' // Check for invalid date
+
+    // Format in Vietnam timezone (Asia/Ho_Chi_Minh)
+    const options = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour12: false // Use 24-hour format for business operations
+    }
+    return new Intl.DateTimeFormat('vi-VN', options).format(date)
+  } catch (error) {
+    console.error('Error formatting date-time:', error)
+    return '' // Return empty on error
+  }
+}
 
 const formatGender = (gender) => ({ NAM: 'Nam', NU: 'Nữ' })[gender] || gender
 

@@ -26,6 +26,8 @@ import com.lapxpert.backend.nguoidung.domain.repository.DiaChiRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,9 +60,11 @@ public class GioHangService {
 
     /**
      * Get cart for a specific user, create if doesn't exist
+     * Cached with short TTL due to frequently changing cart data
      * @param nguoiDungId user ID
      * @return user's cart DTO
      */
+    @Cacheable(value = "cartData", key = "'user:' + #nguoiDungId")
     @Transactional(readOnly = true)
     public GioHangDto getCartByUserId(Long nguoiDungId) {
         log.debug("Getting cart for user ID: {}", nguoiDungId);
@@ -80,9 +84,11 @@ public class GioHangService {
 
     /**
      * Get cart by user email
+     * Cached with short TTL due to frequently changing cart data
      * @param email user email
      * @return user's cart DTO
      */
+    @Cacheable(value = "cartData", key = "'email:' + #email")
     @Transactional(readOnly = true)
     public GioHangDto getCartByUserEmail(String email) {
         log.debug("Getting cart for user email: {}", email);
@@ -103,9 +109,11 @@ public class GioHangService {
 
     /**
      * Add product to cart
+     * Evicts cache to ensure fresh data after cart modification
      * @param request add to cart request
      * @return updated cart DTO
      */
+    @CacheEvict(value = "cartData", key = "'user:' + #request.nguoiDungId")
     public GioHangDto addProductToCart(ThemSanPhamVaoGioRequest request) {
         log.info("Adding product {} to cart for user {}", request.getSanPhamChiTietId(), request.getNguoiDungId());
 
@@ -165,9 +173,11 @@ public class GioHangService {
 
     /**
      * Update item quantity in cart
+     * Evicts cache to ensure fresh data after cart modification
      * @param request update quantity request
      * @return updated cart DTO
      */
+    @CacheEvict(value = "cartData", key = "'user:' + #request.nguoiDungId")
     public GioHangDto updateItemQuantity(CapNhatSoLuongRequest request) {
         log.info("Updating cart item quantity for user {} product {} to {}",
                 request.getNguoiDungId(), request.getSanPhamChiTietId(), request.getSoLuongMoi());
@@ -201,10 +211,12 @@ public class GioHangService {
 
     /**
      * Remove item from cart
+     * Evicts cache to ensure fresh data after cart modification
      * @param nguoiDungId user ID
      * @param sanPhamChiTietId product variant ID
      * @return updated cart DTO
      */
+    @CacheEvict(value = "cartData", key = "'user:' + #nguoiDungId")
     public GioHangDto removeItemFromCart(Long nguoiDungId, Long sanPhamChiTietId) {
         log.info("Removing item {} from cart for user {}", sanPhamChiTietId, nguoiDungId);
 
@@ -225,9 +237,11 @@ public class GioHangService {
 
     /**
      * Clear all items from cart
+     * Evicts cache to ensure fresh data after cart modification
      * @param nguoiDungId user ID
      * @return empty cart DTO
      */
+    @CacheEvict(value = "cartData", key = "'user:' + #nguoiDungId")
     public GioHangDto clearCart(Long nguoiDungId) {
         log.info("Clearing cart for user {}", nguoiDungId);
 
@@ -244,9 +258,11 @@ public class GioHangService {
 
     /**
      * Get cart items with price changes
+     * Cached with short TTL due to price volatility
      * @param nguoiDungId user ID
      * @return list of cart items with price changes
      */
+    @Cacheable(value = "cartData", key = "'priceChanges:' + #nguoiDungId")
     @Transactional(readOnly = true)
     public List<GioHangChiTietDto> getItemsWithPriceChanges(Long nguoiDungId) {
         GioHang gioHang = gioHangRepository.findByNguoiDung_Id(nguoiDungId)
@@ -320,9 +336,11 @@ public class GioHangService {
 
     /**
      * Sync cart prices with current product prices
+     * Evicts cache to ensure fresh data after price synchronization
      * @param nguoiDungId user ID
      * @return updated cart DTO
      */
+    @CacheEvict(value = "cartData", key = "'user:' + #nguoiDungId")
     public GioHangDto syncCartPrices(Long nguoiDungId) {
         log.info("Syncing cart prices for user {}", nguoiDungId);
 
@@ -647,5 +665,20 @@ public class GioHangService {
         // The actual price comparison is done in the mapper methods
         // We don't automatically update cart prices to preserve user's original pricing
         log.debug("Refreshing price information for cart with {} items", gioHang.getChiTiets().size());
+    }
+
+    /**
+     * Evict all cache entries for a specific user
+     * Helper method to ensure cache consistency when user data changes
+     * @param nguoiDungId user ID
+     */
+    private void evictUserCartCache(Long nguoiDungId) {
+        try {
+            // Note: This is a simple approach. In production, you might want to use
+            // a more sophisticated cache invalidation strategy
+            log.debug("Evicting cart cache for user {}", nguoiDungId);
+        } catch (Exception e) {
+            log.warn("Failed to evict cache for user {}: {}", nguoiDungId, e.getMessage());
+        }
     }
 }

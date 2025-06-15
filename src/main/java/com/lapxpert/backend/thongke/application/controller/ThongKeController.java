@@ -1,6 +1,6 @@
 package com.lapxpert.backend.thongke.application.controller;
 
-import com.lapxpert.backend.thongke.application.service.ThongKeService;
+import com.lapxpert.backend.thongke.domain.service.ThongKeService;
 import com.lapxpert.backend.thongke.domain.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

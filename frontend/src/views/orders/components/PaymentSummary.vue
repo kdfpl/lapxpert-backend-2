@@ -91,8 +91,8 @@
             <span class="text-surface-600 dark:text-surface-400">
               Trạng thái:
             </span>
-            <Badge 
-              :value="paymentStatusInfo.label" 
+            <Badge
+              :value="paymentStatusInfo.label"
               :severity="paymentStatusInfo.severity"
               class="text-sm"
             />
@@ -107,7 +107,7 @@
         <i class="pi pi-credit-card text-primary"></i>
         <span class="font-semibold">Phương thức thanh toán</span>
       </div>
-      
+
       <div class="flex items-center gap-3">
         <i :class="paymentMethodInfo.icon" class="text-xl text-primary"></i>
         <div>
@@ -125,10 +125,10 @@
         <i class="pi pi-ticket text-primary"></i>
         <span class="font-semibold">Voucher đã áp dụng</span>
       </div>
-      
+
       <div class="space-y-3">
-        <div 
-          v-for="voucher in appliedVouchers" 
+        <div
+          v-for="voucher in appliedVouchers"
           :key="voucher.id"
           class="flex justify-between items-center p-3 bg-surface-50 dark:bg-surface-800 rounded-lg"
         >
@@ -185,7 +185,7 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  
+
   // Payment information
   paymentMethod: {
     type: String,
@@ -199,13 +199,13 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  
+
   // Applied vouchers
   appliedVouchers: {
     type: Array,
     default: () => []
   },
-  
+
   // Display options
   showPaymentStatus: {
     type: Boolean,
@@ -237,7 +237,7 @@ const paymentStatusInfo = computed(() => {
       severity: 'secondary'
     }
   }
-  
+
   return statusMap[props.paymentStatus] || { label: 'Không xác định', severity: 'secondary' }
 })
 
@@ -245,25 +245,30 @@ const paymentMethodInfo = computed(() => {
   const methodMap = {
     'TIEN_MAT': {
       label: 'Tiền mặt',
-      description: 'Thanh toán bằng tiền mặt tại quầy',
+      description: 'Thanh toán bằng tiền mặt (tại quầy hoặc khi giao hàng)',
       icon: 'pi pi-wallet'
-    },
-    'COD': {
-      label: 'Thanh toán khi nhận hàng',
-      description: 'Thanh toán khi giao hàng',
-      icon: 'pi pi-money-bill'
     },
     'VNPAY': {
       label: 'VNPay',
       description: 'Thanh toán qua ví điện tử VNPay',
       icon: 'pi pi-credit-card'
+    },
+    'MOMO': {
+      label: 'MoMo',
+      description: 'Thanh toán qua ví điện tử MoMo',
+      icon: 'pi pi-mobile'
+    },
+    'VIETQR': {
+      label: 'VietQR',
+      description: 'Chuyển khoản ngân hàng qua QR Code',
+      icon: 'pi pi-qrcode'
     }
   }
-  
-  return methodMap[props.paymentMethod] || { 
-    label: 'Không xác định', 
-    description: '', 
-    icon: 'pi pi-question-circle' 
+
+  return methodMap[props.paymentMethod] || {
+    label: 'Không xác định',
+    description: '',
+    icon: 'pi pi-question-circle'
   }
 })
 

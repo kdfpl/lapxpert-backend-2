@@ -261,18 +261,7 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
     List<Object[]> findLowStockVariants(@Param("threshold") Integer threshold);
 
     // Validation and Constraints
-
-    /**
-     * Find duplicate serial numbers (should not exist due to unique constraint)
-     */
-    @Query("SELECT sn.serialNumberValue, COUNT(sn) FROM SerialNumber sn GROUP BY sn.serialNumberValue HAVING COUNT(sn) > 1")
-    List<Object[]> findDuplicateSerialNumbers();
-
-    /**
-     * Validate serial number format
-     */
-    @Query(value = "SELECT * FROM serial_number sn WHERE sn.serial_number_value !~ :pattern", nativeQuery = true)
-    List<SerialNumber> findInvalidSerialNumberFormat(@Param("pattern") String pattern);
+    // Note: Validation is handled at service layer and database constraint level
 
     // Bulk Operations Support
 

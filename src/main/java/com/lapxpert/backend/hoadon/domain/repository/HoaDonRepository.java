@@ -1,8 +1,8 @@
 package com.lapxpert.backend.hoadon.domain.repository;
 
 import com.lapxpert.backend.hoadon.domain.entity.HoaDon;
-import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
 import com.lapxpert.backend.hoadon.domain.enums.LoaiHoaDon;
+import com.lapxpert.backend.hoadon.domain.enums.TrangThaiDonHang;
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -140,9 +140,13 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long> {
 
     /**
      * Count orders by payment method in period
-     * TODO: This requires implementing the relationship between HoaDon and HoaDonThanhToan
-     * For now, return 0 to avoid compilation errors
+     * Joins through HoaDonThanhToan to ThanhToan to get payment method
      */
-    @Query("SELECT 0")
+    @Query("SELECT COUNT(DISTINCT h) FROM HoaDon h " +
+           "JOIN HoaDonThanhToan hdt ON h.id = hdt.hoaDon.id " +
+           "JOIN ThanhToan t ON hdt.thanhToan.id = t.id " +
+           "WHERE t.phuongThucThanhToan = :paymentMethod AND h.ngayTao >= :since")
     long countOrdersByPaymentMethodInPeriod(@Param("paymentMethod") PhuongThucThanhToan paymentMethod, @Param("since") Instant since);
+
+
 }

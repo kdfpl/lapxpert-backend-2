@@ -32,6 +32,9 @@ import com.lapxpert.backend.sanpham.domain.service.SerialNumberService;
 import com.lapxpert.backend.sanpham.domain.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
 import com.lapxpert.backend.vnpay.domain.VNPayService;
+import com.lapxpert.backend.shipping.domain.service.ShippingCalculatorService;
+import com.lapxpert.backend.shipping.domain.dto.ShippingRequest;
+import com.lapxpert.backend.shipping.domain.dto.ShippingFeeResponse;
 import com.lapxpert.backend.payment.domain.service.PaymentServiceFactory;
 import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
@@ -67,6 +70,7 @@ public class HoaDonService {
     private final MoMoGatewayService moMoGatewayService;
     private final VietQRGatewayService vietQRGatewayService;
     private final PaymentServiceFactory paymentServiceFactory;
+    private final ShippingCalculatorService shippingCalculatorService;
 
     public HoaDonService(HoaDonRepository hoaDonRepository,
                          HoaDonAuditHistoryRepository auditHistoryRepository,
@@ -84,7 +88,8 @@ public class HoaDonService {
                          VNPayService vnPayService,
                          MoMoGatewayService moMoGatewayService,
                          VietQRGatewayService vietQRGatewayService,
-                         PaymentServiceFactory paymentServiceFactory) {
+                         PaymentServiceFactory paymentServiceFactory,
+                         ShippingCalculatorService shippingCalculatorService) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.hoaDonThanhToanRepository = hoaDonThanhToanRepository;
@@ -102,6 +107,7 @@ public class HoaDonService {
         this.moMoGatewayService = moMoGatewayService;
         this.vietQRGatewayService = vietQRGatewayService;
         this.paymentServiceFactory = paymentServiceFactory;
+        this.shippingCalculatorService = shippingCalculatorService;
     }
 
     @Transactional(readOnly = true)
@@ -206,7 +212,10 @@ public class HoaDonService {
 
             // Step 7: Set order totals
             hoaDon.setTongTienHang(tongTienHang);
-            hoaDon.setPhiVanChuyen(hoaDonDto.getPhiVanChuyen() != null ? hoaDonDto.getPhiVanChuyen() : BigDecimal.ZERO);
+
+            // Step 7.1: Calculate shipping fee automatically if not provided manually
+            BigDecimal shippingFee = calculateShippingFee(hoaDon, hoaDonDto);
+            hoaDon.setPhiVanChuyen(shippingFee);
             hoaDon.setGiaTriGiamGiaVoucher(totalVoucherDiscount);
 
             BigDecimal tongCong = tongTienHang.add(hoaDon.getPhiVanChuyen()).subtract(totalVoucherDiscount);
@@ -1658,4 +1667,80 @@ public class HoaDonService {
         log.info("VietQR payment instructions created for order {} with amount {}", orderId, amount);
         return paymentInstructions;
     }
+
+    /**
+     * Calculate shipping fee automatically using GHTK API with manual override capability.
+     * If manual shipping fee is provided in DTO, it takes precedence over automatic calculation.
+     * Falls back to zero shipping fee if automatic calculation fails.
+     */
+    private BigDecimal calculateShippingFee(HoaDon hoaDon, HoaDonDto hoaDonDto) {
+        // Step 1: Check if manual shipping fee is provided (manual override)
+        if (hoaDonDto.getPhiVanChuyen() != null) {
+            log.info("Using manual shipping fee: {} VND", hoaDonDto.getPhiVanChuyen());
+            return hoaDonDto.getPhiVanChuyen();
+        }
+
+        // Step 2: Check if order requires shipping (has delivery address)
+        if (hoaDon.getDiaChiGiaoHang() == null) {
+            log.info("No delivery address provided, setting shipping fee to zero");
+            return BigDecimal.ZERO;
+        }
+
+        // Step 3: Check if shipping service is available
+        if (!shippingCalculatorService.isAvailable()) {
+            log.warn("Shipping calculator service is not available, falling back to zero shipping fee");
+            return BigDecimal.ZERO;
+        }
+
+        try {
+            // Step 4: Build shipping request from order data
+            ShippingRequest shippingRequest = buildShippingRequest(hoaDon);
+
+            // Step 5: Calculate shipping fee using GHTK API
+            ShippingFeeResponse response = shippingCalculatorService.calculateShippingFee(shippingRequest);
+
+            if (response.isSuccess() && response.getTotalFee() != null) {
+                log.info("Calculated shipping fee using {}: {} VND",
+                    response.getProviderName(), response.getTotalFee());
+                return response.getTotalFee();
+            } else {
+                log.warn("Shipping fee calculation failed: {} - {}",
+                    response.getErrorCode(), response.getErrorMessage());
+                return BigDecimal.ZERO;
+            }
+
+        } catch (Exception e) {
+            log.error("Error calculating shipping fee: {}", e.getMessage(), e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Build shipping request from order data for GHTK API.
+     * Extracts delivery address and package information from the order.
+     */
+    private ShippingRequest buildShippingRequest(HoaDon hoaDon) {
+        // Calculate total weight (assuming 500g per item as default)
+        int totalWeight = hoaDon.getHoaDonChiTiets().stream()
+            .mapToInt(chiTiet -> chiTiet.getSoLuong() * 500) // 500g per item
+            .sum();
+
+        // Ensure minimum weight of 100g
+        totalWeight = Math.max(totalWeight, 100);
+
+        // Extract delivery address information from DiaChi entity
+        DiaChi diaChiGiaoHang = hoaDon.getDiaChiGiaoHang();
+
+        return ShippingRequest.builder()
+            // Delivery location (from DiaChi entity)
+            .province(diaChiGiaoHang.getTinhThanh())
+            .district(diaChiGiaoHang.getQuanHuyen())
+            .ward(diaChiGiaoHang.getPhuongXa())
+            .address(diaChiGiaoHang.getDuong())
+            // Package details
+            .weight(totalWeight)
+            .value(hoaDon.getTongTienHang()) // Order value for insurance
+            .build();
+    }
+
 }

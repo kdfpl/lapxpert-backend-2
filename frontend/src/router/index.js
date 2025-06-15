@@ -207,6 +207,21 @@ const router = createRouter({
           }
         },
 
+        // WebSocket Test Page (Development only)
+        {
+          path: '/websocket-test',
+          name: 'WebSocketTest',
+          component: () => import('@/views/WebSocketTest.vue'),
+          meta: {
+            title: 'WebSocket Connection Test',
+            breadcrumb: [
+              { label: 'Trang chủ', to: '/' },
+              { label: 'WebSocket Test', to: '/websocket-test' }
+            ],
+            icon: 'pi pi-wifi'
+          }
+        },
+
       ],
     },
 

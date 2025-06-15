@@ -387,6 +387,7 @@ public class SerialNumberService {
 
     /**
      * Check if sufficient inventory is available for order items
+     * Handles both specific serial numbers and general quantity requests
      * Replaces InventoryService.isInventoryAvailable()
      */
     @Transactional(readOnly = true)
@@ -403,11 +404,41 @@ public class SerialNumberService {
                 return false;
             }
 
-            int availableQuantity = getAvailableQuantityByVariant(item.getSanPhamChiTietId());
-            if (availableQuantity < item.getSoLuong()) {
-                log.warn("Insufficient inventory for variant {}: requested={}, available={}",
-                        item.getSanPhamChiTietId(), item.getSoLuong(), availableQuantity);
-                return false;
+            // CRITICAL FIX: Check if specific serial numbers are provided
+            if (item.getSerialNumberId() != null) {
+                // Validate specific serial number
+                Optional<SerialNumber> serialNumber = serialNumberRepository.findById(item.getSerialNumberId());
+                if (serialNumber.isEmpty()) {
+                    log.warn("Serial number with ID {} not found", item.getSerialNumberId());
+                    return false;
+                }
+
+                SerialNumber sn = serialNumber.get();
+
+                // Check if serial number belongs to the correct variant
+                if (!sn.getSanPhamChiTiet().getId().equals(item.getSanPhamChiTietId())) {
+                    log.warn("Serial number {} belongs to variant {} but order item is for variant {}",
+                            sn.getSerialNumberValue(), sn.getSanPhamChiTiet().getId(), item.getSanPhamChiTietId());
+                    return false;
+                }
+
+                // Check if serial number is available or reserved (reserved is OK for order creation)
+                if (!sn.isAvailable() && !sn.isReserved()) {
+                    log.warn("Serial number {} is not available for order (status: {})",
+                            sn.getSerialNumberValue(), sn.getTrangThai());
+                    return false;
+                }
+
+                log.debug("Serial number {} validated for order (status: {})",
+                         sn.getSerialNumberValue(), sn.getTrangThai());
+            } else {
+                // No specific serial number provided, check general availability
+                int availableQuantity = getAvailableQuantityByVariant(item.getSanPhamChiTietId());
+                if (availableQuantity < item.getSoLuong()) {
+                    log.warn("Insufficient inventory for variant {}: requested={}, available={}",
+                            item.getSanPhamChiTietId(), item.getSoLuong(), availableQuantity);
+                    return false;
+                }
             }
         }
 
@@ -416,6 +447,7 @@ public class SerialNumberService {
 
     /**
      * Reserve items with tracking for an order
+     * Handles both specific serial numbers and general quantity requests
      * Replaces InventoryService.reserveItemsWithTracking()
      */
     @Transactional
@@ -424,16 +456,51 @@ public class SerialNumberService {
 
         try {
             for (HoaDonChiTietDto item : orderItems) {
-                List<SerialNumber> reservedForItem = reserveSerialNumbers(
-                    item.getSanPhamChiTietId(),
-                    item.getSoLuong(),
-                    channel,
-                    orderId,
-                    user
-                );
+                if (item.getSerialNumberId() != null) {
+                    // CRITICAL FIX: Handle specific serial number
+                    Optional<SerialNumber> serialNumberOpt = serialNumberRepository.findById(item.getSerialNumberId());
+                    if (serialNumberOpt.isEmpty()) {
+                        throw new IllegalArgumentException("Serial number with ID " + item.getSerialNumberId() + " not found");
+                    }
 
-                for (SerialNumber serialNumber : reservedForItem) {
+                    SerialNumber serialNumber = serialNumberOpt.get();
+
+                    // Update the reservation with the actual order ID if it was previously reserved with a temp ID
+                    if (serialNumber.isReserved()) {
+                        // Update existing reservation with actual order ID
+                        serialNumber.setDonHangDatTruoc(orderId);
+                        serialNumber.setKenhDatTruoc(channel);
+                        serialNumber.setThoiGianDatTruoc(Instant.now());
+                        serialNumberRepository.save(serialNumber);
+
+                        log.debug("Updated existing reservation for serial number {} with order ID {}",
+                                 serialNumber.getSerialNumberValue(), orderId);
+                    } else if (serialNumber.isAvailable()) {
+                        // Reserve the available serial number
+                        serialNumber.reserveWithTracking(channel, orderId);
+                        serialNumberRepository.save(serialNumber);
+
+                        log.debug("Reserved available serial number {} for order {}",
+                                 serialNumber.getSerialNumberValue(), orderId);
+                    } else {
+                        throw new IllegalArgumentException("Serial number " + serialNumber.getSerialNumberValue() +
+                                                         " is not available for reservation (status: " + serialNumber.getTrangThai() + ")");
+                    }
+
                     reservedSerialNumberIds.add(serialNumber.getId());
+                } else {
+                    // No specific serial number provided, use existing logic
+                    List<SerialNumber> reservedForItem = reserveSerialNumbers(
+                        item.getSanPhamChiTietId(),
+                        item.getSoLuong(),
+                        channel,
+                        orderId,
+                        user
+                    );
+
+                    for (SerialNumber serialNumber : reservedForItem) {
+                        reservedSerialNumberIds.add(serialNumber.getId());
+                    }
                 }
             }
 

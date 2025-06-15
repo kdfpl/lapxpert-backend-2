@@ -9,8 +9,8 @@ import Toast from 'primevue/toast'
 const router = useRouter()
 const toast = useToast()
 
-const email = ref('')
-const password = ref('')
+const taiKhoan = ref('')
+const matKhau = ref('')
 const checked = ref(false)
 const isLoading = ref(false)
 
@@ -32,33 +32,33 @@ onMounted(() => {
   }
 })
 
-const isValidEmail = (email) => {
+const isValidEmail = (taiKhoan) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return re.test(email)
+  return re.test(taiKhoan)
 }
 
 const handleLogin = async () => {
-  if (!email.value || !password.value) {
+  if (!taiKhoan.value || !matKhau.value) {
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
-      detail: 'Vui lòng nhập đầy đủ email và mật khẩu',
+      detail: 'Vui lòng nhập đầy đủ tài khoản và mật khẩu',
       life: 3000,
     })
     return
   }
 
-  if (!isValidEmail(email.value)) {
+  if (!isValidEmail(taiKhoan.value)) {
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
-      detail: 'Email không đúng định dạng',
+      detail: 'Tài khoản không đúng định dạng email',
       life: 3000,
     })
     return
   }
 
-  if (password.value.length < 6) {
+  if (matKhau.value.length < 6) {
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
@@ -70,7 +70,7 @@ const handleLogin = async () => {
 
   try {
     isLoading.value = true
-    await AuthService.login(email.value, password.value)
+    await AuthService.login(taiKhoan.value, matKhau.value)
 
     // Hiển thị thông báo thành công
     toast.add({
@@ -269,38 +269,38 @@ c-320 15 -693 83 -1053 192 -277 84 -693 270 -945 423 -80 48 -95 62 -101 88
 
           <div>
             <label
-              for="email1"
+              for="taiKhoan1"
               class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2"
-              >Email</label
+              >Tài khoản</label
             >
             <InputText
-              id="email1"
+              id="taiKhoan1"
               type="email"
-              placeholder="Email address"
+              placeholder="Nhập địa chỉ email"
               class="w-full md:w-[30rem] mb-8"
-              v-model="email"
-              :class="{ 'p-invalid': email && !isValidEmail(email) }"
+              v-model="taiKhoan"
+              :class="{ 'p-invalid': taiKhoan && !isValidEmail(taiKhoan) }"
             />
-            <small v-if="email && !isValidEmail(email)" class="p-error block mb-4"
-              >Email không hợp lệ</small
+            <small v-if="taiKhoan && !isValidEmail(taiKhoan)" class="p-error block mb-4"
+              >Tài khoản không hợp lệ</small
             >
 
             <label
-              for="password1"
+              for="matKhau1"
               class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2"
               >Mật khẩu</label
             >
             <Password
-              id="password1"
-              v-model="password"
-              placeholder="Password"
+              id="matKhau1"
+              v-model="matKhau"
+              placeholder="Nhập mật khẩu"
               :toggleMask="true"
               class="mb-4"
               fluid
               :feedback="false"
-              :class="{ 'p-invalid': password && password.length < 6 }"
+              :class="{ 'p-invalid': matKhau && matKhau.length < 6 }"
             ></Password>
-            <small v-if="password && password.length < 6" class="p-error block mb-4"
+            <small v-if="matKhau && matKhau.length < 6" class="p-error block mb-4"
               >Mật khẩu phải có ít nhất 6 ký tự</small
             >
 

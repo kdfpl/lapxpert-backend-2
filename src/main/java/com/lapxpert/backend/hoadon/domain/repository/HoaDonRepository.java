@@ -148,5 +148,19 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long> {
            "WHERE t.phuongThucThanhToan = :paymentMethod AND h.ngayTao >= :since")
     long countOrdersByPaymentMethodInPeriod(@Param("paymentMethod") PhuongThucThanhToan paymentMethod, @Param("since") Instant since);
 
+    // ==================== ORDER EXPIRATION METHODS ====================
+
+    /**
+     * Find expired unpaid orders for automatic cancellation
+     * Orders that are unpaid and created before the cutoff time
+     */
+    @Query("SELECT h FROM HoaDon h " +
+           "LEFT JOIN FETCH h.khachHang " +
+           "LEFT JOIN FETCH h.hoaDonChiTiets " +
+           "WHERE h.trangThaiThanhToan = 'CHUA_THANH_TOAN' " +
+           "AND h.trangThaiDonHang NOT IN ('DA_HUY', 'HOAN_THANH') " +
+           "AND h.ngayTao < :cutoffTime")
+    List<HoaDon> findExpiredUnpaidOrders(@Param("cutoffTime") Instant cutoffTime);
+
 
 }

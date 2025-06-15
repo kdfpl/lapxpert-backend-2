@@ -7,6 +7,7 @@ import com.lapxpert.backend.sanpham.domain.entity.sanpham.SanPhamChiTiet;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ public class SanPhamChiTietService {
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
     private final SanPhamChiTietMapper sanPhamChiTietMapper;
     private final PricingService pricingService;
+    private final SanPhamChiTietAuditService auditService;
 
     // Lấy danh sách sản phẩm có trạng thái AVAILABLE
     @Transactional(readOnly = true)
@@ -77,8 +79,13 @@ public class SanPhamChiTietService {
 
     // Cập nhật sản phẩm
     @Transactional
+    @CacheEvict(value = {"activeSanPhamList", "sanPhamList", "cartData"}, allEntries = true)
     public SanPhamChiTiet updateProduct(Long id, SanPhamChiTiet sanPham) {
         return sanPhamChiTietRepository.findById(id).map(existing -> {
+            // Capture old prices for audit and notification
+            BigDecimal oldPrice = existing.getGiaBan();
+            BigDecimal oldPromotionalPrice = existing.getGiaKhuyenMai();
+
             existing.setSanPham(sanPham.getSanPham());
             existing.setSku(sanPham.getSku());
             existing.setGiaBan(sanPham.getGiaBan());
@@ -94,7 +101,21 @@ public class SanPhamChiTietService {
             existing.setGpu(sanPham.getGpu());
             existing.setManHinh(sanPham.getManHinh());
 
-            return sanPhamChiTietRepository.save(existing);
+            SanPhamChiTiet savedProduct = sanPhamChiTietRepository.save(existing);
+
+            // CRITICAL FIX: Trigger price change audit and real-time notifications if prices changed
+            if ((oldPrice != null && !oldPrice.equals(sanPham.getGiaBan())) ||
+                (oldPromotionalPrice != null && !oldPromotionalPrice.equals(sanPham.getGiaKhuyenMai())) ||
+                (oldPrice == null && sanPham.getGiaBan() != null) ||
+                (oldPromotionalPrice == null && sanPham.getGiaKhuyenMai() != null)) {
+
+                auditService.logPriceChange(
+                    id, oldPrice, sanPham.getGiaBan(), oldPromotionalPrice, sanPham.getGiaKhuyenMai(),
+                    savedProduct.getNguoiCapNhat(), "Cập nhật giá qua ProductVariantManager", savedProduct
+                );
+            }
+
+            return savedProduct;
         }).orElseThrow(() -> new RuntimeException("Sản phẩm chi tiết không tồn tại"));
     }
 
@@ -121,19 +142,36 @@ public class SanPhamChiTietService {
         return sanPhamChiTietRepository.save(existingProduct);
     }
 
-    // Cập nhật giá sản phẩm chi tiết với audit trail
+    // Cập nhật giá sản phẩm chi tiết với audit trail và thông báo real-time
     @Transactional
     public SanPhamChiTiet updatePriceWithAudit(Long id, BigDecimal newPrice, BigDecimal newPromotionalPrice, String reason, String ipAddress, String userAgent) {
         SanPhamChiTiet existingProduct = sanPhamChiTietRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sản phẩm chi tiết không tồn tại"));
 
+        // Capture old prices for audit and notification
+        BigDecimal oldPrice = existingProduct.getGiaBan();
+        BigDecimal oldPromotionalPrice = existingProduct.getGiaKhuyenMai();
+
         // Update prices
         existingProduct.setGiaBan(newPrice);
         existingProduct.setGiaKhuyenMai(newPromotionalPrice);
 
-        // Note: Audit information is handled by SanPhamChiTietAuditHistory, not inline audit fields
+        // Save the updated product
+        SanPhamChiTiet savedProduct = sanPhamChiTietRepository.save(existingProduct);
 
-        return sanPhamChiTietRepository.save(existingProduct);
+        // Log price change with real-time notification (if prices actually changed)
+        if ((oldPrice != null && !oldPrice.equals(newPrice)) ||
+            (oldPromotionalPrice != null && !oldPromotionalPrice.equals(newPromotionalPrice)) ||
+            (oldPrice == null && newPrice != null) ||
+            (oldPromotionalPrice == null && newPromotionalPrice != null)) {
+
+            auditService.logPriceChange(
+                id, oldPrice, newPrice, oldPromotionalPrice, newPromotionalPrice,
+                savedProduct.getNguoiCapNhat(), reason, savedProduct
+            );
+        }
+
+        return savedProduct;
     }
 
 }

@@ -4,6 +4,7 @@ import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
 import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.domain.service.PaymentGatewayService;
+import com.lapxpert.backend.momo.domain.MoMoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,8 +18,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * MoMo payment controller for handling payment callbacks and processing
- * Handles MoMo payment integration with Vietnamese business terminology
+ * Enhanced MoMo payment controller with improved security, error handling, and audit logging.
+ *
+ * Security enhancements:
+ * - Enhanced parameter validation
+ * - Improved error handling with security-conscious responses
+ * - Better IP address detection and logging
+ * - Enhanced IPN processing with comprehensive validation
+ * - Proper audit logging for all payment operations
+ *
+ * v3 API Features:
+ * - Support for enhanced payment creation
+ * - Multiple response format handling
+ * - Improved callback processing
  */
 @Slf4j
 @CrossOrigin(origins = "*")
@@ -75,58 +87,75 @@ public class MoMoController {
     }
 
     /**
-     * Handle MoMo IPN (Instant Payment Notification)
-     * @param request HTTP request containing MoMo IPN data
+     * Enhanced MoMo IPN (Instant Payment Notification) handler with comprehensive security validation.
+     *
+     * @param ipnData MoMo IPN data
+     * @param request HTTP request for IP detection
      * @return Response to MoMo
      */
     @PostMapping("/momo-ipn")
-    public ResponseEntity<Map<String, String>> handlePaymentIPN(@RequestBody Map<String, String> ipnData) {
+    public ResponseEntity<Map<String, String>> handlePaymentIPN(@RequestBody Map<String, String> ipnData,
+                                                               HttpServletRequest request) {
+        String clientIp = getClientIpAddress(request);
+        String orderId = ipnData.get("orderId");
+        String transId = ipnData.get("transId");
+
+        log.info("MoMo IPN received from IP: {} - OrderID: {}, TransID: {}",
+                clientIp, orderId, transId);
+
         Map<String, String> response = new HashMap<>();
-        
+
         try {
-            log.info("Received MoMo IPN: {}", ipnData);
-            
-            // Verify payment
-            PaymentGatewayService.PaymentVerificationResult verificationResult = 
+            // Enhanced parameter validation
+            if (orderId == null || orderId.trim().isEmpty()) {
+                log.error("MoMo IPN missing orderId from IP: {}", clientIp);
+                response.put("resultCode", "1");
+                response.put("message", "Missing Order ID");
+                return ResponseEntity.ok(response);
+            }
+
+            // Verify payment using enhanced verification
+            PaymentGatewayService.PaymentVerificationResult verificationResult =
                 moMoGatewayService.verifyPaymentWithCallback(ipnData);
-            
-            String orderId = ipnData.get("orderId");
-            String resultCode = ipnData.get("resultCode");
-            
+
             if (verificationResult.isValid() && verificationResult.isSuccessful()) {
                 // Payment successful - update order status
                 try {
                     Long orderIdLong = Long.parseLong(orderId);
                     hoaDonService.confirmPayment(orderIdLong, PhuongThucThanhToan.MOMO);
-                    
-                    log.info("Order {} payment confirmed successfully via MoMo IPN", orderId);
+
+                    log.info("Order {} payment confirmed successfully via MoMo IPN from IP: {}",
+                            orderId, clientIp);
                     response.put("resultCode", "0");
                     response.put("message", "Confirm Success");
-                    
+
                 } catch (NumberFormatException e) {
-                    log.error("Invalid order ID in MoMo IPN: {}", orderId);
+                    log.error("Invalid order ID in MoMo IPN from IP: {} - OrderID: {}", clientIp, orderId);
                     response.put("resultCode", "1");
                     response.put("message", "Invalid Order ID");
-                    
+
                 } catch (Exception e) {
-                    log.error("Failed to confirm payment for order {}: {}", orderId, e.getMessage());
+                    log.error("Failed to confirm payment for order {} from IP: {} - {}",
+                             orderId, clientIp, e.getMessage(), e);
                     response.put("resultCode", "2");
                     response.put("message", "Order Confirm Failed");
                 }
-                
+
             } else {
                 // Payment failed or invalid
-                log.warn("MoMo payment verification failed for order {}: {}", orderId, verificationResult.getErrorMessage());
+                log.warn("MoMo payment verification failed for order {} from IP: {} - Error: {}",
+                        orderId, clientIp, verificationResult.getErrorMessage());
                 response.put("resultCode", "1");
                 response.put("message", "Payment Verification Failed");
             }
-            
+
         } catch (Exception e) {
-            log.error("Error processing MoMo IPN: {}", e.getMessage(), e);
+            log.error("Error processing MoMo IPN from IP: {} - OrderID: {} - {}",
+                     clientIp, orderId, e.getMessage(), e);
             response.put("resultCode", "99");
             response.put("message", "System Error");
         }
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -218,21 +247,38 @@ public class MoMoController {
     }
 
     /**
-     * Get client IP address from request
+     * Enhanced client IP address detection with comprehensive proxy header support.
+     *
      * @param request HTTP request
      * @return Client IP address
      */
     private String getClientIpAddress(HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getHeader("Proxy-Client-IP");
+        if (request == null) {
+            return "unknown";
         }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getHeader("WL-Proxy-Client-IP");
+
+        String[] headerNames = {
+            "X-Forwarded-For",
+            "X-Real-IP",
+            "X-Forwarded",
+            "X-Cluster-Client-IP",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP"
+        };
+
+        for (String headerName : headerNames) {
+            String ip = request.getHeader(headerName);
+            if (ip != null && !ip.trim().isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+                // Handle comma-separated IPs (first one is usually the real client IP)
+                if (ip.contains(",")) {
+                    ip = ip.split(",")[0].trim();
+                }
+                return ip;
+            }
         }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        return ipAddress;
+
+        // Fallback to remote address
+        String ip = request.getRemoteAddr();
+        return ip != null ? ip : "unknown";
     }
 }

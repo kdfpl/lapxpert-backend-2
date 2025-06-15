@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class VNPayGatewayService implements PaymentGatewayService {
-    
+
     private final VNPayService vnPayService;
-    
+
     public VNPayGatewayService(VNPayService vnPayService) {
         this.vnPayService = vnPayService;
     }

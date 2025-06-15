@@ -184,11 +184,36 @@ export const useProductStore = defineStore('product', {
     async updateProductDetailStatus(id, status, reason) {
       try {
         const updatedDetail = await productService.updateProductDetailStatus(id, status, reason)
-        // Update local state
+
+        // Update activeProductsDetailed array
         const index = this.activeProductsDetailed.findIndex(pd => pd.id === id)
         if (index !== -1) {
           this.activeProductsDetailed[index] = updatedDetail
         }
+
+        // CRITICAL FIX: Also update main products array and cache for status changes
+        const parentProductId = updatedDetail.sanPham?.id
+        if (parentProductId) {
+          // Update the variant in the main products array
+          const productIndex = this.products.findIndex(p => p.id === parentProductId)
+          if (productIndex !== -1) {
+            const variantIndex = this.products[productIndex].sanPhamChiTiets?.findIndex(v => v.id === id)
+            if (variantIndex !== -1) {
+              this.products[productIndex].sanPhamChiTiets[variantIndex] = updatedDetail
+            }
+          }
+
+          // Update the cached product
+          const cachedProduct = this.productCache.get(parentProductId)
+          if (cachedProduct) {
+            const cachedVariantIndex = cachedProduct.sanPhamChiTiets?.findIndex(v => v.id === id)
+            if (cachedVariantIndex !== -1) {
+              cachedProduct.sanPhamChiTiets[cachedVariantIndex] = updatedDetail
+              this.productCache.set(parentProductId, cachedProduct)
+            }
+          }
+        }
+
         return updatedDetail
       } catch (error) {
         this.error = error
@@ -295,6 +320,30 @@ export const useProductStore = defineStore('product', {
       try {
         const newDetail = await productDetailService.addProductDetailed(productDetailData)
         this.activeProductsDetailed.unshift(newDetail)
+
+        // CONSISTENCY FIX: Also update main products array and cache when creating new variants
+        const parentProductId = newDetail.sanPham?.id
+        if (parentProductId) {
+          // Add the new variant to the main products array
+          const productIndex = this.products.findIndex(p => p.id === parentProductId)
+          if (productIndex !== -1) {
+            if (!this.products[productIndex].sanPhamChiTiets) {
+              this.products[productIndex].sanPhamChiTiets = []
+            }
+            this.products[productIndex].sanPhamChiTiets.push(newDetail)
+          }
+
+          // Add the new variant to the cached product
+          const cachedProduct = this.productCache.get(parentProductId)
+          if (cachedProduct) {
+            if (!cachedProduct.sanPhamChiTiets) {
+              cachedProduct.sanPhamChiTiets = []
+            }
+            cachedProduct.sanPhamChiTiets.push(newDetail)
+            this.productCache.set(parentProductId, cachedProduct)
+          }
+        }
+
         return newDetail
       } catch (error) {
         this.error = error
@@ -305,10 +354,43 @@ export const useProductStore = defineStore('product', {
     async updateProductDetail(id, productDetailData) {
       try {
         const updatedDetail = await productDetailService.updateProductDetailed(id, productDetailData)
+
+        // Update activeProductsDetailed array
         const index = this.activeProductsDetailed.findIndex(pd => pd.id === id)
         if (index !== -1) {
           this.activeProductsDetailed[index] = updatedDetail
         }
+
+        // CRITICAL FIX: Update the main products array and cache
+        // Find the parent product that contains this variant
+        const parentProductId = updatedDetail.sanPham?.id
+        if (parentProductId) {
+          console.log(`ProductStore: Updating variant ${id} for product ${parentProductId}`)
+
+          // Update the variant in the main products array
+          const productIndex = this.products.findIndex(p => p.id === parentProductId)
+          if (productIndex !== -1) {
+            const variantIndex = this.products[productIndex].sanPhamChiTiets?.findIndex(v => v.id === id)
+            if (variantIndex !== -1) {
+              console.log(`ProductStore: Updated variant in products array at index ${variantIndex}`)
+              this.products[productIndex].sanPhamChiTiets[variantIndex] = updatedDetail
+            }
+          }
+
+          // Update the cached product
+          const cachedProduct = this.productCache.get(parentProductId)
+          if (cachedProduct) {
+            const cachedVariantIndex = cachedProduct.sanPhamChiTiets?.findIndex(v => v.id === id)
+            if (cachedVariantIndex !== -1) {
+              console.log(`ProductStore: Updated variant in cache at index ${cachedVariantIndex}`)
+              cachedProduct.sanPhamChiTiets[cachedVariantIndex] = updatedDetail
+              this.productCache.set(parentProductId, cachedProduct)
+            }
+          }
+        } else {
+          console.warn(`ProductStore: No parent product ID found for variant ${id}`)
+        }
+
         return updatedDetail
       } catch (error) {
         this.error = error
@@ -338,6 +420,27 @@ export const useProductStore = defineStore('product', {
     clearCache() {
       this.productCache.clear()
       this.lastFetch = null
+    },
+
+    // NEW: Force refresh a specific product from API
+    async forceRefreshProduct(id) {
+      try {
+        const freshProduct = await productService.getProductById(id)
+
+        // Update the main products array
+        const index = this.products.findIndex(p => p.id == id)
+        if (index !== -1) {
+          this.products[index] = freshProduct
+        }
+
+        // Update the cache
+        this.productCache.set(id, freshProduct)
+
+        return freshProduct
+      } catch (error) {
+        this.error = error
+        throw error
+      }
     },
 
     // NEW: Filter management

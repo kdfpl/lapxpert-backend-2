@@ -506,13 +506,36 @@ const cancelSerialImport = () => {
 }
 
 const refreshData = async () => {
-  await loadProduct()
-  toast.add({
-    severity: 'success',
-    summary: 'Thành công',
-    detail: 'Đã làm mới dữ liệu',
-    life: 2000
-  })
+  // Force refresh the product from API to get latest data including variant updates
+  const productId = route.params.id
+  if (productId) {
+    try {
+      console.log(`ProductDetail: Force refreshing product ${productId}`)
+
+      // Force refresh from API instead of using potentially stale cache
+      product.value = await productStore.forceRefreshProduct(productId)
+
+      console.log(`ProductDetail: Refreshed product data:`, product.value)
+
+      // Reload serial numbers for all variants
+      await loadVariantSerialNumbers()
+
+      toast.add({
+        severity: 'success',
+        summary: 'Thành công',
+        detail: 'Đã làm mới dữ liệu',
+        life: 2000
+      })
+    } catch (error) {
+      console.error('Error refreshing product data:', error)
+      toast.add({
+        severity: 'error',
+        summary: 'Lỗi',
+        detail: 'Lỗi làm mới dữ liệu',
+        life: 3000
+      })
+    }
+  }
 }
 
 // Lifecycle

@@ -32,7 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // Bỏ qua các request không cần xác thực
-        if (path.startsWith("/api/auth") || path.startsWith("/api/v1/auth")) {
+        if (path.startsWith("/api/auth") || path.startsWith("/api/v1/auth") || path.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }

@@ -96,6 +96,14 @@ public interface SanPhamChiTietAuditHistoryRepository extends JpaRepository<SanP
     Page<SanPhamChiTietAuditHistory> findDiscountAssignmentHistory(Pageable pageable);
 
     /**
+     * Find audit history by multiple action types
+     * @param sanPhamChiTietId ID of the product variant
+     * @param hanhDongs List of action types
+     * @return List of audit history entries
+     */
+    List<SanPhamChiTietAuditHistory> findBySanPhamChiTietIdAndHanhDongInOrderByThoiGianThayDoiDesc(Long sanPhamChiTietId, List<String> hanhDongs);
+
+    /**
      * Delete old audit history entries (for data retention)
      * @param cutoffDate Date before which to delete entries
      * @return Number of deleted entries

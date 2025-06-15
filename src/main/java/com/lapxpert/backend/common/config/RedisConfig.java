@@ -220,6 +220,8 @@ public class RedisConfig {
                         defaultConfig.entryTtl(Duration.ofMinutes(mediumTermTtlMinutes)))
                     .withCacheConfiguration("userSessions",
                         defaultConfig.entryTtl(Duration.ofMinutes(mediumTermTtlMinutes)))
+                    .withCacheConfiguration("shippingFees",
+                        defaultConfig.entryTtl(Duration.ofMinutes(mediumTermTtlMinutes)))
                     // Long-term caches (24 hours) - rarely changing data
                     .withCacheConfiguration("categories",
                         defaultConfig.entryTtl(Duration.ofMinutes(longTermTtlMinutes)))
@@ -244,7 +246,7 @@ public class RedisConfig {
         return new ConcurrentMapCacheManager(
             "productRatings", "sanPhamList", "activeSanPhamList",
             "searchResults", "popularProducts", "userSessions",
-            "cartData", "categories", "systemConfig"
+            "cartData", "categories", "systemConfig", "shippingFees"
         );
     }
 

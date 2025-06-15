@@ -16,9 +16,9 @@ import java.util.Map;
 @Slf4j
 @Service
 public class MoMoGatewayService implements PaymentGatewayService {
-    
+
     private final MoMoService moMoService;
-    
+
     public MoMoGatewayService(MoMoService moMoService) {
         this.moMoService = moMoService;
     }

@@ -1237,6 +1237,9 @@ const saveVariant = async () => {
     }
 
     variantDialogVisible.value = false
+
+    // CRITICAL FIX: Ensure parent component gets fresh data
+    // The updateProductDetail method now handles cache invalidation automatically
     emit('variant-updated')
   } catch (error) {
     console.error('Error saving variant:', error)
@@ -1285,6 +1288,8 @@ const updateVariantStatus = async () => {
     })
 
     statusDialogVisible.value = false
+
+    // CACHE FIX: Status updates are now properly handled by updateProductDetailStatus
     emit('variant-updated')
   } catch (error) {
     toast.add({

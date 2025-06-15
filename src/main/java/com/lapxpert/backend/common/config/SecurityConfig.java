@@ -37,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll() // Add v1 auth endpoints
                         .requestMatchers("/api/payment/**").permitAll()
+                        .requestMatchers("/api/v1/shipping/config").permitAll() // Allow shipping config for order creation
+                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket endpoints
                         .requestMatchers("/error").permitAll() // Cho phép tất cả truy cập /error
                         .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers("/api/v1/hoa-don/**").hasAnyRole("ADMIN", "STAFF")
@@ -65,6 +67,8 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
+        // Support WebSocket upgrade headers
+        configuration.setExposedHeaders(List.of("Upgrade", "Connection", "Sec-WebSocket-Accept"));
         configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

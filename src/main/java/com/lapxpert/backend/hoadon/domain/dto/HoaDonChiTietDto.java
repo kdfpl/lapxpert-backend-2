@@ -21,4 +21,8 @@ public class HoaDonChiTietDto {
     private String hinhAnhSnapshot;
     private Instant ngayTao;
     private Instant ngayCapNhat;
+
+    // Serial number information for specific inventory tracking
+    private Long serialNumberId; // ID of the specific serial number to use
+    private String serialNumber; // Serial number value for display/validation
 }

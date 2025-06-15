@@ -19,6 +19,22 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <!-- Order Expiration Warning -->
+          <div v-if="criticalExpiringOrders.length > 0"
+               class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-red-50 border-red-200 text-red-700">
+            <i class="pi pi-exclamation-triangle text-red-500 text-xs"></i>
+            <span class="text-xs font-medium">
+              {{ criticalExpiringOrders.length }} đơn hàng sắp hết hạn
+            </span>
+          </div>
+
+          <!-- General Expiration Updates -->
+          <div v-else-if="hasExpirationUpdates"
+               class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-orange-50 border-orange-200 text-orange-700">
+            <i class="pi pi-clock text-orange-500 text-xs"></i>
+            <span class="text-xs font-medium">Có cập nhật hết hạn</span>
+          </div>
+
           <Button
             label="Quay lại"
             icon="pi pi-arrow-left"
@@ -146,12 +162,19 @@
             </div>
           </div>
 
+          <!-- Price Change Warnings -->
+          <PriceChangeWarning
+            :price-changes="cartPriceChanges"
+            @acknowledge-change="acknowledgePriceChange"
+          />
+
           <!-- Order Items List -->
           <div v-if="activeTab?.sanPhamList?.length" class="space-y-3 mb-4">
             <div
-              v-for="(item, index) in activeTab.sanPhamList"
-              :key="index"
+              v-for="(item, index) in processedCartItems"
+              :key="getCartItemKey(item, index)"
               class="flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow"
+              :class="{ 'border-orange-300 bg-orange-50': item.hasPriceChange }"
             >
               <img
                 :src="getCartItemImage(item) || '/placeholder-product.png'"
@@ -186,7 +209,7 @@
                 rounded
                 size="small"
                 severity="danger"
-                @click="removeFromActiveTab(index)"
+                @click="removeFromActiveTab(item.originalIndex !== undefined ? item.originalIndex : index)"
                 v-tooltip.top="'Xóa khỏi giỏ hàng'"
               />
             </div>
@@ -439,6 +462,86 @@
                   />
                   <small v-if="addressErrors.phuongXa" class="p-error">{{ addressErrors.phuongXa }}</small>
                 </div>
+
+                <!-- Shipping Fee Calculator -->
+                <div class="border-t pt-4 mt-4">
+                  <div class="font-semibold text-base mb-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="pi pi-truck text-blue-600"></i>
+                      <span class="text-blue-800">Phí vận chuyển</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Badge
+                        :value="shippingStatus.text"
+                        :severity="shippingStatus.severity"
+                        size="small"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Shipping Fee Input -->
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">
+                      Phí vận chuyển (VND)
+                    </label>
+                    <div class="flex gap-2">
+                      <InputNumber
+                        v-model="shippingFee"
+                        :disabled="!isManualShippingOverride"
+                        placeholder="0"
+                        class="flex-1"
+                        :min="0"
+                        :max="10000000"
+                        locale="vi-VN"
+                        @input="onShippingFeeChange"
+                      />
+                      <Button
+                        v-if="!isManualShippingOverride"
+                        icon="pi pi-calculator"
+                        severity="info"
+                        outlined
+                        @click="calculateShippingFeeForCurrentAddress"
+                        :loading="isCalculatingShipping"
+                        v-tooltip.top="'Tính phí tự động'"
+                      />
+                      <Button
+                        v-if="isManualShippingOverride"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        outlined
+                        @click="enableAutoShippingCalculation"
+                        v-tooltip.top="'Chuyển về tự động'"
+                      />
+                      <Button
+                        v-if="!isManualShippingOverride"
+                        icon="pi pi-pencil"
+                        severity="warn"
+                        outlined
+                        @click="enableManualShippingOverride"
+                        v-tooltip.top="'Nhập thủ công'"
+                      />
+                    </div>
+                    <small v-if="shippingError" class="p-error">{{ shippingError }}</small>
+                  </div>
+
+                  <!-- Estimated Delivery Time -->
+                  <div v-if="estimatedDeliveryTime" class="mb-3">
+                    <div class="text-sm text-surface-600 flex items-center gap-2">
+                      <i class="pi pi-clock text-blue-600"></i>
+                      <span>Thời gian giao hàng dự kiến: {{ estimatedDeliveryTime }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Shipping Calculation Info -->
+                  <div v-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
+                    <i class="pi pi-check-circle"></i>
+                    <span>Phí vận chuyển được tính tự động qua GHTK</span>
+                  </div>
+                  <div v-else-if="isManualShippingOverride" class="text-xs text-orange-600 flex items-center gap-1">
+                    <i class="pi pi-pencil"></i>
+                    <span>Phí vận chuyển được nhập thủ công</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -446,9 +549,90 @@
 
         <!-- Voucher Section -->
         <div class="card border border-surface-200">
-          <div class="font-semibold text-lg mb-4 flex items-center gap-2">
-            <i class="pi pi-tag text-primary"></i>
-            Voucher giảm giá
+          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-tag text-primary"></i>
+              Voucher giảm giá
+            </div>
+            <!-- Real-time indicators -->
+            <div class="flex items-center gap-2">
+              <Badge v-if="hasVoucherUpdates" value="!" severity="warn" size="small"
+                     v-tooltip.top="'Có cập nhật voucher mới'" />
+              <Badge v-if="priceUpdates?.length > 0" value="₫" severity="info" size="small"
+                     v-tooltip.top="'Có thay đổi giá sản phẩm'" />
+            </div>
+          </div>
+
+          <!-- Real-time Price Update Alert -->
+          <div v-if="lastPriceUpdate && showPriceWarnings"
+               class="mb-4 p-3 border rounded-lg bg-blue-50 border-blue-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="pi pi-info-circle text-blue-600"></i>
+              <span class="font-medium text-blue-800 text-sm">Thông báo thay đổi giá</span>
+            </div>
+            <div class="text-sm text-blue-700">
+              {{ lastPriceUpdate.productName || 'Sản phẩm' }} -
+              Giá mới: {{ formatCurrency(lastPriceUpdate.newPrice) }}
+            </div>
+          </div>
+
+          <!-- Voucher Expiration Alert -->
+          <div v-if="expiredVouchers?.length > 0 && showVoucherNotifications"
+               class="mb-4 p-3 border rounded-lg bg-orange-50 border-orange-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="pi pi-exclamation-triangle text-orange-600"></i>
+              <span class="font-medium text-orange-800 text-sm">Voucher hết hạn</span>
+            </div>
+            <div class="text-sm text-orange-700">
+              {{ expiredVouchers[0].code }} đã hết hiệu lực
+              <span v-if="alternativeRecommendations?.length > 0" class="ml-2">
+                - Có {{ alternativeRecommendations.length }} voucher thay thế
+              </span>
+            </div>
+          </div>
+
+          <!-- New Voucher Alert -->
+          <div v-if="newVouchers?.length > 0 && showVoucherNotifications"
+               class="mb-4 p-3 border rounded-lg bg-green-50 border-green-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="pi pi-check-circle text-green-600"></i>
+              <span class="font-medium text-green-800 text-sm">Voucher mới</span>
+            </div>
+            <div class="text-sm text-green-700">
+              {{ newVouchers[0].code }} - Giảm {{ formatCurrency(newVouchers[0].discountValue) }} đã có hiệu lực
+            </div>
+          </div>
+
+          <!-- Critical Order Expiration Alert -->
+          <div v-if="criticalExpiringOrders?.length > 0"
+               class="mb-4 p-3 border rounded-lg bg-red-50 border-red-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="pi pi-exclamation-triangle text-red-600"></i>
+              <span class="font-medium text-red-800 text-sm">Đơn hàng sắp hết hạn</span>
+            </div>
+            <div class="space-y-1">
+              <div v-for="order in criticalExpiringOrders.slice(0, 2)" :key="order.id"
+                   class="text-sm text-red-700">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium">{{ order.orderCode }}</span>
+                  <span class="text-xs font-bold">
+                    {{ formatRemainingTime(getRemainingTimeForOrder(order.id)) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Expiration Info -->
+          <div v-else-if="expiringOrders?.length > 0"
+               class="mb-4 p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="pi pi-clock text-yellow-600"></i>
+              <span class="font-medium text-yellow-800 text-sm">Đơn hàng chờ thanh toán</span>
+            </div>
+            <div class="text-sm text-yellow-700">
+              Có {{ expiringOrders.length }} đơn hàng đang chờ thanh toán
+            </div>
           </div>
 
 
@@ -708,6 +892,76 @@
                   <div v-if="!method.available" class="text-xs text-red-500 mt-1">
                     Không khả dụng
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Expiration Panel (if there are updates) -->
+        <div v-if="hasExpirationUpdates" class="card border border-surface-200 mb-6">
+          <div class="font-semibold text-lg mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-clock text-orange-600"></i>
+              <span class="text-orange-800">Theo dõi hết hạn</span>
+            </div>
+            <Button
+              :icon="showExpirationPanel ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+              text
+              size="small"
+              @click="showExpirationPanel = !showExpirationPanel"
+            />
+          </div>
+
+          <div v-if="showExpirationPanel" class="space-y-3">
+            <!-- Critical Expiring Orders -->
+            <div v-if="criticalExpiringOrders.length > 0" class="p-3 border rounded-lg bg-red-50 border-red-200">
+              <h5 class="font-medium text-red-800 mb-2 flex items-center gap-2">
+                <i class="pi pi-exclamation-triangle"></i>
+                Đơn hàng sắp hết hạn ({{ criticalExpiringOrders.length }})
+              </h5>
+              <div class="space-y-2">
+                <div v-for="order in criticalExpiringOrders.slice(0, 3)" :key="order.id"
+                     class="text-sm text-red-700 p-2 bg-red-100 rounded">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">{{ order.orderCode }}</div>
+                    <div class="text-xs font-bold text-red-600">
+                      {{ formatRemainingTime(getRemainingTimeForOrder(order.id)) }}
+                    </div>
+                  </div>
+                  <div class="text-xs">
+                    {{ order.customerName }} - {{ formatCurrency(order.totalAmount) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Regular Expiring Orders -->
+            <div v-if="expiringOrders.length > 0" class="p-3 border rounded-lg bg-orange-50 border-orange-200">
+              <h5 class="font-medium text-orange-800 mb-2 flex items-center gap-2">
+                <i class="pi pi-clock"></i>
+                Đơn hàng chờ thanh toán ({{ expiringOrders.length }})
+              </h5>
+              <div class="space-y-1">
+                <div v-for="order in expiringOrders.slice(0, 3)" :key="order.id"
+                     class="text-sm text-orange-700 flex items-center justify-between">
+                  <span class="font-medium">{{ order.orderCode }}</span>
+                  <span class="text-xs">{{ formatRemainingTime(getRemainingTimeForOrder(order.id)) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Expired Orders -->
+            <div v-if="expiredOrders.length > 0" class="p-3 border rounded-lg bg-gray-50 border-gray-200">
+              <h5 class="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                <i class="pi pi-times-circle"></i>
+                Đơn hàng đã hết hạn ({{ expiredOrders.length }})
+              </h5>
+              <div class="space-y-1">
+                <div v-for="order in expiredOrders.slice(0, 2)" :key="order.id"
+                     class="text-sm text-gray-700">
+                  <div class="font-medium">{{ order.orderCode }}</div>
+                  <div class="text-xs text-gray-500">{{ order.reason }}</div>
                 </div>
               </div>
             </div>
@@ -1088,6 +1342,11 @@ import voucherApi from '@/apis/voucherApi'
 
 import { useOrderAudit } from '@/composables/useOrderAudit'
 import { useOrderValidation } from '@/composables/useOrderValidation'
+import { useRealTimeOrderManagement } from '@/composables/useRealTimeOrderManagement'
+import { useRealTimePricing } from '@/composables/useRealTimePricing'
+import { useVoucherMonitoring } from '@/composables/useVoucherMonitoring'
+import { useShippingCalculator } from '@/composables/useShippingCalculator'
+import { useOrderExpiration } from '@/composables/useOrderExpiration'
 import storageApi from '@/apis/storage'
 import serialNumberApi from '@/apis/serialNumberApi'
 
@@ -1098,6 +1357,7 @@ import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import Badge from 'primevue/badge'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import AutoComplete from 'primevue/autocomplete'
 import Avatar from 'primevue/avatar'
 import ToggleButton from 'primevue/togglebutton'
@@ -1111,6 +1371,7 @@ import ProductVariantDialog from '@/components/orders/ProductVariantDialog.vue'
 import FastCustomerCreate from '@/components/orders/FastCustomerCreate.vue'
 import FastAddressCreate from '@/components/orders/FastAddressCreate.vue'
 import MixedPaymentDialog from '@/components/orders/MixedPaymentDialog.vue'
+import PriceChangeWarning from '@/components/orders/PriceChangeWarning.vue'
 
 // QR Scanner
 import { QrcodeStream } from 'vue-qrcode-reader'
@@ -1174,6 +1435,9 @@ const imageUrlCache = ref(new Map())
 // Product variant dialog state
 const variantDialogVisible = ref(false)
 const productVariantDialogRef = ref(null)
+
+// Order expiration panel state
+const showExpirationPanel = ref(true)
 
 
 
@@ -1241,13 +1505,67 @@ const {
   onDistrictChange,
   setAddressData,
   // Enhanced address management functions
-  compareAddresses,
   findMatchingAddress,
   isAddressDifferentFromCustomer,
   addAddressToCustomer
 } = useEmbeddedAddress()
 
+// Real-time order management composables
+const {
+  isConnected: wsConnected,
+  connectionStatus
+} = useRealTimeOrderManagement()
 
+const {
+  priceUpdates,
+  lastPriceUpdate,
+  subscribeToPriceUpdates,
+  showPriceWarnings,
+  getLatestPriceForVariant,
+  hasRecentPriceChange,
+  formatCurrency: formatPricingCurrency
+} = useRealTimePricing()
+
+const {
+  expiredVouchers,
+  newVouchers,
+  alternativeRecommendations,
+  hasVoucherUpdates,
+  subscribeToVoucherMonitoring,
+  showVoucherNotifications
+} = useVoucherMonitoring()
+
+// Shipping calculator composable
+const {
+  isCalculating: isCalculatingShipping,
+  calculationError: shippingError,
+  shippingFee,
+  isManualOverride: isManualShippingOverride,
+  isAutoCalculated: isShippingAutoCalculated,
+  estimatedDeliveryTime,
+  shippingStatus,
+  calculateShippingFee,
+  enableManualOverride: enableManualShippingOverride,
+  enableAutoCalculation: enableAutoShippingCalculation,
+  setManualShippingFee,
+  resetShippingCalculation,
+  loadShippingConfig
+} = useShippingCalculator()
+
+// Order expiration composable
+const {
+  expiringOrders,
+  expiredOrders,
+  criticalExpiringOrders,
+  hasExpirationUpdates,
+  subscribeToOrderExpiration,
+  formatRemainingTime,
+  getRemainingTimeForOrder
+} = useOrderExpiration()
+
+// Real-time cart price change tracking
+const cartPriceChanges = ref([])
+const acknowledgedPriceChanges = ref(new Set())
 
 // Computed properties
 const canCreateActiveOrder = computed(() => {
@@ -1371,7 +1689,26 @@ const formattedDeliveryAddress = computed(() => {
   return parts.length > 0 ? parts.join(', ') : 'Chưa nhập địa chỉ giao hàng'
 })
 
+// Computed property for processed cart items with price change detection
+const processedCartItems = computed(() => {
+  if (!activeTab.value?.sanPhamList?.length) return []
 
+  return activeTab.value.sanPhamList.map((item, index) => {
+    const variantId = item.sanPhamChiTiet?.id
+    if (!variantId) return { ...item, hasPriceChange: false }
+
+    // Check if this variant has recent price changes
+    const hasPriceChange = hasRecentPriceChange(variantId)
+    const latestPrice = getLatestPriceForVariant(variantId)
+
+    return {
+      ...item,
+      hasPriceChange,
+      latestPrice,
+      originalIndex: index
+    }
+  })
+})
 
 // Methods
 const formatCurrency = (amount) => {
@@ -1380,6 +1717,141 @@ const formatCurrency = (amount) => {
     currency: 'VND'
   }).format(amount)
 }
+
+// Price change notification methods
+const getCartItemKey = (item, index) => {
+  const variantId = item.sanPhamChiTiet?.id || 'unknown'
+  const serialNumber = item.sanPhamChiTiet?.serialNumber || ''
+  return `${variantId}-${serialNumber}-${index}`
+}
+
+const acknowledgePriceChange = (index) => {
+  if (index >= 0 && index < cartPriceChanges.value.length) {
+    cartPriceChanges.value.splice(index, 1)
+  }
+}
+
+const detectCartPriceChanges = () => {
+  if (!activeTab.value?.sanPhamList?.length) return
+
+  const newPriceChanges = []
+
+  activeTab.value.sanPhamList.forEach((item, index) => {
+    const variantId = item.sanPhamChiTiet?.id
+    if (!variantId) return
+
+    const latestPrice = getLatestPriceForVariant(variantId)
+    if (latestPrice && latestPrice !== item.donGia) {
+      const changeId = `${variantId}-${item.sanPhamChiTiet?.serialNumber || ''}`
+
+      // Check if this change is already acknowledged
+      if (acknowledgedPriceChanges.value.has(changeId)) return
+
+      // Check if this change is already in the list
+      const existingChange = cartPriceChanges.value.find(change =>
+        change.variantId === variantId &&
+        change.serialNumber === (item.sanPhamChiTiet?.serialNumber || '')
+      )
+
+      if (!existingChange) {
+        newPriceChanges.push({
+          variantId,
+          serialNumber: item.sanPhamChiTiet?.serialNumber || '',
+          productName: getCartItemName(item),
+          variantInfo: getVariantDisplayInfo(item),
+          oldPrice: item.donGia,
+          newPrice: latestPrice,
+          changeType: latestPrice > item.donGia ? 'INCREASE' : 'DECREASE',
+          timestamp: new Date(),
+          cartIndex: index
+        })
+      }
+    }
+  })
+
+  if (newPriceChanges.length > 0) {
+    cartPriceChanges.value.push(...newPriceChanges)
+  }
+}
+
+// Detect same-SKU price differences in cart
+const detectSameSKUPriceDifferences = (newlyAddedItem) => {
+  if (!activeTab.value?.sanPhamList?.length || !newlyAddedItem) return
+
+  const newVariantId = newlyAddedItem.sanPhamChiTiet?.id
+  if (!newVariantId) return
+
+  const newPrice = newlyAddedItem.donGia
+  const newSerial = newlyAddedItem.sanPhamChiTiet?.serialNumber || ''
+
+  // Find existing items with the same variant ID but different prices
+  const existingItemsWithSameSKU = activeTab.value.sanPhamList.filter(item =>
+    item.sanPhamChiTiet?.id === newVariantId &&
+    item.donGia !== newPrice &&
+    item !== newlyAddedItem // Exclude the newly added item itself
+  )
+
+  if (existingItemsWithSameSKU.length > 0) {
+    // Get the first existing item's price as the "old" price
+    const oldPrice = existingItemsWithSameSKU[0].donGia
+    const changeId = `sku-diff-${newVariantId}-${newSerial}`
+
+    // Check if this change is already acknowledged
+    if (acknowledgedPriceChanges.value.has(changeId)) return
+
+    // Check if this change is already in the list
+    const existingChange = cartPriceChanges.value.find(change =>
+      change.variantId === newVariantId &&
+      change.serialNumber === newSerial &&
+      change.changeType === 'SKU_PRICE_DIFFERENCE'
+    )
+
+    if (!existingChange) {
+      cartPriceChanges.value.push({
+        variantId: newVariantId,
+        serialNumber: newSerial,
+        productName: getCartItemName(newlyAddedItem),
+        variantInfo: getVariantDisplayInfo(newlyAddedItem),
+        oldPrice: oldPrice,
+        newPrice: newPrice,
+        changeType: 'SKU_PRICE_DIFFERENCE',
+        timestamp: new Date(),
+        cartIndex: activeTab.value.sanPhamList.length - 1 // Index of newly added item
+      })
+    }
+  }
+}
+
+// Shipping fee calculation methods
+const calculateShippingFeeForCurrentAddress = async () => {
+  if (!activeTab.value?.giaohang) {
+    return
+  }
+
+  const deliveryAddress = {
+    province: addressData.value.tinhThanh,
+    district: addressData.value.quanHuyen,
+    ward: addressData.value.phuongXa,
+    address: addressData.value.duong
+  }
+
+  const orderValue = activeTab.value.tongTienHang || 0
+  const success = await calculateShippingFee(deliveryAddress, orderValue)
+
+  if (success) {
+    // Update the tab's shipping fee
+    updateActiveTabData({ phiVanChuyen: shippingFee.value })
+  }
+}
+
+const onShippingFeeChange = (value) => {
+  if (isManualShippingOverride.value) {
+    setManualShippingFee(value)
+    updateActiveTabData({ phiVanChuyen: value || 0 })
+  }
+}
+
+
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
@@ -1483,7 +1955,16 @@ const calculateVoucherDiscount = (voucher, orderTotal = null) => {
 const addVariantToActiveTab = async (variantData) => {
   if (!activeTab.value) return
 
-  const { sanPhamChiTiet, soLuong, donGia, thanhTien, groupInfo } = variantData
+  const { sanPhamChiTiet, soLuong, groupInfo } = variantData
+  let { donGia, thanhTien } = variantData
+
+  // Check if there's a more recent price for this variant
+  const latestPrice = getLatestPriceForVariant(sanPhamChiTiet.id)
+  if (latestPrice && latestPrice !== donGia) {
+    console.log(`Price updated for variant ${sanPhamChiTiet.id}: ${donGia} -> ${latestPrice}`)
+    donGia = latestPrice
+    thanhTien = latestPrice * soLuong
+  }
 
   // Check if this specific variant with the same serial number already exists in cart
   // For variants with serial numbers, we need to check both variant ID and serial number
@@ -1535,15 +2016,20 @@ const addVariantToActiveTab = async (variantData) => {
     await reserveForCart(reservationRequest)
 
     // Add new variant to cart after successful reservation
-    activeTab.value.sanPhamList.push({
+    const newCartItem = {
       sanPhamChiTiet: sanPhamChiTiet,
       soLuong: soLuong,
       donGia: donGia,
       thanhTien: thanhTien,
       groupInfo: groupInfo // Store group info for display purposes
-    })
+    }
+
+    activeTab.value.sanPhamList.push(newCartItem)
 
     calculateTabTotals(activeTabId.value)
+
+    // Check for same-SKU price differences after adding the item
+    detectSameSKUPriceDifferences(newCartItem)
 
     // Sync with product variant dialog to update stock counts
     // Add small delay to prevent race condition with immediate serial tracking
@@ -1903,7 +2389,7 @@ const processScannedSerialNumber = async (serialNumber) => {
       thanhTien: variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan ? variant.giaKhuyenMai : variant.giaBan
     }
 
-    addVariantToActiveTab(variantData)
+    await addVariantToActiveTab(variantData)
 
     qrProcessingResult.value = {
       success: true,
@@ -4395,9 +4881,13 @@ watch(
       if (activeTab.value.khachHang) {
         await syncCustomerToRecipient(activeTab.value.khachHang)
       }
+      // Reset shipping calculation when delivery is enabled
+      resetShippingCalculation()
     } else if (!deliveryEnabled && wasDeliveryEnabled) {
       // Delivery just disabled - clear recipient info
       clearRecipientInfo()
+      // Clear shipping fee when delivery is disabled
+      updateActiveTabData({ phiVanChuyen: 0 })
     }
   },
   { immediate: false }
@@ -4437,6 +4927,68 @@ watch(
     }
   },
   { immediate: false }
+)
+
+// Shipping calculation timeout for debouncing
+const shippingCalculationTimeout = ref(null)
+
+// Watch for address changes to automatically calculate shipping fee
+watch(
+  () => [
+    addressData.value.tinhThanh,
+    addressData.value.quanHuyen,
+    addressData.value.phuongXa,
+    addressData.value.duong,
+    activeTab.value?.tongTienHang
+  ],
+  async ([province, district, ward, street, orderTotal], [oldProvince, oldDistrict, oldWard, oldStreet, oldOrderTotal]) => {
+    // Only calculate if delivery is enabled and we have a complete address
+    if (!activeTab.value?.giaohang || !province || !district || !street) {
+      return
+    }
+
+    // Only calculate if address or order total has actually changed
+    const addressChanged = province !== oldProvince || district !== oldDistrict ||
+                          ward !== oldWard || street !== oldStreet
+    const orderTotalChanged = orderTotal !== oldOrderTotal
+
+    if ((addressChanged || orderTotalChanged) && !isManualShippingOverride.value) {
+      // Debounce the calculation to avoid too many API calls
+      clearTimeout(shippingCalculationTimeout.value)
+      shippingCalculationTimeout.value = setTimeout(async () => {
+        await calculateShippingFeeForCurrentAddress()
+      }, 1000) // 1 second delay
+    }
+  },
+  { immediate: false, deep: true }
+)
+
+// Watch for price updates to detect cart price changes
+watch(
+  () => priceUpdates.value,
+  (newUpdates) => {
+    if (newUpdates && newUpdates.length > 0) {
+      detectCartPriceChanges()
+    }
+  },
+  { deep: true, immediate: false }
+)
+
+// Watch for cart items to subscribe to price updates
+watch(
+  () => activeTab.value?.sanPhamList,
+  (newItems, _oldItems) => {
+    if (newItems && newItems.length > 0) {
+      const variantIds = newItems
+        .map(item => item.sanPhamChiTiet?.id)
+        .filter(Boolean)
+
+      if (variantIds.length > 0) {
+        subscribeToPriceUpdates(variantIds)
+      }
+    }
+  },
+  { deep: true, immediate: false }
 )
 
 // Page refresh/close detection for cart reservation cleanup
@@ -4862,7 +5414,6 @@ const testUIIntegration = async () => {
     }
 
     // Test 3: Customer search integration
-    const searchTerm = 'test'
     selectedCustomer.value = null
 
     // Test customer selection functionality
@@ -5098,6 +5649,33 @@ onMounted(async () => {
     await customerStore.fetchCustomers()
   } catch (error) {
     console.error('Failed to preload data:', error)
+  }
+
+  // Initialize real-time features
+  try {
+    // Subscribe to voucher monitoring
+    subscribeToVoucherMonitoring()
+
+    // Subscribe to order expiration monitoring
+    subscribeToOrderExpiration()
+
+    // Subscribe to price updates for any existing cart items
+    const existingVariantIds = activeTab.value?.sanPhamList?.map(item => item.sanPhamChiTiet?.id).filter(Boolean) || []
+    if (existingVariantIds.length > 0) {
+      subscribeToPriceUpdates(existingVariantIds)
+    }
+
+    console.log('✅ Real-time features initialized successfully')
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize real-time features:', error)
+  }
+
+  // Initialize shipping configuration
+  try {
+    await loadShippingConfig()
+    console.log('✅ Shipping configuration loaded successfully')
+  } catch (error) {
+    console.warn('⚠️ Failed to load shipping configuration:', error)
   }
 
   // Add beforeunload event listener for page refresh/close detection

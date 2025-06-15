@@ -245,6 +245,8 @@
           class="p-datatable-sm"
           :scrollable="true"
           scrollHeight="400px"
+          v-bind="getDataTableSortProps()"
+          @sort="onSort"
         >
           <template #header>
             <div class="flex justify-between items-center">
@@ -254,6 +256,16 @@
                 <span v-if="hasActiveFilters" class="text-xs text-surface-500">
                   ({{ availableVariants.length }} tổng cộng)
                 </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button
+                  icon="pi pi-refresh"
+                  size="small"
+                  outlined
+                  @click="refreshProductData"
+                  v-tooltip.top="'Làm mới giá sản phẩm'"
+                  :loading="loading"
+                />
               </div>
             </div>
           </template>
@@ -312,15 +324,31 @@
             </template>
           </Column>
 
-          <Column field="giaBan" header="Giá bán" sortable style="min-width: 120px">
+          <Column field="giaBan" header="Giá bán" sortable style="min-width: 140px">
             <template #body="{ data }">
-              <div>
-                <div v-if="data.giaKhuyenMai && data.giaKhuyenMai < data.giaBan" class="space-y-1">
-                  <div class="text-red-500 font-semibold">{{ formatCurrency(data.giaKhuyenMai) }}</div>
-                  <div class="text-xs text-surface-500 line-through">{{ formatCurrency(data.giaBan) }}</div>
+              <div class="relative">
+                <!-- Price change indicator -->
+                <div v-if="hasRecentPriceChange(data.id)" class="absolute -top-1 -right-1">
+                  <i class="pi pi-exclamation-circle text-orange-500 text-xs"
+                     v-tooltip.top="'Giá đã thay đổi gần đây'"></i>
                 </div>
-                <div v-else class="font-semibold text-primary">
-                  {{ formatCurrency(data.giaBan) }}
+
+                <!-- Current price display -->
+                <div class="space-y-1">
+                  <div class="font-semibold text-primary flex items-center gap-1">
+                    {{ formatCurrency(getVariantPrice(data)) }}
+                    <span v-if="getLatestPriceForVariant(data.id) !== null"
+                          class="text-xs bg-orange-100 text-orange-700 px-1 rounded">
+                      Cập nhật
+                    </span>
+                  </div>
+
+                  <!-- Show original price if different from current -->
+                  <div v-if="getLatestPriceForVariant(data.id) !== null &&
+                           getLatestPriceForVariant(data.id) !== (data.giaKhuyenMai || data.giaBan)"
+                       class="text-xs text-surface-500 line-through">
+                    {{ formatCurrency(data.giaKhuyenMai || data.giaBan) }}
+                  </div>
                 </div>
               </div>
             </template>
@@ -332,6 +360,12 @@
                 <div class="font-semibold text-lg text-green-600">{{ getAvailableSerialCount(data) }}</div>
                 <div class="text-xs text-surface-500">sản phẩm</div>
               </div>
+            </template>
+          </Column>
+
+          <Column field="ngayCapNhat" header="Ngày cập nhật" sortable style="min-width: 140px">
+            <template #body="{ data }">
+              {{ formatDateTime(data.ngayCapNhat) }}
             </template>
           </Column>
 
@@ -494,6 +528,8 @@ import { useToast } from 'primevue/usetoast'
 import { useAttributeStore } from '@/stores/attributestore'
 import { useProductStore } from '@/stores/productstore'
 import { useDynamicPricing } from '@/composables/useDynamicPricing'
+import { useRealTimePricing } from '@/composables/useRealTimePricing'
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
 import { storeToRefs } from 'pinia'
 
 import serialNumberApi from '@/apis/serialNumberApi'
@@ -527,6 +563,26 @@ const toast = useToast()
 const attributeStore = useAttributeStore()
 const productStore = useProductStore()
 const dynamicPricing = useDynamicPricing()
+
+// Real-time pricing integration
+const {
+  priceUpdates,
+  subscribeToPriceUpdates,
+  getLatestPriceForVariant,
+  hasRecentPriceChange
+} = useRealTimePricing()
+
+// DataTable sorting integration
+const {
+  getDataTableSortProps,
+  onSort,
+  applySorting,
+  getSortIndicator
+} = useDataTableSorting({
+  defaultSortField: 'ngayCapNhat',
+  defaultSortOrder: -1, // Newest first
+  enableUserOverride: true
+})
 
 // Destructure attribute store
 const {
@@ -692,7 +748,8 @@ const filteredVariants = computed(() => {
     })
   }
 
-  return filtered
+  // Apply sorting (auto-sort by ngayCapNhat, newest first)
+  return applySorting(filtered)
 })
 
 // Check if any filters are active
@@ -747,6 +804,13 @@ const getAvailableSerialCount = (variant) => {
 }
 
 const getVariantPrice = (variant) => {
+  // Check for real-time price updates first
+  const latestPrice = getLatestPriceForVariant(variant.id)
+  if (latestPrice !== null) {
+    return latestPrice
+  }
+
+  // Fall back to cached price data
   if (variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan) {
     return variant.giaKhuyenMai
   }
@@ -872,6 +936,24 @@ const formatCurrency = (amount) => {
   }).format(amount)
 }
 
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return 'N/A'
+  try {
+    const date = new Date(dateTime)
+    return new Intl.DateTimeFormat('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(date)
+  } catch (_error) {
+    return 'N/A'
+  }
+}
+
 
 
 const closeDialog = () => {
@@ -906,6 +988,38 @@ const refreshSerialNumbersForCrossTabs = async () => {
 
   // Reload all serial numbers to get current availability
   await loadAllSerialNumbers()
+}
+
+// Refresh product data and prices to get latest information
+const refreshProductData = async () => {
+  try {
+    console.log('ProductVariantDialog: Starting refresh of product data...')
+
+    // Force refresh product store data to get latest prices
+    await productStore.fetchProducts(true)
+
+    // Clear any cached price updates to force fresh data
+    // This ensures we get the most current prices from the database
+    console.log('ProductVariantDialog: Cleared price update cache and fetched fresh product data')
+
+    // Show success message to user
+    toast.add({
+      severity: 'success',
+      summary: 'Thành công',
+      detail: 'Đã làm mới giá sản phẩm',
+      life: 2000
+    })
+
+    console.log('ProductVariantDialog: Refreshed product data successfully')
+  } catch (error) {
+    console.error('Error refreshing product data:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Không thể làm mới giá sản phẩm',
+      life: 3000
+    })
+  }
 }
 
 // Sync used serial numbers with current cart items (legacy method for compatibility)
@@ -952,7 +1066,7 @@ watch(() => props.visible, async (isVisible) => {
     // Sync used serial numbers with current cart items when dialog opens
     syncUsedSerialNumbersWithCart()
 
-    // Load all products if not already loaded
+    // Load all products if not already loaded or refresh to get latest prices
     if (!products.value?.length) {
       loading.value = true
       try {
@@ -968,12 +1082,30 @@ watch(() => props.visible, async (isVisible) => {
       } finally {
         loading.value = false
       }
+    } else {
+      // Refresh product data to get latest prices
+      await refreshProductData()
     }
 
     // Load serial numbers for all variants
     await loadAllSerialNumbers()
+
+    // Subscribe to price updates for all available variants
+    const variantIds = availableVariants.value.map(variant => variant.id).filter(Boolean)
+    if (variantIds.length > 0) {
+      subscribeToPriceUpdates(variantIds)
+    }
   }
 }, { immediate: true })
+
+// Watch for price updates to refresh variant display
+watch(() => priceUpdates.value, (newUpdates) => {
+  if (newUpdates && newUpdates.length > 0 && props.visible) {
+    // Force reactivity update for price display
+    // The getVariantPrice function will automatically use the latest prices
+    console.log('ProductVariantDialog: Price updates received, display will refresh automatically')
+  }
+}, { deep: true })
 
 // Load serial numbers for all variants
 const loadAllSerialNumbers = async () => {

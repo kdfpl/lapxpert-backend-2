@@ -16,9 +16,9 @@ import java.util.Map;
 @Slf4j
 @Service
 public class VietQRGatewayService implements PaymentGatewayService {
-    
+
     private final VietQRService vietQRService;
-    
+
     public VietQRGatewayService(VietQRService vietQRService) {
         this.vietQRService = vietQRService;
     }
@@ -43,20 +43,20 @@ public class VietQRGatewayService implements PaymentGatewayService {
         try {
             // For VietQR, transaction verification is typically done through bank callbacks
             // or manual verification. The transactionStatus indicates the payment result.
-            
+
             if ("SUCCESS".equals(transactionStatus) || "COMPLETED".equals(transactionStatus)) {
                 log.info("VietQR payment verification successful for transaction: {}", transactionRef);
                 return PaymentVerificationResult.success(transactionRef, extractOrderIdFromTransactionRef(transactionRef));
             } else if ("FAILED".equals(transactionStatus) || "CANCELLED".equals(transactionStatus)) {
                 log.warn("VietQR payment verification failed for transaction: {} with status: {}", transactionRef, transactionStatus);
-                return PaymentVerificationResult.failure(transactionRef, extractOrderIdFromTransactionRef(transactionRef), 
+                return PaymentVerificationResult.failure(transactionRef, extractOrderIdFromTransactionRef(transactionRef),
                     "Thanh toán VietQR thất bại với trạng thái: " + transactionStatus);
             } else {
                 log.warn("Unknown VietQR payment status for transaction: {}", transactionRef);
-                return PaymentVerificationResult.failure(transactionRef, extractOrderIdFromTransactionRef(transactionRef), 
+                return PaymentVerificationResult.failure(transactionRef, extractOrderIdFromTransactionRef(transactionRef),
                     "Trạng thái thanh toán VietQR không xác định: " + transactionStatus);
             }
-            
+
         } catch (Exception e) {
             log.error("Error verifying VietQR payment for transaction {}: {}", transactionRef, e.getMessage(), e);
             return PaymentVerificationResult.invalid("Lỗi xác thực thanh toán VietQR: " + e.getMessage());

@@ -1,7 +1,12 @@
 package com.lapxpert.backend.shipping.application.controller;
 
 import com.lapxpert.backend.ghtk.domain.GHTKConfig;
+import com.lapxpert.backend.ghn.domain.GHNConfig;
+import com.lapxpert.backend.ghn.domain.service.GHNService;
+import com.lapxpert.backend.shipping.domain.service.ShippingProviderComparator;
 import com.lapxpert.backend.shipping.domain.dto.ShippingRequest;
+import com.lapxpert.backend.shipping.domain.dto.ShippingFeeResponse;
+import com.lapxpert.backend.shipping.domain.dto.ProviderComparisonResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +27,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class ShippingController {
+
+    private final GHNService ghnService;
+    private final ShippingProviderComparator providerComparator;
 
     /**
      * Get shipping configuration for frontend
@@ -224,6 +232,96 @@ public class ShippingController {
             errorResponse.put("message", e.getMessage());
             
             return ResponseEntity.ok(errorResponse);
+        }
+    }
+
+    // GHN-specific endpoints
+
+    /**
+     * Calculate shipping fee using GHN
+     */
+    @PostMapping("/ghn/calculate")
+    public ResponseEntity<ShippingFeeResponse> calculateGHNShippingFee(@RequestBody ShippingRequest request) {
+        try {
+            log.info("GHN shipping fee calculation requested for: {} -> {}",
+                    request.getPickProvince(), request.getProvince());
+
+            ShippingFeeResponse response = ghnService.calculateShippingFee(request);
+
+            if (response.isSuccess()) {
+                log.info("GHN shipping fee calculated successfully: {} VND", response.getShippingFee());
+                return ResponseEntity.ok(response);
+            } else {
+                log.warn("GHN shipping fee calculation failed: {}", response.getErrorMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+
+        } catch (Exception e) {
+            log.error("Error calculating GHN shipping fee: {}", e.getMessage(), e);
+            ShippingFeeResponse errorResponse = ShippingFeeResponse.error(
+                "CALCULATION_ERROR",
+                "Failed to calculate GHN shipping fee: " + e.getMessage(),
+                "GHN"
+            );
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Get GHN service availability
+     */
+    @GetMapping("/ghn/availability")
+    public ResponseEntity<Map<String, Object>> getGHNAvailability() {
+        try {
+            Map<String, Object> response = new HashMap<>();
+            boolean isAvailable = ghnService.isAvailable();
+
+            response.put("success", true);
+            response.put("available", isAvailable);
+            response.put("provider", "GHN");
+            response.put("message", isAvailable ? "GHN service is available" : "GHN service is not configured");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error checking GHN availability: {}", e.getMessage(), e);
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("available", false);
+            errorResponse.put("provider", "GHN");
+            errorResponse.put("message", "Error checking GHN availability: " + e.getMessage());
+
+            return ResponseEntity.ok(errorResponse);
+        }
+    }
+
+    /**
+     * Compare all available shipping providers and get the best option
+     */
+    @PostMapping("/compare")
+    public ResponseEntity<ProviderComparisonResult> compareShippingProviders(@RequestBody ShippingRequest request) {
+        try {
+            log.info("Provider comparison requested for: {} -> {}",
+                    request.getPickProvince(), request.getProvince());
+
+            ProviderComparisonResult comparisonResult = providerComparator.compareProviders(request);
+
+            if (comparisonResult.hasValidShippingOptions()) {
+                log.info("Provider comparison successful. Selected: {} with fee: {} VND",
+                    comparisonResult.getSelectedProviderName(), comparisonResult.getBestShippingFee());
+                return ResponseEntity.ok(comparisonResult);
+            } else {
+                log.warn("Provider comparison failed: {}", comparisonResult.getSelectionReason());
+                return ResponseEntity.ok(comparisonResult); // Return result even if no valid options
+            }
+
+        } catch (Exception e) {
+            log.error("Error during provider comparison: {}", e.getMessage(), e);
+            ProviderComparisonResult errorResult = ProviderComparisonResult.failed(
+                "Provider comparison failed: " + e.getMessage()
+            );
+            return ResponseEntity.internalServerError().body(errorResult);
         }
     }
 }

@@ -33,8 +33,10 @@ import com.lapxpert.backend.sanpham.domain.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.domain.service.PhieuGiamGiaService;
 import com.lapxpert.backend.vnpay.domain.VNPayService;
 import com.lapxpert.backend.shipping.domain.service.ShippingCalculatorService;
+import com.lapxpert.backend.shipping.domain.service.ShippingProviderComparator;
 import com.lapxpert.backend.shipping.domain.dto.ShippingRequest;
 import com.lapxpert.backend.shipping.domain.dto.ShippingFeeResponse;
+import com.lapxpert.backend.shipping.domain.dto.ProviderComparisonResult;
 import com.lapxpert.backend.payment.domain.service.PaymentServiceFactory;
 import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
@@ -71,6 +73,7 @@ public class HoaDonService {
     private final VietQRGatewayService vietQRGatewayService;
     private final PaymentServiceFactory paymentServiceFactory;
     private final ShippingCalculatorService shippingCalculatorService;
+    private final ShippingProviderComparator shippingProviderComparator;
 
     public HoaDonService(HoaDonRepository hoaDonRepository,
                          HoaDonAuditHistoryRepository auditHistoryRepository,
@@ -89,7 +92,8 @@ public class HoaDonService {
                          MoMoGatewayService moMoGatewayService,
                          VietQRGatewayService vietQRGatewayService,
                          PaymentServiceFactory paymentServiceFactory,
-                         ShippingCalculatorService shippingCalculatorService) {
+                         ShippingCalculatorService shippingCalculatorService,
+                         ShippingProviderComparator shippingProviderComparator) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.hoaDonThanhToanRepository = hoaDonThanhToanRepository;
@@ -108,6 +112,7 @@ public class HoaDonService {
         this.vietQRGatewayService = vietQRGatewayService;
         this.paymentServiceFactory = paymentServiceFactory;
         this.shippingCalculatorService = shippingCalculatorService;
+        this.shippingProviderComparator = shippingProviderComparator;
     }
 
     @Transactional(readOnly = true)
@@ -1669,9 +1674,10 @@ public class HoaDonService {
     }
 
     /**
-     * Calculate shipping fee automatically using GHTK API with manual override capability.
+     * Calculate shipping fee automatically using provider comparison with manual override capability.
      * If manual shipping fee is provided in DTO, it takes precedence over automatic calculation.
-     * Falls back to zero shipping fee if automatic calculation fails.
+     * Uses intelligent provider comparison to select the best shipping option.
+     * Falls back to zero shipping fee if all providers fail.
      */
     private BigDecimal calculateShippingFee(HoaDon hoaDon, HoaDonDto hoaDonDto) {
         // Step 1: Check if manual shipping fee is provided (manual override)
@@ -1686,31 +1692,55 @@ public class HoaDonService {
             return BigDecimal.ZERO;
         }
 
-        // Step 3: Check if shipping service is available
-        if (!shippingCalculatorService.isAvailable()) {
-            log.warn("Shipping calculator service is not available, falling back to zero shipping fee");
-            return BigDecimal.ZERO;
-        }
-
         try {
-            // Step 4: Build shipping request from order data
+            // Step 3: Build shipping request from order data
             ShippingRequest shippingRequest = buildShippingRequest(hoaDon);
 
-            // Step 5: Calculate shipping fee using GHTK API
-            ShippingFeeResponse response = shippingCalculatorService.calculateShippingFee(shippingRequest);
+            // Step 4: Use provider comparison to get the best shipping option
+            ProviderComparisonResult comparisonResult = shippingProviderComparator.compareProviders(shippingRequest);
 
-            if (response.isSuccess() && response.getTotalFee() != null) {
-                log.info("Calculated shipping fee using {}: {} VND",
-                    response.getProviderName(), response.getTotalFee());
-                return response.getTotalFee();
+            if (comparisonResult.hasValidShippingOptions()) {
+                BigDecimal selectedFee = comparisonResult.getBestShippingFee();
+                String selectedProvider = comparisonResult.getSelectedProviderName();
+
+                log.info("Selected shipping provider: {} with fee: {} VND ({})",
+                    selectedProvider, selectedFee, comparisonResult.getSelectionReason());
+
+                return selectedFee;
             } else {
-                log.warn("Shipping fee calculation failed: {} - {}",
-                    response.getErrorCode(), response.getErrorMessage());
+                log.warn("No valid shipping options found: {}", comparisonResult.getSelectionReason());
+
+                // Fallback: Try primary shipping service directly
+                if (shippingCalculatorService.isAvailable()) {
+                    ShippingFeeResponse fallbackResponse = shippingCalculatorService.calculateShippingFee(shippingRequest);
+                    if (fallbackResponse.isSuccess() && fallbackResponse.getTotalFee() != null) {
+                        log.info("Fallback shipping fee using {}: {} VND",
+                            fallbackResponse.getProviderName(), fallbackResponse.getTotalFee());
+                        return fallbackResponse.getTotalFee();
+                    }
+                }
+
+                log.warn("All shipping providers failed, setting shipping fee to zero");
                 return BigDecimal.ZERO;
             }
 
         } catch (Exception e) {
             log.error("Error calculating shipping fee: {}", e.getMessage(), e);
+
+            // Final fallback: Try primary service
+            try {
+                if (shippingCalculatorService.isAvailable()) {
+                    ShippingRequest shippingRequest = buildShippingRequest(hoaDon);
+                    ShippingFeeResponse fallbackResponse = shippingCalculatorService.calculateShippingFee(shippingRequest);
+                    if (fallbackResponse.isSuccess() && fallbackResponse.getTotalFee() != null) {
+                        log.info("Emergency fallback shipping fee: {} VND", fallbackResponse.getTotalFee());
+                        return fallbackResponse.getTotalFee();
+                    }
+                }
+            } catch (Exception fallbackException) {
+                log.error("Emergency fallback also failed: {}", fallbackException.getMessage());
+            }
+
             return BigDecimal.ZERO;
         }
     }

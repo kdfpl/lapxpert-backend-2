@@ -49,6 +49,77 @@ const shippingApi = {
   },
 
   /**
+   * Calculate shipping fee using GHN API
+   * @param {Object} shippingRequest - Shipping calculation request
+   * @returns {Promise<Object>} API response with GHN shipping fee data
+   */
+  async calculateGHNShippingFee(shippingRequest) {
+    try {
+      const response = await privateApi.post(`${SHIPPING_BASE_URL}/ghn/calculate`, shippingRequest)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'GHN shipping fee calculated successfully'
+      }
+    } catch (error) {
+      console.error('Error calculating GHN shipping fee:', error)
+      return {
+        success: false,
+        data: { fee: 0, isManualOverride: true, errorMessage: error.response?.data?.message || error.message },
+        message: error.response?.data?.message || error.message || 'Failed to calculate GHN shipping fee'
+      }
+    }
+  },
+
+  /**
+   * Compare all available shipping providers and get the best option
+   * @param {Object} shippingRequest - Shipping calculation request
+   * @returns {Promise<Object>} API response with provider comparison results
+   */
+  async compareShippingProviders(shippingRequest) {
+    try {
+      const response = await privateApi.post(`${SHIPPING_BASE_URL}/compare`, shippingRequest)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'Provider comparison completed successfully'
+      }
+    } catch (error) {
+      console.error('Error comparing shipping providers:', error)
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || error.message || 'Failed to compare shipping providers'
+      }
+    }
+  },
+
+  /**
+   * Get GHN service availability
+   * @returns {Promise<Object>} API response with GHN availability status
+   */
+  async getGHNAvailability() {
+    try {
+      const response = await privateApi.get(`${SHIPPING_BASE_URL}/ghn/availability`)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'GHN availability checked successfully'
+      }
+    } catch (error) {
+      console.error('Error checking GHN availability:', error)
+      return {
+        success: false,
+        data: { available: false, provider: 'GHN' },
+        message: error.response?.data?.message || error.message || 'Failed to check GHN availability'
+      }
+    }
+  },
+
+  /**
    * Get available shipping services for a route
    * @param {Object} routeRequest - Route information
    * @param {string} routeRequest.pickProvince - Pickup province

@@ -465,20 +465,58 @@ public class SerialNumberService {
 
                     SerialNumber serialNumber = serialNumberOpt.get();
 
-                    // Update the reservation with the actual order ID if it was previously reserved with a temp ID
+                    // Handle different reservation scenarios
                     if (serialNumber.isReserved()) {
-                        // Update existing reservation with actual order ID
-                        serialNumber.setDonHangDatTruoc(orderId);
-                        serialNumber.setKenhDatTruoc(channel);
-                        serialNumber.setThoiGianDatTruoc(Instant.now());
-                        serialNumberRepository.save(serialNumber);
+                        // Check if it's reserved for a cart session and we're converting to order
+                        String currentReservationId = serialNumber.getDonHangDatTruoc();
+                        String currentChannel = serialNumber.getKenhDatTruoc();
 
-                        log.debug("Updated existing reservation for serial number {} with order ID {}",
-                                 serialNumber.getSerialNumberValue(), orderId);
+                        if ("CART".equals(currentChannel) && currentReservationId != null && currentReservationId.startsWith("CART-")) {
+                            // This is a cart reservation being converted to order - update the reservation
+                            log.debug("Converting cart reservation to order reservation for serial number {} (cart: {} -> order: {})",
+                                     serialNumber.getSerialNumberValue(), currentReservationId, orderId);
+
+                            serialNumber.setDonHangDatTruoc(orderId);
+                            serialNumber.setKenhDatTruoc(channel);
+                            serialNumber.setThoiGianDatTruoc(Instant.now());
+                            serialNumberRepository.save(serialNumber);
+
+                            // Create audit trail for cart-to-order conversion
+                            SerialNumberAuditHistory auditEntry = SerialNumberAuditHistory.reservationEntry(
+                                serialNumber.getId(),
+                                channel,
+                                orderId,
+                                user,
+                                String.format("Chuyển đổi từ giỏ hàng (%s) sang đơn hàng", currentReservationId)
+                            );
+                            auditHistoryRepository.save(auditEntry);
+
+                            log.debug("Converted cart reservation to order for serial number {} (cart: {} -> order: {})",
+                                     serialNumber.getSerialNumberValue(), currentReservationId, orderId);
+                        } else {
+                            // Update existing reservation with actual order ID (for temp order IDs)
+                            serialNumber.setDonHangDatTruoc(orderId);
+                            serialNumber.setKenhDatTruoc(channel);
+                            serialNumber.setThoiGianDatTruoc(Instant.now());
+                            serialNumberRepository.save(serialNumber);
+
+                            log.debug("Updated existing reservation for serial number {} with order ID {}",
+                                     serialNumber.getSerialNumberValue(), orderId);
+                        }
                     } else if (serialNumber.isAvailable()) {
                         // Reserve the available serial number
                         serialNumber.reserveWithTracking(channel, orderId);
                         serialNumberRepository.save(serialNumber);
+
+                        // Create audit trail
+                        SerialNumberAuditHistory auditEntry = SerialNumberAuditHistory.reservationEntry(
+                            serialNumber.getId(),
+                            channel,
+                            orderId,
+                            user,
+                            "Đặt trước serial number cho đơn hàng"
+                        );
+                        auditHistoryRepository.save(auditEntry);
 
                         log.debug("Reserved available serial number {} for order {}",
                                  serialNumber.getSerialNumberValue(), orderId);

@@ -501,8 +501,8 @@
                         severity="info"
                         outlined
                         @click="calculateShippingFeeForCurrentAddress"
-                        :loading="isCalculatingShipping"
-                        v-tooltip.top="'Tính phí tự động'"
+                        :loading="isCalculatingShipping || isComparingProviders"
+                        v-tooltip.top="'So sánh nhà vận chuyển'"
                       />
                       <Button
                         v-if="isManualShippingOverride"
@@ -524,6 +524,88 @@
                     <small v-if="shippingError" class="p-error">{{ shippingError }}</small>
                   </div>
 
+                  <!-- Provider Selection (when comparison is available) -->
+                  <div v-if="hasProviderComparison && !isManualShippingOverride" class="mb-3">
+                    <label class="block text-sm font-medium mb-2">
+                      Nhà vận chuyển
+                    </label>
+                    <div class="space-y-2">
+                      <!-- Auto Selection Option -->
+                      <div
+                        class="border rounded-lg p-3 cursor-pointer transition-all"
+                        :class="{
+                          'border-primary bg-primary/5': selectedProvider === 'AUTO',
+                          'border-surface-200 hover:border-primary/50': selectedProvider !== 'AUTO'
+                        }"
+                        @click="onProviderSelect('AUTO')"
+                      >
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <i class="pi pi-sparkles text-primary"></i>
+                            <div>
+                              <div class="font-semibold text-sm">Tự động chọn tốt nhất</div>
+                              <div class="text-xs text-surface-500">
+                                {{ getProviderComparisonSummary()?.selectionReason || 'Hệ thống sẽ chọn nhà vận chuyển tối ưu' }}
+                              </div>
+                            </div>
+                          </div>
+                          <div v-if="selectedProviderInfo && selectedProvider === 'AUTO'" class="text-right">
+                            <div class="font-medium text-sm">{{ formatCurrency(selectedProviderInfo.totalFee) }}</div>
+                            <div class="text-xs text-surface-500">{{ selectedProviderInfo.providerName }}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Individual Provider Options -->
+                      <div
+                        v-for="provider in availableProviders"
+                        :key="provider.providerName"
+                        class="border rounded-lg p-3 cursor-pointer transition-all"
+                        :class="{
+                          'border-primary bg-primary/5': selectedProvider === provider.providerName,
+                          'border-surface-200 hover:border-primary/50': selectedProvider !== provider.providerName
+                        }"
+                        @click="onProviderSelect(provider.providerName)"
+                      >
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <i :class="[
+                                 provider.providerName === 'GHN' ? 'pi pi-truck' : 'pi pi-send',
+                                 provider.providerName === 'GHN' ? 'text-blue-600' : 'text-green-600'
+                               ]"></i>
+                            <div>
+                              <div class="font-semibold text-sm">{{ provider.providerName }}</div>
+                              <div class="text-xs text-surface-500">
+                                Độ tin cậy: {{ Math.round(provider.reliabilityScore * 100) }}% •
+                                Thời gian phản hồi: {{ provider.responseTimeMs }}ms
+                              </div>
+                            </div>
+                          </div>
+                          <div class="text-right">
+                            <div class="font-medium text-sm">{{ formatCurrency(provider.response.totalFee) }}</div>
+                            <div class="text-xs text-surface-500">
+                              Điểm: {{ Math.round(provider.totalScore * 100) }}/100
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Manual Override Option -->
+                      <div
+                        class="border rounded-lg p-3 cursor-pointer transition-all border-orange-200 hover:border-orange-400"
+                        @click="onProviderSelect('MANUAL')"
+                      >
+                        <div class="flex items-center gap-3">
+                          <i class="pi pi-pencil text-orange-600"></i>
+                          <div>
+                            <div class="font-semibold text-sm text-orange-800">Nhập thủ công</div>
+                            <div class="text-xs text-orange-600">Tự nhập phí vận chuyển</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Estimated Delivery Time -->
                   <div v-if="estimatedDeliveryTime" class="mb-3">
                     <div class="text-sm text-surface-600 flex items-center gap-2">
@@ -533,13 +615,23 @@
                   </div>
 
                   <!-- Shipping Calculation Info -->
-                  <div v-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
+                  <div v-if="isShippingAutoCalculated && hasProviderComparison" class="text-xs text-green-600 flex items-center gap-1">
                     <i class="pi pi-check-circle"></i>
-                    <span>Phí vận chuyển được tính tự động qua GHTK</span>
+                    <span>Phí vận chuyển được tính tự động qua {{ selectedProviderInfo?.providerName || 'hệ thống so sánh' }}</span>
+                  </div>
+                  <div v-else-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
+                    <i class="pi pi-check-circle"></i>
+                    <span>Phí vận chuyển được tính tự động</span>
                   </div>
                   <div v-else-if="isManualShippingOverride" class="text-xs text-orange-600 flex items-center gap-1">
                     <i class="pi pi-pencil"></i>
                     <span>Phí vận chuyển được nhập thủ công</span>
+                  </div>
+
+                  <!-- Provider Comparison Loading -->
+                  <div v-if="isComparingProviders" class="text-xs text-blue-600 flex items-center gap-1">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Đang so sánh nhà vận chuyển...</span>
                   </div>
                 </div>
               </div>
@@ -1084,6 +1176,14 @@
     @confirm="onMixedPaymentConfirm"
   />
 
+  <!-- Voucher Suggestion Dialog -->
+  <VoucherSuggestionDialog
+    v-model:visible="suggestionDialogVisible"
+    :suggestion="currentSuggestion"
+    @accept="onAcceptBetterVoucher"
+    @reject="onRejectBetterVoucher"
+  />
+
 
 
   <!-- QR Scanner Dialog -->
@@ -1372,6 +1472,7 @@ import FastCustomerCreate from '@/components/orders/FastCustomerCreate.vue'
 import FastAddressCreate from '@/components/orders/FastAddressCreate.vue'
 import MixedPaymentDialog from '@/components/orders/MixedPaymentDialog.vue'
 import PriceChangeWarning from '@/components/orders/PriceChangeWarning.vue'
+import VoucherSuggestionDialog from '@/components/orders/VoucherSuggestionDialog.vue'
 
 // QR Scanner
 import { QrcodeStream } from 'vue-qrcode-reader'
@@ -1530,9 +1631,15 @@ const {
   expiredVouchers,
   newVouchers,
   alternativeRecommendations,
+  betterVoucherSuggestions,
   hasVoucherUpdates,
+  hasBetterVoucherSuggestions,
   subscribeToVoucherMonitoring,
-  showVoucherNotifications
+  showVoucherNotifications,
+  suggestionDialogVisible,
+  currentSuggestion,
+  processBetterVoucherSuggestion,
+  closeSuggestionDialog
 } = useVoucherMonitoring()
 
 // Shipping calculator composable
@@ -1544,10 +1651,20 @@ const {
   isAutoCalculated: isShippingAutoCalculated,
   estimatedDeliveryTime,
   shippingStatus,
+  comparisonResults,
+  selectedProvider,
+  availableProviders,
+  isComparingProviders,
+  hasProviderComparison,
+  canSelectProvider,
+  selectedProviderInfo,
   calculateShippingFee,
+  calculateShippingFeeWithComparison,
   enableManualOverride: enableManualShippingOverride,
   enableAutoCalculation: enableAutoShippingCalculation,
   setManualShippingFee,
+  selectProvider,
+  getProviderComparisonSummary,
   resetShippingCalculation,
   loadShippingConfig
 } = useShippingCalculator()
@@ -1836,10 +1953,20 @@ const calculateShippingFeeForCurrentAddress = async () => {
   }
 
   const orderValue = activeTab.value.tongTienHang || 0
-  const success = await calculateShippingFee(deliveryAddress, orderValue)
+
+  // Use provider comparison for better shipping options
+  const success = await calculateShippingFeeWithComparison(deliveryAddress, orderValue)
 
   if (success) {
     // Update the tab's shipping fee
+    updateActiveTabData({ phiVanChuyen: shippingFee.value })
+  }
+}
+
+// Provider selection methods
+const onProviderSelect = (providerName) => {
+  const success = selectProvider(providerName)
+  if (success) {
     updateActiveTabData({ phiVanChuyen: shippingFee.value })
   }
 }
@@ -3057,6 +3184,68 @@ const onMixedPaymentConfirm = (paymentConfig) => {
 const getPaymentMethodLabel = (methodValue) => {
   const method = paymentMethods.value.find(m => m.value === methodValue)
   return method?.label || methodValue
+}
+
+// Better voucher suggestion handlers
+const onAcceptBetterVoucher = async (suggestion) => {
+  if (!activeTab.value || !suggestion) return
+
+  try {
+    // Process the suggestion acceptance
+    const result = processBetterVoucherSuggestion(suggestion, 'accept')
+
+    if (result.type === 'ACCEPT_BETTER_VOUCHER') {
+      // Remove current voucher and apply better voucher
+      const currentVoucherIndex = activeTab.value.voucherList.findIndex(
+        v => v.maPhieuGiamGia === suggestion.currentVoucherCode
+      )
+
+      if (currentVoucherIndex !== -1) {
+        // Remove current voucher
+        activeTab.value.voucherList.splice(currentVoucherIndex, 1)
+      }
+
+      // Apply better voucher
+      await selectVoucher(suggestion.betterVoucher)
+
+      // Close dialog
+      closeSuggestionDialog()
+
+      toast.add({
+        severity: 'success',
+        summary: 'Voucher đã được cập nhật',
+        detail: `Đã áp dụng voucher tốt hơn: ${suggestion.betterVoucher.maPhieuGiamGia}. Tiết kiệm thêm ${formatCurrency(suggestion.savingsAmount)}`,
+        life: 5000
+      })
+    }
+  } catch (error) {
+    console.error('Error accepting better voucher:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Không thể áp dụng voucher tốt hơn. Vui lòng thử lại.',
+      life: 3000
+    })
+  }
+}
+
+const onRejectBetterVoucher = (suggestion) => {
+  if (!suggestion) return
+
+  // Process the suggestion rejection
+  const result = processBetterVoucherSuggestion(suggestion, 'reject')
+
+  if (result.type === 'REJECT_BETTER_VOUCHER') {
+    // Close dialog
+    closeSuggestionDialog()
+
+    toast.add({
+      severity: 'info',
+      summary: 'Đã từ chối',
+      detail: 'Tiếp tục sử dụng voucher hiện tại',
+      life: 3000
+    })
+  }
 }
 
 // Calculate change amount for cash payments

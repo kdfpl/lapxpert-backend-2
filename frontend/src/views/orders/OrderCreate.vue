@@ -10,9 +10,7 @@
             <i class="pi pi-shop text-lg text-primary"></i>
           </div>
           <div>
-            <h1 class="font-semibold text-xl text-surface-900 m-0">
-              Bán hàng tại quầy
-            </h1>
+            <h1 class="font-semibold text-xl text-surface-900 m-0"> Bán hàng tại quầy </h1>
             <p class="text-surface-500 text-sm mt-1 mb-0">
               Quản lý nhiều đơn hàng đồng thời với giao diện tab
             </p>
@@ -20,8 +18,10 @@
         </div>
         <div class="flex items-center gap-2">
           <!-- Order Expiration Warning -->
-          <div v-if="criticalExpiringOrders.length > 0"
-               class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-red-50 border-red-200 text-red-700">
+          <div
+            v-if="criticalExpiringOrders.length > 0"
+            class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-red-50 border-red-200 text-red-700"
+          >
             <i class="pi pi-exclamation-triangle text-red-500 text-xs"></i>
             <span class="text-xs font-medium">
               {{ criticalExpiringOrders.length }} đơn hàng sắp hết hạn
@@ -29,8 +29,10 @@
           </div>
 
           <!-- General Expiration Updates -->
-          <div v-else-if="hasExpirationUpdates"
-               class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-orange-50 border-orange-200 text-orange-700">
+          <div
+            v-else-if="hasExpirationUpdates"
+            class="flex items-center gap-2 px-3 py-1 rounded-lg border bg-orange-50 border-orange-200 text-orange-700"
+          >
             <i class="pi pi-clock text-orange-500 text-xs"></i>
             <span class="text-xs font-medium">Có cập nhật hết hạn</span>
           </div>
@@ -56,7 +58,7 @@
             class="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all min-w-fit"
             :class="{
               'bg-primary text-white': activeTabId === tab.id,
-              'bg-surface-100 hover:bg-surface-200 text-surface-700': activeTabId !== tab.id
+              'bg-surface-100 hover:bg-surface-200 text-surface-700': activeTabId !== tab.id,
             }"
             @click="switchToTab(tab.id)"
           >
@@ -74,7 +76,11 @@
               rounded
               size="small"
               class="w-5 h-5 ml-1"
-              :class="activeTabId === tab.id ? 'text-white hover:bg-white/20' : 'text-surface-500 hover:bg-surface-300'"
+              :class="
+                activeTabId === tab.id
+                  ? 'text-white hover:bg-white/20'
+                  : 'text-surface-500 hover:bg-surface-300'
+              "
               @click.stop="closeTabWithConfirmation(tab.id)"
             />
           </div>
@@ -108,19 +114,19 @@
             v-tooltip.top="'Đóng tab hiện tại'"
           />
           <Button
-          icon="pi pi-qrcode"
-          severity="info"
-          outlined
-          @click="showQRScanner = true"
-          v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
-        />
-        <Button
-          label="Chọn sản phẩm"
-          icon="pi pi-plus"
-          severity="primary"
-          @click="showProductSelectionDialog"
-          v-tooltip.top="'Chọn sản phẩm từ danh sách'"
-        />
+            icon="pi pi-qrcode"
+            severity="info"
+            outlined
+            @click="showQRScanner = true"
+            v-tooltip.top="'Quét mã QR để thêm serial number vào giỏ hàng'"
+          />
+          <Button
+            label="Chọn sản phẩm"
+            icon="pi pi-plus"
+            severity="primary"
+            @click="showProductSelectionDialog"
+            v-tooltip.top="'Chọn sản phẩm từ danh sách'"
+          />
         </div>
       </div>
     </div>
@@ -144,8 +150,6 @@
     <div v-else-if="activeTab" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left Column: Product Selection & Order Items -->
       <div class="lg:col-span-2 space-y-6">
-
-
         <!-- Order Items -->
         <div class="card border border-surface-200">
           <div class="font-semibold text-lg mb-4 flex items-center justify-between">
@@ -187,13 +191,19 @@
                 <div class="text-xs text-surface-600 mb-2">
                   {{ getVariantDisplayInfo(item) }}
                 </div>
-                <div class="text-sm text-primary font-semibold">{{ formatCurrency(item.donGia) }}</div>
+                <div class="text-sm text-primary font-semibold">{{
+                  formatCurrency(item.donGia)
+                }}</div>
               </div>
               <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg shadow-sm">
+                <div
+                  class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg shadow-sm"
+                >
                   <i class="pi pi-barcode text-primary text-lg"></i>
                   <div class="flex flex-col">
-                    <span class="text-xs text-surface-500 uppercase tracking-wide font-medium">Serial</span>
+                    <span class="text-xs text-surface-500 uppercase tracking-wide font-medium"
+                      >Serial</span
+                    >
                     <span class="text-sm font-bold font-mono text-primary">
                       {{ item.sanPhamChiTiet?.serialNumber || 'N/A' }}
                     </span>
@@ -201,7 +211,9 @@
                 </div>
               </div>
               <div class="text-right min-w-0">
-                <div class="font-semibold text-lg text-primary">{{ formatCurrency(item.thanhTien) }}</div>
+                <div class="font-semibold text-lg text-primary">{{
+                  formatCurrency(item.thanhTien)
+                }}</div>
               </div>
               <Button
                 icon="pi pi-trash"
@@ -209,7 +221,9 @@
                 rounded
                 size="small"
                 severity="danger"
-                @click="removeFromActiveTab(item.originalIndex !== undefined ? item.originalIndex : index)"
+                @click="
+                  removeFromActiveTab(item.originalIndex !== undefined ? item.originalIndex : index)
+                "
                 v-tooltip.top="'Xóa khỏi giỏ hàng'"
               />
             </div>
@@ -222,8 +236,6 @@
             <p class="text-xs">Tìm kiếm và thêm sản phẩm ở phía trên</p>
           </div>
         </div>
-
-
       </div>
 
       <!-- Right Column: Order Summary & Actions -->
@@ -296,8 +308,6 @@
           </div>
         </div>
 
-
-
         <!-- Delivery Options -->
         <div class="card border border-surface-200">
           <div class="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -315,8 +325,6 @@
               :disabled="!activeTab"
             />
           </div>
-
-
 
           <!-- Recipient Information Form (when delivery is enabled) -->
           <div v-if="activeTab?.giaohang" class="space-y-4">
@@ -349,12 +357,16 @@
                       <Avatar :label="item.hoTen?.charAt(0)" size="small" />
                       <div>
                         <div class="font-medium">{{ item.hoTen }}</div>
-                        <div class="text-sm text-surface-500">{{ item.soDienThoai || 'Không có SĐT' }}</div>
+                        <div class="text-sm text-surface-500">{{
+                          item.soDienThoai || 'Không có SĐT'
+                        }}</div>
                       </div>
                     </div>
                   </template>
                 </AutoComplete>
-                <small v-if="recipientErrors.hoTen" class="p-error">{{ recipientErrors.hoTen }}</small>
+                <small v-if="recipientErrors.hoTen" class="p-error">{{
+                  recipientErrors.hoTen
+                }}</small>
               </div>
 
               <!-- Recipient Phone -->
@@ -384,7 +396,9 @@
                     </div>
                   </template>
                 </AutoComplete>
-                <small v-if="recipientErrors.soDienThoai" class="p-error">{{ recipientErrors.soDienThoai }}</small>
+                <small v-if="recipientErrors.soDienThoai" class="p-error">{{
+                  recipientErrors.soDienThoai
+                }}</small>
               </div>
 
               <!-- Embedded Address Form -->
@@ -405,7 +419,9 @@
                     class="w-full"
                     :class="{ 'p-invalid': addressErrors.duong }"
                   />
-                  <small v-if="addressErrors.duong" class="p-error">{{ addressErrors.duong }}</small>
+                  <small v-if="addressErrors.duong" class="p-error">{{
+                    addressErrors.duong
+                  }}</small>
                 </div>
 
                 <!-- Province/City -->
@@ -423,7 +439,9 @@
                     @change="onProvinceChange"
                     :loading="loadingProvinces"
                   />
-                  <small v-if="addressErrors.tinhThanh" class="p-error">{{ addressErrors.tinhThanh }}</small>
+                  <small v-if="addressErrors.tinhThanh" class="p-error">{{
+                    addressErrors.tinhThanh
+                  }}</small>
                 </div>
 
                 <!-- District -->
@@ -442,7 +460,9 @@
                     :disabled="!selectedProvince"
                     :loading="loadingDistricts"
                   />
-                  <small v-if="addressErrors.quanHuyen" class="p-error">{{ addressErrors.quanHuyen }}</small>
+                  <small v-if="addressErrors.quanHuyen" class="p-error">{{
+                    addressErrors.quanHuyen
+                  }}</small>
                 </div>
 
                 <!-- Ward -->
@@ -460,7 +480,9 @@
                     :disabled="!selectedDistrict"
                     :loading="loadingWards"
                   />
-                  <small v-if="addressErrors.phuongXa" class="p-error">{{ addressErrors.phuongXa }}</small>
+                  <small v-if="addressErrors.phuongXa" class="p-error">{{
+                    addressErrors.phuongXa
+                  }}</small>
                 </div>
 
                 <!-- Shipping Fee Calculator -->
@@ -481,9 +503,7 @@
 
                   <!-- Shipping Fee Input -->
                   <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">
-                      Phí vận chuyển (VND)
-                    </label>
+                    <label class="block text-sm font-medium mb-1"> Phí vận chuyển (VND) </label>
                     <div class="flex gap-2">
                       <InputNumber
                         v-model="shippingFee"
@@ -533,11 +553,17 @@
                   </div>
 
                   <!-- Shipping Calculation Info -->
-                  <div v-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
+                  <div
+                    v-if="isShippingAutoCalculated"
+                    class="text-xs text-green-600 flex items-center gap-1"
+                  >
                     <i class="pi pi-check-circle"></i>
                     <span>Phí vận chuyển được tính tự động qua GHTK</span>
                   </div>
-                  <div v-else-if="isManualShippingOverride" class="text-xs text-orange-600 flex items-center gap-1">
+                  <div
+                    v-else-if="isManualShippingOverride"
+                    class="text-xs text-orange-600 flex items-center gap-1"
+                  >
                     <i class="pi pi-pencil"></i>
                     <span>Phí vận chuyển được nhập thủ công</span>
                   </div>
@@ -556,29 +582,43 @@
             </div>
             <!-- Real-time indicators -->
             <div class="flex items-center gap-2">
-              <Badge v-if="hasVoucherUpdates" value="!" severity="warn" size="small"
-                     v-tooltip.top="'Có cập nhật voucher mới'" />
-              <Badge v-if="priceUpdates?.length > 0" value="₫" severity="info" size="small"
-                     v-tooltip.top="'Có thay đổi giá sản phẩm'" />
+              <Badge
+                v-if="hasVoucherUpdates"
+                value="!"
+                severity="warn"
+                size="small"
+                v-tooltip.top="'Có cập nhật voucher mới'"
+              />
+              <Badge
+                v-if="priceUpdates?.length > 0"
+                value="₫"
+                severity="info"
+                size="small"
+                v-tooltip.top="'Có thay đổi giá sản phẩm'"
+              />
             </div>
           </div>
 
           <!-- Real-time Price Update Alert -->
-          <div v-if="lastPriceUpdate && showPriceWarnings"
-               class="mb-4 p-3 border rounded-lg bg-blue-50 border-blue-200">
+          <div
+            v-if="lastPriceUpdate && showPriceWarnings"
+            class="mb-4 p-3 border rounded-lg bg-blue-50 border-blue-200"
+          >
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-info-circle text-blue-600"></i>
               <span class="font-medium text-blue-800 text-sm">Thông báo thay đổi giá</span>
             </div>
             <div class="text-sm text-blue-700">
-              {{ lastPriceUpdate.productName || 'Sản phẩm' }} -
-              Giá mới: {{ formatCurrency(lastPriceUpdate.newPrice) }}
+              {{ lastPriceUpdate.productName || 'Sản phẩm' }} - Giá mới:
+              {{ formatCurrency(lastPriceUpdate.newPrice) }}
             </div>
           </div>
 
           <!-- Voucher Expiration Alert -->
-          <div v-if="expiredVouchers?.length > 0 && showVoucherNotifications"
-               class="mb-4 p-3 border rounded-lg bg-orange-50 border-orange-200">
+          <div
+            v-if="expiredVouchers?.length > 0 && showVoucherNotifications"
+            class="mb-4 p-3 border rounded-lg bg-orange-50 border-orange-200"
+          >
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-exclamation-triangle text-orange-600"></i>
               <span class="font-medium text-orange-800 text-sm">Voucher hết hạn</span>
@@ -592,27 +632,35 @@
           </div>
 
           <!-- New Voucher Alert -->
-          <div v-if="newVouchers?.length > 0 && showVoucherNotifications"
-               class="mb-4 p-3 border rounded-lg bg-green-50 border-green-200">
+          <div
+            v-if="newVouchers?.length > 0 && showVoucherNotifications"
+            class="mb-4 p-3 border rounded-lg bg-green-50 border-green-200"
+          >
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-check-circle text-green-600"></i>
               <span class="font-medium text-green-800 text-sm">Voucher mới</span>
             </div>
             <div class="text-sm text-green-700">
-              {{ newVouchers[0].code }} - Giảm {{ formatCurrency(newVouchers[0].discountValue) }} đã có hiệu lực
+              {{ newVouchers[0].code }} - Giảm {{ formatCurrency(newVouchers[0].discountValue) }} đã
+              có hiệu lực
             </div>
           </div>
 
           <!-- Critical Order Expiration Alert -->
-          <div v-if="criticalExpiringOrders?.length > 0"
-               class="mb-4 p-3 border rounded-lg bg-red-50 border-red-200">
+          <div
+            v-if="criticalExpiringOrders?.length > 0"
+            class="mb-4 p-3 border rounded-lg bg-red-50 border-red-200"
+          >
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-exclamation-triangle text-red-600"></i>
               <span class="font-medium text-red-800 text-sm">Đơn hàng sắp hết hạn</span>
             </div>
             <div class="space-y-1">
-              <div v-for="order in criticalExpiringOrders.slice(0, 2)" :key="order.id"
-                   class="text-sm text-red-700">
+              <div
+                v-for="order in criticalExpiringOrders.slice(0, 2)"
+                :key="order.id"
+                class="text-sm text-red-700"
+              >
                 <div class="flex items-center justify-between">
                   <span class="font-medium">{{ order.orderCode }}</span>
                   <span class="text-xs font-bold">
@@ -624,8 +672,10 @@
           </div>
 
           <!-- Order Expiration Info -->
-          <div v-else-if="expiringOrders?.length > 0"
-               class="mb-4 p-3 border rounded-lg bg-yellow-50 border-yellow-200">
+          <div
+            v-else-if="expiringOrders?.length > 0"
+            class="mb-4 p-3 border rounded-lg bg-yellow-50 border-yellow-200"
+          >
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-clock text-yellow-600"></i>
               <span class="font-medium text-yellow-800 text-sm">Đơn hàng chờ thanh toán</span>
@@ -634,8 +684,6 @@
               Có {{ expiringOrders.length }} đơn hàng đang chờ thanh toán
             </div>
           </div>
-
-
 
           <!-- Applied Vouchers -->
           <div v-if="activeTab?.voucherList?.length" class="space-y-2 mb-4">
@@ -685,7 +733,7 @@
                 class="relative p-3 border rounded-lg transition-all cursor-pointer hover:shadow-md"
                 :class="{
                   'border-green-500 bg-green-50': isBestAvailableVoucher(voucher),
-                  'border-surface-200 bg-surface-50': !isBestAvailableVoucher(voucher)
+                  'border-surface-200 bg-surface-50': !isBestAvailableVoucher(voucher),
                 }"
                 @click="selectVoucher(voucher)"
               >
@@ -696,14 +744,22 @@
 
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
-                    <div class="font-semibold text-sm mb-1" :class="isBestAvailableVoucher(voucher) ? 'text-green-800' : 'text-surface-900'">
+                    <div
+                      class="font-semibold text-sm mb-1"
+                      :class="
+                        isBestAvailableVoucher(voucher) ? 'text-green-800' : 'text-surface-900'
+                      "
+                    >
                       {{ voucher.tenPhieuGiamGia || voucher.maPhieuGiamGia }}
                     </div>
                     <div class="text-xs text-surface-500 mb-2">{{ voucher.moTa }}</div>
 
                     <!-- Voucher Details -->
                     <div class="space-y-1">
-                      <div class="text-sm font-medium" :class="isBestAvailableVoucher(voucher) ? 'text-green-700' : 'text-primary'">
+                      <div
+                        class="text-sm font-medium"
+                        :class="isBestAvailableVoucher(voucher) ? 'text-green-700' : 'text-primary'"
+                      >
                         Giảm {{ formatCurrency(calculateVoucherDiscount(voucher)) }}
                       </div>
 
@@ -730,7 +786,11 @@
                     text
                     rounded
                     size="small"
-                    :class="isBestAvailableVoucher(voucher) ? 'text-green-600 hover:bg-green-100' : 'text-primary hover:bg-primary/10'"
+                    :class="
+                      isBestAvailableVoucher(voucher)
+                        ? 'text-green-600 hover:bg-green-100'
+                        : 'text-primary hover:bg-primary/10'
+                    "
                   />
                 </div>
               </div>
@@ -739,7 +799,11 @@
             <!-- Show More/Less Button -->
             <div v-if="availableVouchers.length > voucherDisplayLimit" class="text-center mt-3">
               <Button
-                :label="showAllVouchers ? 'Thu gọn' : `Xem thêm ${availableVouchers.length - voucherDisplayLimit} voucher`"
+                :label="
+                  showAllVouchers
+                    ? 'Thu gọn'
+                    : `Xem thêm ${availableVouchers.length - voucherDisplayLimit} voucher`
+                "
                 :icon="showAllVouchers ? 'pi pi-angle-up' : 'pi pi-angle-down'"
                 text
                 size="small"
@@ -765,9 +829,14 @@
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
                     <div class="font-semibold text-sm mb-1 text-surface-700">
-                      {{ recommendation.voucher.tenPhieuGiamGia || recommendation.voucher.maPhieuGiamGia }}
+                      {{
+                        recommendation.voucher.tenPhieuGiamGia ||
+                        recommendation.voucher.maPhieuGiamGia
+                      }}
                     </div>
-                    <div class="text-xs text-surface-500 mb-2">{{ recommendation.voucher.moTa }}</div>
+                    <div class="text-xs text-surface-500 mb-2">{{
+                      recommendation.voucher.moTa
+                    }}</div>
 
                     <!-- Voucher Details -->
                     <div class="space-y-1">
@@ -783,10 +852,17 @@
                       <!-- Conditions -->
                       <div class="text-xs text-surface-600">
                         <span v-if="recommendation.voucher.giaTriDonHangToiThieu">
-                          Đơn tối thiểu: {{ formatCurrency(recommendation.voucher.giaTriDonHangToiThieu) }}
+                          Đơn tối thiểu:
+                          {{ formatCurrency(recommendation.voucher.giaTriDonHangToiThieu) }}
                         </span>
-                        <span v-if="recommendation.voucher.giaTriGiamToiDa && recommendation.voucher.loaiGiamGia === 'PHAN_TRAM'">
-                          • Giảm tối đa: {{ formatCurrency(recommendation.voucher.giaTriGiamToiDa) }}
+                        <span
+                          v-if="
+                            recommendation.voucher.giaTriGiamToiDa &&
+                            recommendation.voucher.loaiGiamGia === 'PHAN_TRAM'
+                          "
+                        >
+                          • Giảm tối đa:
+                          {{ formatCurrency(recommendation.voucher.giaTriGiamToiDa) }}
                         </span>
                       </div>
 
@@ -812,7 +888,12 @@
           </div>
 
           <!-- No Vouchers Available -->
-          <div v-if="!activeTab?.voucherList?.length && !availableVouchers.length && activeTab?.khachHang" class="mb-4 p-3 border border-dashed border-surface-300 rounded-lg text-center">
+          <div
+            v-if="
+              !activeTab?.voucherList?.length && !availableVouchers.length && activeTab?.khachHang
+            "
+            class="mb-4 p-3 border border-dashed border-surface-300 rounded-lg text-center"
+          >
             <i class="pi pi-info-circle text-surface-400 text-lg mb-2"></i>
             <p class="text-sm text-surface-500">Không có voucher khả dụng cho đơn hàng này</p>
           </div>
@@ -843,7 +924,10 @@
             <p class="text-sm">Vui lòng kiểm tra lại tùy chọn giao hàng</p>
           </div>
           <!-- Mixed Payment Display -->
-          <div v-if="activeTab?.phuongThucThanhToan === 'MIXED' && activeTab?.mixedPayments" class="mb-4">
+          <div
+            v-if="activeTab?.phuongThucThanhToan === 'MIXED' && activeTab?.mixedPayments"
+            class="mb-4"
+          >
             <div class="border rounded-lg p-3 bg-blue-50 border-blue-200">
               <div class="flex items-center gap-2 mb-3">
                 <i class="pi pi-plus-circle text-blue-600"></i>
@@ -879,8 +963,9 @@
               class="border rounded-lg p-3 cursor-pointer transition-all"
               :class="{
                 'border-primary bg-primary/5': activeTab?.phuongThucThanhToan === method.value,
-                'border-surface-200 hover:border-primary/50': activeTab?.phuongThucThanhToan !== method.value,
-                'opacity-50 cursor-not-allowed': !method.available
+                'border-surface-200 hover:border-primary/50':
+                  activeTab?.phuongThucThanhToan !== method.value,
+                'opacity-50 cursor-not-allowed': !method.available,
               }"
               @click="method.available && selectPaymentMethod(method.value)"
             >
@@ -915,14 +1000,20 @@
 
           <div v-if="showExpirationPanel" class="space-y-3">
             <!-- Critical Expiring Orders -->
-            <div v-if="criticalExpiringOrders.length > 0" class="p-3 border rounded-lg bg-red-50 border-red-200">
+            <div
+              v-if="criticalExpiringOrders.length > 0"
+              class="p-3 border rounded-lg bg-red-50 border-red-200"
+            >
               <h5 class="font-medium text-red-800 mb-2 flex items-center gap-2">
                 <i class="pi pi-exclamation-triangle"></i>
                 Đơn hàng sắp hết hạn ({{ criticalExpiringOrders.length }})
               </h5>
               <div class="space-y-2">
-                <div v-for="order in criticalExpiringOrders.slice(0, 3)" :key="order.id"
-                     class="text-sm text-red-700 p-2 bg-red-100 rounded">
+                <div
+                  v-for="order in criticalExpiringOrders.slice(0, 3)"
+                  :key="order.id"
+                  class="text-sm text-red-700 p-2 bg-red-100 rounded"
+                >
                   <div class="flex items-center justify-between">
                     <div class="font-medium">{{ order.orderCode }}</div>
                     <div class="text-xs font-bold text-red-600">
@@ -937,29 +1028,43 @@
             </div>
 
             <!-- Regular Expiring Orders -->
-            <div v-if="expiringOrders.length > 0" class="p-3 border rounded-lg bg-orange-50 border-orange-200">
+            <div
+              v-if="expiringOrders.length > 0"
+              class="p-3 border rounded-lg bg-orange-50 border-orange-200"
+            >
               <h5 class="font-medium text-orange-800 mb-2 flex items-center gap-2">
                 <i class="pi pi-clock"></i>
                 Đơn hàng chờ thanh toán ({{ expiringOrders.length }})
               </h5>
               <div class="space-y-1">
-                <div v-for="order in expiringOrders.slice(0, 3)" :key="order.id"
-                     class="text-sm text-orange-700 flex items-center justify-between">
+                <div
+                  v-for="order in expiringOrders.slice(0, 3)"
+                  :key="order.id"
+                  class="text-sm text-orange-700 flex items-center justify-between"
+                >
                   <span class="font-medium">{{ order.orderCode }}</span>
-                  <span class="text-xs">{{ formatRemainingTime(getRemainingTimeForOrder(order.id)) }}</span>
+                  <span class="text-xs">{{
+                    formatRemainingTime(getRemainingTimeForOrder(order.id))
+                  }}</span>
                 </div>
               </div>
             </div>
 
             <!-- Recent Expired Orders -->
-            <div v-if="expiredOrders.length > 0" class="p-3 border rounded-lg bg-gray-50 border-gray-200">
+            <div
+              v-if="expiredOrders.length > 0"
+              class="p-3 border rounded-lg bg-gray-50 border-gray-200"
+            >
               <h5 class="font-medium text-gray-800 mb-2 flex items-center gap-2">
                 <i class="pi pi-times-circle"></i>
                 Đơn hàng đã hết hạn ({{ expiredOrders.length }})
               </h5>
               <div class="space-y-1">
-                <div v-for="order in expiredOrders.slice(0, 2)" :key="order.id"
-                     class="text-sm text-gray-700">
+                <div
+                  v-for="order in expiredOrders.slice(0, 2)"
+                  :key="order.id"
+                  class="text-sm text-gray-700"
+                >
                   <div class="font-medium">{{ order.orderCode }}</div>
                   <div class="text-xs text-gray-500">{{ order.reason }}</div>
                 </div>
@@ -980,7 +1085,10 @@
               <span>Tạm tính:</span>
               <span>{{ formatCurrency(activeTab.tongTienHang || 0) }}</span>
             </div>
-            <div v-if="activeTab.giaTriGiamGiaVoucher > 0" class="flex justify-between text-green-600">
+            <div
+              v-if="activeTab.giaTriGiamGiaVoucher > 0"
+              class="flex justify-between text-green-600"
+            >
               <span>Giảm giá voucher:</span>
               <span>-{{ formatCurrency(activeTab.giaTriGiamGiaVoucher) }}</span>
             </div>
@@ -988,14 +1096,17 @@
               <span>Phí giao hàng:</span>
               <span>{{ formatCurrency(activeTab.phiVanChuyen || 0) }}</span>
             </div>
-            <hr class="my-2">
+            <hr class="my-2" />
             <div class="flex justify-between font-semibold text-lg">
               <span>Tổng cộng:</span>
               <span class="text-primary">{{ formatCurrency(activeTab.tongThanhToan || 0) }}</span>
             </div>
 
             <!-- Customer Payment Section (for cash payments) -->
-            <div v-if="activeTab?.phuongThucThanhToan === 'TIEN_MAT'" class="mt-4 pt-4 border-t border-surface-200">
+            <div
+              v-if="activeTab?.phuongThucThanhToan === 'TIEN_MAT'"
+              class="mt-4 pt-4 border-t border-surface-200"
+            >
               <div class="space-y-3">
                 <div>
                   <label class="block text-sm font-medium mb-1">Khách hàng đưa:</label>
@@ -1008,12 +1119,16 @@
                     @input="calculateChange"
                   />
                 </div>
-                <div v-if="customerPayment >= (activeTab?.tongThanhToan || 0)" class="flex justify-between font-semibold text-lg">
+                <div
+                  v-if="customerPayment >= (activeTab?.tongThanhToan || 0)"
+                  class="flex justify-between font-semibold text-lg"
+                >
                   <span>Tiền trả lại:</span>
                   <span class="text-green-600">{{ formatCurrency(changeAmount) }}</span>
                 </div>
                 <div v-else-if="customerPayment > 0" class="text-red-500 text-sm">
-                  Số tiền không đủ (thiếu {{ formatCurrency((activeTab?.tongThanhToan || 0) - customerPayment) }})
+                  Số tiền không đủ (thiếu
+                  {{ formatCurrency((activeTab?.tongThanhToan || 0) - customerPayment) }})
                 </div>
               </div>
             </div>
@@ -1028,17 +1143,34 @@
               size="large"
               class="w-full"
               @click="showOrderConfirmation"
-              :loading="creating"
-              :disabled="!canCreateActiveOrder || creating"
+              :loading="creating || prePaymentCheckInProgress"
+              :disabled="!canCreateActiveOrder || creating || prePaymentCheckInProgress"
             />
             <div v-if="!canCreateActiveOrder" class="text-center mt-2">
               <small class="text-surface-500">
-                <span v-if="!activeTab?.sanPhamList?.length">Vui lòng thêm sản phẩm vào đơn hàng</span>
-                <span v-else-if="!activeTab?.phuongThucThanhToan">Vui lòng chọn phương thức thanh toán</span>
-                <span v-else-if="activeTab?.giaohang && (!recipientInfo.hoTen.trim() || !recipientInfo.soDienThoai.trim())">
+                <span v-if="!activeTab?.sanPhamList?.length"
+                  >Vui lòng thêm sản phẩm vào đơn hàng</span
+                >
+                <span v-else-if="!activeTab?.phuongThucThanhToan"
+                  >Vui lòng chọn phương thức thanh toán</span
+                >
+                <span
+                  v-else-if="
+                    activeTab?.giaohang &&
+                    (!recipientInfo.hoTen.trim() || !recipientInfo.soDienThoai.trim())
+                  "
+                >
                   Vui lòng nhập đầy đủ thông tin người nhận
                 </span>
-                <span v-else-if="activeTab?.giaohang && (!addressData.duong.trim() || !addressData.phuongXa || !addressData.quanHuyen || !addressData.tinhThanh)">
+                <span
+                  v-else-if="
+                    activeTab?.giaohang &&
+                    (!addressData.duong.trim() ||
+                      !addressData.phuongXa ||
+                      !addressData.quanHuyen ||
+                      !addressData.tinhThanh)
+                  "
+                >
                   Vui lòng nhập đầy đủ địa chỉ giao hàng
                 </span>
                 <span v-else-if="activeTab?.giaohang && Object.keys(addressErrors).length > 0">
@@ -1051,8 +1183,6 @@
       </div>
     </div>
   </div>
-
-
 
   <!-- Product Variant Selection Dialog -->
   <ProductVariantDialog
@@ -1083,8 +1213,6 @@
     :has-delivery="activeTab?.giaohang || false"
     @confirm="onMixedPaymentConfirm"
   />
-
-
 
   <!-- QR Scanner Dialog -->
   <Dialog
@@ -1179,7 +1307,9 @@
             <div>
               <div class="font-medium">{{ activeTab.khachHang.hoTen }}</div>
               <div class="text-sm text-surface-500">{{ activeTab.khachHang.soDienThoai }}</div>
-              <div v-if="activeTab.khachHang.email" class="text-xs text-surface-400">{{ activeTab.khachHang.email }}</div>
+              <div v-if="activeTab.khachHang.email" class="text-xs text-surface-400">{{
+                activeTab.khachHang.email
+              }}</div>
             </div>
           </div>
 
@@ -1198,7 +1328,9 @@
               </div>
               <div class="text-sm">
                 <span class="font-medium text-blue-700">Số điện thoại:</span>
-                <span class="text-surface-700 ml-2">{{ recipientInfo.soDienThoai || 'Chưa nhập' }}</span>
+                <span class="text-surface-700 ml-2">{{
+                  recipientInfo.soDienThoai || 'Chưa nhập'
+                }}</span>
               </div>
             </div>
 
@@ -1206,7 +1338,10 @@
             <div class="border-t border-blue-200 pt-2">
               <div class="text-sm">
                 <span class="font-medium text-blue-700">Địa chỉ giao hàng:</span>
-                <div class="text-surface-700 mt-1 ml-2" :class="{ 'text-surface-400 italic': !addressData.duong?.trim() }">
+                <div
+                  class="text-surface-700 mt-1 ml-2"
+                  :class="{ 'text-surface-400 italic': !addressData.duong?.trim() }"
+                >
                   {{ formattedDeliveryAddress }}
                 </div>
               </div>
@@ -1217,13 +1352,9 @@
           <div v-if="activeTab.giaohang && recipientInfo.hoTen.trim()">
             Khách hàng: {{ recipientInfo.hoTen }} ({{ recipientInfo.soDienThoai || 'Chưa có SĐT' }})
           </div>
-          <div v-else>
-            Khách hàng vãng lai
-          </div>
+          <div v-else> Khách hàng vãng lai </div>
         </div>
       </div>
-
-
 
       <!-- Products Summary -->
       <div class="border rounded-lg p-4 bg-surface-50">
@@ -1266,7 +1397,10 @@
           <div class="flex justify-between">
             <span>Phương thức thanh toán:</span>
             <span class="font-medium">
-              {{ paymentMethods.find(m => m.value === activeTab.phuongThucThanhToan)?.label || activeTab.phuongThucThanhToan }}
+              {{
+                paymentMethods.find((m) => m.value === activeTab.phuongThucThanhToan)?.label ||
+                activeTab.phuongThucThanhToan
+              }}
             </span>
           </div>
           <div class="flex justify-between">
@@ -1289,7 +1423,10 @@
             <span>Tạm tính:</span>
             <span>{{ formatCurrency(activeTab.tongTienHang || 0) }}</span>
           </div>
-          <div v-if="activeTab.giaTriGiamGiaVoucher > 0" class="flex justify-between text-green-600">
+          <div
+            v-if="activeTab.giaTriGiamGiaVoucher > 0"
+            class="flex justify-between text-green-600"
+          >
             <span>Giảm giá voucher:</span>
             <span>-{{ formatCurrency(activeTab.giaTriGiamGiaVoucher) }}</span>
           </div>
@@ -1297,7 +1434,7 @@
             <span>Phí giao hàng:</span>
             <span>{{ formatCurrency(activeTab.phiVanChuyen || 0) }}</span>
           </div>
-          <hr class="my-2">
+          <hr class="my-2" />
           <div class="flex justify-between font-semibold text-lg">
             <span>Tổng cộng:</span>
             <span class="text-primary">{{ formatCurrency(activeTab.tongThanhToan || 0) }}</span>
@@ -1350,8 +1487,6 @@ import { useOrderExpiration } from '@/composables/useOrderExpiration'
 import storageApi from '@/apis/storage'
 import serialNumberApi from '@/apis/serialNumberApi'
 
-
-
 // PrimeVue Components
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -1363,8 +1498,8 @@ import Avatar from 'primevue/avatar'
 import ToggleButton from 'primevue/togglebutton'
 import Dropdown from 'primevue/dropdown'
 import Dialog from 'primevue/dialog'
-
-
+import { useConfirm } from 'primevue/useconfirm'
+const confirm = useConfirm()
 
 // Custom Components
 import ProductVariantDialog from '@/components/orders/ProductVariantDialog.vue'
@@ -1383,22 +1518,12 @@ const customerStore = useCustomerStore()
 const productStore = useProductStore()
 const confirmDialog = inject('confirmDialog')
 
-
 // Cart reservations
-const {
-  reserveForCart,
-  releaseCartReservations,
-  releaseSpecificItems
-} = useCartReservations()
+const { reserveForCart, releaseCartReservations, releaseSpecificItems } = useCartReservations()
 
 // Destructure store state and actions using storeToRefs for reactive properties
-const {
-  orderTabs,
-  activeTabId,
-  activeTab,
-  hasActiveTabs,
-  canCreateNewTab
-} = storeToRefs(orderStore)
+const { orderTabs, activeTabId, activeTab, hasActiveTabs, canCreateNewTab } =
+  storeToRefs(orderStore)
 
 const {
   createNewOrderTab,
@@ -1406,15 +1531,14 @@ const {
   switchToTab,
   updateActiveTabData,
   calculateTabTotals,
-  createOrderFromTab
+  createOrderFromTab,
 } = orderStore
 
 // Local state
 const creating = ref(false)
 const selectedCustomer = ref(null)
 const customerSuggestions = ref([])
-
-
+const prePaymentCheckInProgress = ref(false)
 
 const availableVouchers = ref([])
 
@@ -1439,15 +1563,11 @@ const productVariantDialogRef = ref(null)
 // Order expiration panel state
 const showExpirationPanel = ref(true)
 
-
-
 // Fast customer creation dialog state
 const fastCustomerDialogVisible = ref(false)
 
 // Fast address creation dialog state
 const fastAddressDialogVisible = ref(false)
-
-
 
 // QR Scanner state
 const showQRScanner = ref(false)
@@ -1464,8 +1584,6 @@ const mixedPaymentDialogVisible = ref(false)
 // Local state
 const hasUnsavedChanges = ref(false)
 
-
-
 // Customer payment state
 const customerPayment = ref(0)
 const changeAmount = ref(0)
@@ -1473,7 +1591,7 @@ const changeAmount = ref(0)
 // Recipient information state
 const recipientInfo = ref({
   hoTen: '',
-  soDienThoai: ''
+  soDienThoai: '',
 })
 const recipientNameSuggestions = ref([])
 const recipientPhoneSuggestions = ref([])
@@ -1507,14 +1625,11 @@ const {
   // Enhanced address management functions
   findMatchingAddress,
   isAddressDifferentFromCustomer,
-  addAddressToCustomer
+  addAddressToCustomer,
 } = useEmbeddedAddress()
 
 // Real-time order management composables
-const {
-  isConnected: wsConnected,
-  connectionStatus
-} = useRealTimeOrderManagement()
+const { isConnected: wsConnected, connectionStatus } = useRealTimeOrderManagement()
 
 const {
   priceUpdates,
@@ -1523,7 +1638,7 @@ const {
   showPriceWarnings,
   getLatestPriceForVariant,
   hasRecentPriceChange,
-  formatCurrency: formatPricingCurrency
+  formatCurrency: formatPricingCurrency,
 } = useRealTimePricing()
 
 const {
@@ -1532,7 +1647,7 @@ const {
   alternativeRecommendations,
   hasVoucherUpdates,
   subscribeToVoucherMonitoring,
-  showVoucherNotifications
+  showVoucherNotifications,
 } = useVoucherMonitoring()
 
 // Shipping calculator composable
@@ -1549,7 +1664,7 @@ const {
   enableAutoCalculation: enableAutoShippingCalculation,
   setManualShippingFee,
   resetShippingCalculation,
-  loadShippingConfig
+  loadShippingConfig,
 } = useShippingCalculator()
 
 // Order expiration composable
@@ -1560,7 +1675,7 @@ const {
   hasExpirationUpdates,
   subscribeToOrderExpiration,
   formatRemainingTime,
-  getRemainingTimeForOrder
+  getRemainingTimeForOrder,
 } = useOrderExpiration()
 
 // Real-time cart price change tracking
@@ -1578,23 +1693,26 @@ const canCreateActiveOrder = computed(() => {
   // Mixed payment validation
   let paymentValid = true
   if (activeTab.value.phuongThucThanhToan === 'MIXED') {
-    paymentValid = activeTab.value.mixedPayments &&
-                   activeTab.value.mixedPayments.length > 0 &&
-                   activeTab.value.mixedPayments.every(p => p.method && p.amount > 0)
+    paymentValid =
+      activeTab.value.mixedPayments &&
+      activeTab.value.mixedPayments.length > 0 &&
+      activeTab.value.mixedPayments.every((p) => p.method && p.amount > 0)
   }
 
   // Delivery validation using embedded address form
   let deliveryValid = true
   if (activeTab.value.giaohang) {
     // When shipping, need recipient information and complete address
-    const hasRecipientInfo = recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()
+    const hasRecipientInfo =
+      recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()
 
     // Use embedded address validation for complete address check
-    const hasCompleteAddress = addressData.value.duong.trim() &&
-                              addressData.value.phuongXa &&
-                              addressData.value.quanHuyen &&
-                              addressData.value.tinhThanh &&
-                              Object.keys(addressErrors.value).length === 0
+    const hasCompleteAddress =
+      addressData.value.duong.trim() &&
+      addressData.value.phuongXa &&
+      addressData.value.quanHuyen &&
+      addressData.value.tinhThanh &&
+      Object.keys(addressErrors.value).length === 0
 
     deliveryValid = hasRecipientInfo && hasCompleteAddress
   }
@@ -1614,7 +1732,7 @@ const paymentMethods = computed(() => {
       label: 'Tiền mặt',
       description: 'Thanh toán bằng tiền mặt tại quầy',
       icon: 'pi pi-wallet',
-      available: true
+      available: true,
     })
   }
 
@@ -1625,7 +1743,7 @@ const paymentMethods = computed(() => {
       label: 'Tiền mặt khi giao hàng',
       description: 'Thanh toán bằng tiền mặt khi nhận hàng',
       icon: 'pi pi-money-bill',
-      available: true
+      available: true,
     })
   }
 
@@ -1635,7 +1753,7 @@ const paymentMethods = computed(() => {
     label: 'VNPay',
     description: 'Thanh toán qua ví điện tử VNPay',
     icon: 'pi pi-credit-card',
-    available: true
+    available: true,
   })
 
   // MOMO - Available for both order types
@@ -1644,7 +1762,7 @@ const paymentMethods = computed(() => {
     label: 'MoMo',
     description: 'Thanh toán qua ví điện tử MoMo',
     icon: 'pi pi-mobile',
-    available: true
+    available: true,
   })
 
   // VIETQR - Available for both order types
@@ -1653,7 +1771,7 @@ const paymentMethods = computed(() => {
     label: 'VietQR',
     description: 'Chuyển khoản ngân hàng qua QR Code',
     icon: 'pi pi-qrcode',
-    available: true
+    available: true,
   })
 
   return methods
@@ -1666,6 +1784,113 @@ const displayedAvailableVouchers = computed(() => {
   }
   return availableVouchers.value.slice(0, voucherDisplayLimit.value)
 })
+const validateVouchersBeforePayment = async () => {
+  // Nếu không có voucher nào được áp dụng, bỏ qua và tiếp tục.
+  if (!activeTab.value?.voucherList?.length) {
+    return { proceed: true }
+  }
+
+  const appliedVoucher = activeTab.value.voucherList[0]
+  const originalDiscount = appliedVoucher.giaTriGiam
+  const orderTotal = activeTab.value.tongTienHang || 0
+  const customerId = activeTab.value.khachHang?.id || null
+
+  try {
+    // --- Bước 1: Xác thực lại voucher đang được áp dụng với API ---
+    const validationResponse = await voucherApi.validateVoucher(
+      appliedVoucher.maPhieuGiamGia,
+      customerId,
+      orderTotal,
+    )
+
+    if (!validationResponse.success || !validationResponse.data.valid) {
+      const reason = validationResponse.data?.error || 'Voucher không còn hợp lệ.'
+      toast.add({
+        severity: 'error',
+        summary: 'Voucher không hợp lệ',
+        detail: `Voucher ${appliedVoucher.maPhieuGiamGia} không thể sử dụng. Lý do: ${reason}`,
+        life: 7000,
+      })
+      activeTab.value.voucherList = []
+      await loadAvailableVouchers()
+      calculateTabTotals(activeTabId.value)
+      await findAndApplyBestVoucher()
+      return { proceed: false }
+    }
+
+    const validatedDiscount = validationResponse.data.discountAmount
+
+    // --- Bước 2: Kiểm tra xem giá trị giảm giá của voucher có thay đổi không ---
+    if (validatedDiscount !== originalDiscount) {
+      const confirmed = await new Promise((resolve) => {
+        // SỬA ĐỔI: Dùng `confirm` thay vì `confirmDialog`
+        confirm.require({
+          message: `Giá trị giảm của voucher ${appliedVoucher.maPhieuGiamGia} đã thay đổi từ ${formatCurrency(originalDiscount)} thành ${formatCurrency(validatedDiscount)}. Bạn có muốn tiếp tục với giá trị mới không?`,
+          header: 'Cập nhật giá trị Voucher',
+          icon: 'pi pi-info-circle',
+          acceptLabel: 'Đồng ý',
+          rejectLabel: 'Để tôi chọn lại',
+          accept: () => resolve(true),
+          reject: () => resolve(false),
+          onHide: () => resolve(false),
+        })
+      })
+
+      if (confirmed) {
+        activeTab.value.voucherList[0].giaTriGiam = validatedDiscount
+        calculateTabTotals(activeTabId.value)
+      } else {
+        activeTab.value.voucherList = []
+        await loadAvailableVouchers()
+        calculateTabTotals(activeTabId.value)
+        return { proceed: false }
+      }
+    }
+
+    // --- Bước 3: Kiểm tra xem có voucher nào TỐT HƠN ở thời điểm hiện tại không ---
+    const bestVoucherResponse = await voucherApi.getBestVoucher(customerId, orderTotal)
+
+    if (bestVoucherResponse.success && bestVoucherResponse.data.found) {
+      const bestVoucher = bestVoucherResponse.data.voucher
+      const bestDiscount = bestVoucherResponse.data.discountAmount
+
+      if (
+        bestVoucher.maPhieuGiamGia !== appliedVoucher.maPhieuGiamGia &&
+        bestDiscount > validatedDiscount
+      ) {
+        const confirmed = await new Promise((resolve) => {
+          // SỬA ĐỔI: Dùng `confirm` thay vì `confirmDialog`
+          confirm.require({
+            message: `Chúng tôi tìm thấy voucher tốt hơn! Voucher '${bestVoucher.tenPhieuGiamGia || bestVoucher.maPhieuGiamGia}' giúp bạn tiết kiệm thêm ${formatCurrency(bestDiscount - validatedDiscount)}. Bạn có muốn đổi sang voucher này không?`,
+            header: 'Gợi ý Voucher tốt hơn',
+            icon: 'pi pi-lightbulb',
+            acceptLabel: 'Đồng ý đổi',
+            rejectLabel: 'Không, giữ voucher cũ',
+            accept: () => resolve(true),
+            reject: () => resolve(false),
+            onHide: () => resolve(false),
+          })
+        })
+
+        if (confirmed) {
+          await selectVoucher(bestVoucher)
+          return { proceed: true }
+        }
+      }
+    }
+
+    return { proceed: true }
+  } catch (error) {
+    console.error('Lỗi API trong quá trình kiểm tra voucher:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi API',
+      detail: 'Không thể xác thực voucher tại thời điểm này. Vui lòng thử lại.',
+      life: 5000,
+    })
+    return { proceed: false }
+  }
+}
 
 // Computed property for formatted delivery address
 const formattedDeliveryAddress = computed(() => {
@@ -1705,7 +1930,7 @@ const processedCartItems = computed(() => {
       ...item,
       hasPriceChange,
       latestPrice,
-      originalIndex: index
+      originalIndex: index,
     }
   })
 })
@@ -1714,7 +1939,7 @@ const processedCartItems = computed(() => {
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
-    currency: 'VND'
+    currency: 'VND',
   }).format(amount)
 }
 
@@ -1748,9 +1973,10 @@ const detectCartPriceChanges = () => {
       if (acknowledgedPriceChanges.value.has(changeId)) return
 
       // Check if this change is already in the list
-      const existingChange = cartPriceChanges.value.find(change =>
-        change.variantId === variantId &&
-        change.serialNumber === (item.sanPhamChiTiet?.serialNumber || '')
+      const existingChange = cartPriceChanges.value.find(
+        (change) =>
+          change.variantId === variantId &&
+          change.serialNumber === (item.sanPhamChiTiet?.serialNumber || ''),
       )
 
       if (!existingChange) {
@@ -1763,7 +1989,7 @@ const detectCartPriceChanges = () => {
           newPrice: latestPrice,
           changeType: latestPrice > item.donGia ? 'INCREASE' : 'DECREASE',
           timestamp: new Date(),
-          cartIndex: index
+          cartIndex: index,
         })
       }
     }
@@ -1785,10 +2011,11 @@ const detectSameSKUPriceDifferences = (newlyAddedItem) => {
   const newSerial = newlyAddedItem.sanPhamChiTiet?.serialNumber || ''
 
   // Find existing items with the same variant ID but different prices
-  const existingItemsWithSameSKU = activeTab.value.sanPhamList.filter(item =>
-    item.sanPhamChiTiet?.id === newVariantId &&
-    item.donGia !== newPrice &&
-    item !== newlyAddedItem // Exclude the newly added item itself
+  const existingItemsWithSameSKU = activeTab.value.sanPhamList.filter(
+    (item) =>
+      item.sanPhamChiTiet?.id === newVariantId &&
+      item.donGia !== newPrice &&
+      item !== newlyAddedItem, // Exclude the newly added item itself
   )
 
   if (existingItemsWithSameSKU.length > 0) {
@@ -1800,10 +2027,11 @@ const detectSameSKUPriceDifferences = (newlyAddedItem) => {
     if (acknowledgedPriceChanges.value.has(changeId)) return
 
     // Check if this change is already in the list
-    const existingChange = cartPriceChanges.value.find(change =>
-      change.variantId === newVariantId &&
-      change.serialNumber === newSerial &&
-      change.changeType === 'SKU_PRICE_DIFFERENCE'
+    const existingChange = cartPriceChanges.value.find(
+      (change) =>
+        change.variantId === newVariantId &&
+        change.serialNumber === newSerial &&
+        change.changeType === 'SKU_PRICE_DIFFERENCE',
     )
 
     if (!existingChange) {
@@ -1816,7 +2044,7 @@ const detectSameSKUPriceDifferences = (newlyAddedItem) => {
         newPrice: newPrice,
         changeType: 'SKU_PRICE_DIFFERENCE',
         timestamp: new Date(),
-        cartIndex: activeTab.value.sanPhamList.length - 1 // Index of newly added item
+        cartIndex: activeTab.value.sanPhamList.length - 1, // Index of newly added item
       })
     }
   }
@@ -1832,7 +2060,7 @@ const calculateShippingFeeForCurrentAddress = async () => {
     province: addressData.value.tinhThanh,
     district: addressData.value.quanHuyen,
     ward: addressData.value.phuongXa,
-    address: addressData.value.duong
+    address: addressData.value.duong,
   }
 
   const orderValue = activeTab.value.tongTienHang || 0
@@ -1851,14 +2079,12 @@ const onShippingFeeChange = (value) => {
   }
 }
 
-
-
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric'
+    year: 'numeric',
   })
 }
 
@@ -1873,22 +2099,22 @@ const getBestOverallVoucher = () => {
 
   // Add applied vouchers with their actual discount amounts
   if (activeTab.value?.voucherList?.length) {
-    activeTab.value.voucherList.forEach(voucher => {
+    activeTab.value.voucherList.forEach((voucher) => {
       allVouchers.push({
         ...voucher,
         discountAmount: voucher.giaTriGiam || 0,
-        isApplied: true
+        isApplied: true,
       })
     })
   }
 
   // Add available vouchers with their calculated discount amounts
   if (availableVouchers.value.length) {
-    availableVouchers.value.forEach(voucher => {
+    availableVouchers.value.forEach((voucher) => {
       allVouchers.push({
         ...voucher,
         discountAmount: calculateVoucherDiscount(voucher),
-        isApplied: false
+        isApplied: false,
       })
     })
   }
@@ -1915,9 +2141,10 @@ const isBestAvailableVoucher = (voucher) => {
   if (!bestVoucher) return false
 
   // Only return true if this voucher is the best overall AND it's not applied
-  const isOverallBest = voucher.id === bestVoucher.id || voucher.maPhieuGiamGia === bestVoucher.maPhieuGiamGia
-  const isNotApplied = !activeTab.value?.voucherList?.some(applied =>
-    applied.id === voucher.id || applied.maPhieuGiamGia === voucher.maPhieuGiamGia
+  const isOverallBest =
+    voucher.id === bestVoucher.id || voucher.maPhieuGiamGia === bestVoucher.maPhieuGiamGia
+  const isNotApplied = !activeTab.value?.voucherList?.some(
+    (applied) => applied.id === voucher.id || applied.maPhieuGiamGia === voucher.maPhieuGiamGia,
   )
 
   return isOverallBest && isNotApplied
@@ -1943,14 +2170,6 @@ const calculateVoucherDiscount = (voucher, orderTotal = null) => {
   }
 }
 
-
-
-
-
-
-
-
-
 // Add selected variant to active tab (handles frontend-selected variants)
 const addVariantToActiveTab = async (variantData) => {
   if (!activeTab.value) return
@@ -1968,7 +2187,7 @@ const addVariantToActiveTab = async (variantData) => {
 
   // Check if this specific variant with the same serial number already exists in cart
   // For variants with serial numbers, we need to check both variant ID and serial number
-  const existingIndex = activeTab.value.sanPhamList.findIndex(item => {
+  const existingIndex = activeTab.value.sanPhamList.findIndex((item) => {
     if (item.sanPhamChiTiet?.id !== sanPhamChiTiet.id) {
       return false
     }
@@ -1984,8 +2203,12 @@ const addVariantToActiveTab = async (variantData) => {
     }
 
     // If neither has serial numbers, then it's a duplicate variant
-    if (!sanPhamChiTiet.serialNumber && !sanPhamChiTiet.serialNumberId &&
-        !item.sanPhamChiTiet?.serialNumber && !item.sanPhamChiTiet?.serialNumberId) {
+    if (
+      !sanPhamChiTiet.serialNumber &&
+      !sanPhamChiTiet.serialNumberId &&
+      !item.sanPhamChiTiet?.serialNumber &&
+      !item.sanPhamChiTiet?.serialNumberId
+    ) {
       return true
     }
 
@@ -1994,12 +2217,14 @@ const addVariantToActiveTab = async (variantData) => {
   })
 
   if (existingIndex !== -1) {
-    const serialInfo = sanPhamChiTiet.serialNumber ? ` (Serial: ${sanPhamChiTiet.serialNumber})` : ''
+    const serialInfo = sanPhamChiTiet.serialNumber
+      ? ` (Serial: ${sanPhamChiTiet.serialNumber})`
+      : ''
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
       detail: `Phiên bản này${serialInfo} đã có trong giỏ hàng`,
-      life: 3000
+      life: 3000,
     })
     return
   }
@@ -2010,7 +2235,7 @@ const addVariantToActiveTab = async (variantData) => {
       sanPhamChiTietId: sanPhamChiTiet.id,
       soLuong: soLuong,
       tabId: activeTabId.value,
-      serialNumbers: sanPhamChiTiet.serialNumber ? [sanPhamChiTiet.serialNumber] : undefined
+      serialNumbers: sanPhamChiTiet.serialNumber ? [sanPhamChiTiet.serialNumber] : undefined,
     }
 
     await reserveForCart(reservationRequest)
@@ -2021,7 +2246,7 @@ const addVariantToActiveTab = async (variantData) => {
       soLuong: soLuong,
       donGia: donGia,
       thanhTien: thanhTien,
-      groupInfo: groupInfo // Store group info for display purposes
+      groupInfo: groupInfo, // Store group info for display purposes
     }
 
     activeTab.value.sanPhamList.push(newCartItem)
@@ -2042,7 +2267,7 @@ const addVariantToActiveTab = async (variantData) => {
       severity: 'error',
       summary: 'Lỗi',
       detail: error.message || 'Không thể đặt trước sản phẩm',
-      life: 3000
+      life: 3000,
     })
     return // Don't add to cart if reservation fails
   }
@@ -2054,7 +2279,7 @@ const addVariantToActiveTab = async (variantData) => {
       severity: 'success',
       summary: 'Thành công',
       detail: 'Đã thêm sản phẩm vào giỏ hàng',
-      life: 3000
+      life: 3000,
     })
   }
 }
@@ -2065,7 +2290,11 @@ const getCartItemImage = (item) => {
 
   if (item.sanPhamChiTiet) {
     // Get first image from variant's image array
-    if (item.sanPhamChiTiet.hinhAnh && Array.isArray(item.sanPhamChiTiet.hinhAnh) && item.sanPhamChiTiet.hinhAnh.length > 0) {
+    if (
+      item.sanPhamChiTiet.hinhAnh &&
+      Array.isArray(item.sanPhamChiTiet.hinhAnh) &&
+      item.sanPhamChiTiet.hinhAnh.length > 0
+    ) {
       imageFilename = item.sanPhamChiTiet.hinhAnh[0]
     } else {
       // Fallback to product image if variant has no image
@@ -2120,8 +2349,6 @@ const loadCartImageUrl = async (imageFilename) => {
   }
 }
 
-
-
 const getCartItemName = (item) => {
   if (item.sanPhamChiTiet) {
     return item.sanPhamChiTiet.sanPham?.tenSanPham || 'Sản phẩm'
@@ -2171,8 +2398,6 @@ const getVariantDisplayInfo = (item) => {
   return ''
 }
 
-
-
 const removeFromActiveTab = async (index) => {
   const item = activeTab.value.sanPhamList[index]
 
@@ -2195,8 +2420,6 @@ const removeFromActiveTab = async (index) => {
     syncCartWithDialog()
   }, 100)
 }
-
-
 
 // QR Scanner Methods
 const onQRDetect = async (detectedCodes) => {
@@ -2244,7 +2467,9 @@ const onQRInit = async (promise) => {
 
 const paintBoundingBox = (detectedCodes, ctx) => {
   for (const detectedCode of detectedCodes) {
-    const { boundingBox: { x, y, width, height } } = detectedCode
+    const {
+      boundingBox: { x, y, width, height },
+    } = detectedCode
 
     ctx.lineWidth = 2
     ctx.strokeStyle = '#007bff'
@@ -2272,7 +2497,8 @@ const requestCameraPermission = async () => {
     })
   } catch (error) {
     console.error('Permission request error:', error)
-    cameraError.value = 'Không thể truy cập camera. Vui lòng kiểm tra cài đặt quyền của trình duyệt.'
+    cameraError.value =
+      'Không thể truy cập camera. Vui lòng kiểm tra cài đặt quyền của trình duyệt.'
     toast.add({
       severity: 'error',
       summary: 'Lỗi Camera',
@@ -2303,7 +2529,7 @@ const processScannedSerialNumber = async (serialNumber) => {
     if (!serialData) {
       qrProcessingResult.value = {
         success: false,
-        message: `Serial number "${serialNumber}" không tồn tại trong hệ thống`
+        message: `Serial number "${serialNumber}" không tồn tại trong hệ thống`,
       }
       return
     }
@@ -2312,7 +2538,7 @@ const processScannedSerialNumber = async (serialNumber) => {
     if (serialData.trangThai !== 'AVAILABLE') {
       qrProcessingResult.value = {
         success: false,
-        message: `Serial number "${serialNumber}" không khả dụng (Trạng thái: ${serialData.trangThai})`
+        message: `Serial number "${serialNumber}" không khả dụng (Trạng thái: ${serialData.trangThai})`,
       }
       return
     }
@@ -2322,7 +2548,7 @@ const processScannedSerialNumber = async (serialNumber) => {
     if (!variantId) {
       qrProcessingResult.value = {
         success: false,
-        message: `Serial number "${serialNumber}" không liên kết với sản phẩm nào`
+        message: `Serial number "${serialNumber}" không liên kết với sản phẩm nào`,
       }
       return
     }
@@ -2339,7 +2565,7 @@ const processScannedSerialNumber = async (serialNumber) => {
         await productStore.fetchProducts()
         for (const product of productStore.products) {
           if (product.sanPhamChiTiets) {
-            variant = product.sanPhamChiTiets.find(v => v.id === variantId)
+            variant = product.sanPhamChiTiets.find((v) => v.id === variantId)
             if (variant) {
               // Add product reference to variant for display
               variant.sanPham = product
@@ -2355,21 +2581,22 @@ const processScannedSerialNumber = async (serialNumber) => {
     if (!variant) {
       qrProcessingResult.value = {
         success: false,
-        message: `Không tìm thấy thông tin sản phẩm cho serial number "${serialNumber}"`
+        message: `Không tìm thấy thông tin sản phẩm cho serial number "${serialNumber}"`,
       }
       return
     }
 
     // Check if this serial number is already in cart
-    const existingInCart = activeTab.value?.sanPhamList?.find(item =>
-      item.sanPhamChiTiet?.serialNumberId === serialData.id ||
-      item.sanPhamChiTiet?.serialNumber === serialNumber
+    const existingInCart = activeTab.value?.sanPhamList?.find(
+      (item) =>
+        item.sanPhamChiTiet?.serialNumberId === serialData.id ||
+        item.sanPhamChiTiet?.serialNumber === serialNumber,
     )
 
     if (existingInCart) {
       qrProcessingResult.value = {
         success: false,
-        message: `Serial number "${serialNumber}" đã có trong giỏ hàng`
+        message: `Serial number "${serialNumber}" đã có trong giỏ hàng`,
       }
       return
     }
@@ -2378,22 +2605,28 @@ const processScannedSerialNumber = async (serialNumber) => {
     const variantWithSerial = {
       ...variant,
       serialNumber: serialNumber,
-      serialNumberId: serialData.id
+      serialNumberId: serialData.id,
     }
 
     // Add to cart
     const variantData = {
       sanPhamChiTiet: variantWithSerial,
       soLuong: 1,
-      donGia: variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan ? variant.giaKhuyenMai : variant.giaBan,
-      thanhTien: variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan ? variant.giaKhuyenMai : variant.giaBan
+      donGia:
+        variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan
+          ? variant.giaKhuyenMai
+          : variant.giaBan,
+      thanhTien:
+        variant.giaKhuyenMai && variant.giaKhuyenMai < variant.giaBan
+          ? variant.giaKhuyenMai
+          : variant.giaBan,
     }
 
     await addVariantToActiveTab(variantData)
 
     qrProcessingResult.value = {
       success: true,
-      message: `Đã thêm sản phẩm với serial "${serialNumber}" vào giỏ hàng`
+      message: `Đã thêm sản phẩm với serial "${serialNumber}" vào giỏ hàng`,
     }
 
     // Auto-close scanner after successful scan (optional)
@@ -2402,19 +2635,14 @@ const processScannedSerialNumber = async (serialNumber) => {
         resetQRScanner()
       }
     }, 2000)
-
   } catch (error) {
     console.error('Error processing scanned serial number:', error)
     qrProcessingResult.value = {
       success: false,
-      message: `Lỗi khi xử lý serial number: ${error.message}`
+      message: `Lỗi khi xử lý serial number: ${error.message}`,
     }
   }
 }
-
-
-
-
 
 // Customer display label helper
 const getCustomerDisplayLabel = (customer) => {
@@ -2449,18 +2677,19 @@ const searchCustomers = async (event) => {
     }
 
     const query = event.query.toLowerCase().trim()
-    const filteredCustomers = allCustomers.filter(customer => {
-      return (
-        customer.hoTen?.toLowerCase().includes(query) ||
-        customer.soDienThoai?.includes(query) ||
-        customer.email?.toLowerCase().includes(query) ||
-        customer.maNguoiDung?.toLowerCase().includes(query)
-      )
-    }).slice(0, 10) // Limit to first 10 results
+    const filteredCustomers = allCustomers
+      .filter((customer) => {
+        return (
+          customer.hoTen?.toLowerCase().includes(query) ||
+          customer.soDienThoai?.includes(query) ||
+          customer.email?.toLowerCase().includes(query) ||
+          customer.maNguoiDung?.toLowerCase().includes(query)
+        )
+      })
+      .slice(0, 10) // Limit to first 10 results
 
     console.log('Filtered customers:', filteredCustomers)
     customerSuggestions.value = filteredCustomers
-
   } catch (error) {
     console.error('Error searching customers:', error)
     customerSuggestions.value = []
@@ -2477,7 +2706,7 @@ const onCustomerSelect = async (event) => {
 
     updateActiveTabData({
       khachHang: customerWithAddresses,
-      diaChiGiaoHang: null // Clear any previously selected address
+      diaChiGiaoHang: null, // Clear any previously selected address
     })
     selectedCustomer.value = customerWithAddresses
 
@@ -2489,7 +2718,7 @@ const onCustomerSelect = async (event) => {
     console.log('Using fallback customer data:', event.value)
     updateActiveTabData({
       khachHang: event.value,
-      diaChiGiaoHang: null // Clear any previously selected address
+      diaChiGiaoHang: null, // Clear any previously selected address
     })
     selectedCustomer.value = event.value
     await loadAvailableVouchers()
@@ -2535,15 +2764,16 @@ const searchRecipientByName = async (event) => {
       // Use the same customer search logic for recipient name search
       const customers = await customerStore.fetchCustomers({ search: event.query })
 
-      const suggestions = customers.map(customer => ({
-        ...customer,
-        displayLabel: customer.hoTen,
-        searchType: 'name'
-      })).slice(0, 10) // Limit to 10 results for performance
+      const suggestions = customers
+        .map((customer) => ({
+          ...customer,
+          displayLabel: customer.hoTen,
+          searchType: 'name',
+        }))
+        .slice(0, 10) // Limit to 10 results for performance
 
       recipientNameSuggestions.value = suggestions
       recipientSuggestions.value = suggestions // Keep backward compatibility
-
     } catch (error) {
       console.error('Error searching recipients by name:', error)
       recipientNameSuggestions.value = []
@@ -2577,15 +2807,16 @@ const searchRecipientByPhone = async (event) => {
       // Use the same customer search logic for recipient phone search
       const customers = await customerStore.fetchCustomers({ search: event.query })
 
-      const suggestions = customers.map(customer => ({
-        ...customer,
-        displayLabel: customer.soDienThoai,
-        searchType: 'phone'
-      })).slice(0, 10) // Limit to 10 results for performance
+      const suggestions = customers
+        .map((customer) => ({
+          ...customer,
+          displayLabel: customer.soDienThoai,
+          searchType: 'phone',
+        }))
+        .slice(0, 10) // Limit to 10 results for performance
 
       recipientPhoneSuggestions.value = suggestions
       recipientSuggestions.value = suggestions // Keep backward compatibility
-
     } catch (error) {
       console.error('Error searching recipients by phone:', error)
       recipientPhoneSuggestions.value = []
@@ -2649,14 +2880,13 @@ const handleRecipientSelection = async (selectedCustomer, fieldType) => {
 
     // Clear any validation errors
     recipientErrors.value = {}
-
   } catch (error) {
     console.error('Error handling recipient selection:', error)
     toast.add({
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Có lỗi xảy ra khi xử lý thông tin người nhận',
-      life: 3000
+      life: 3000,
     })
   }
 }
@@ -2670,7 +2900,7 @@ const populateAddressFromCustomer = async (customer) => {
     }
 
     // Find default address or use first address
-    const addressToUse = customer.diaChis.find(addr => addr.laMacDinh) || customer.diaChis[0]
+    const addressToUse = customer.diaChis.find((addr) => addr.laMacDinh) || customer.diaChis[0]
 
     console.log('Populating address form with:', addressToUse)
 
@@ -2680,16 +2910,15 @@ const populateAddressFromCustomer = async (customer) => {
       phuongXa: addressToUse.phuongXa || '',
       quanHuyen: addressToUse.quanHuyen || '',
       tinhThanh: addressToUse.tinhThanh || '',
-      loaiDiaChi: addressToUse.loaiDiaChi || 'Nhà riêng'
+      loaiDiaChi: addressToUse.loaiDiaChi || 'Nhà riêng',
     })
 
     toast.add({
       severity: 'info',
       summary: 'Thông tin',
       detail: 'Đã tự động điền địa chỉ từ thông tin khách hàng',
-      life: 2000
+      life: 2000,
     })
-
   } catch (error) {
     console.error('Error populating address from customer:', error)
   }
@@ -2707,12 +2936,12 @@ const checkExistingCustomer = async () => {
     // Search by phone first (more unique)
     if (recipientInfo.value.soDienThoai.trim()) {
       const phoneResults = await customerStore.fetchCustomers({
-        search: recipientInfo.value.soDienThoai.trim()
+        search: recipientInfo.value.soDienThoai.trim(),
       })
 
       // Look for exact phone match
-      const phoneMatch = phoneResults.find(customer =>
-        customer.soDienThoai === recipientInfo.value.soDienThoai.trim()
+      const phoneMatch = phoneResults.find(
+        (customer) => customer.soDienThoai === recipientInfo.value.soDienThoai.trim(),
       )
 
       if (phoneMatch) {
@@ -2724,12 +2953,13 @@ const checkExistingCustomer = async () => {
     // Search by name if no phone match
     if (recipientInfo.value.hoTen.trim()) {
       const nameResults = await customerStore.fetchCustomers({
-        search: recipientInfo.value.hoTen.trim()
+        search: recipientInfo.value.hoTen.trim(),
       })
 
       // Look for exact name match
-      const nameMatch = nameResults.find(customer =>
-        customer.hoTen?.toLowerCase() === recipientInfo.value.hoTen.trim().toLowerCase()
+      const nameMatch = nameResults.find(
+        (customer) =>
+          customer.hoTen?.toLowerCase() === recipientInfo.value.hoTen.trim().toLowerCase(),
       )
 
       if (nameMatch) {
@@ -2740,20 +2970,11 @@ const checkExistingCustomer = async () => {
 
     console.log('No existing customer found for recipient info')
     return null
-
   } catch (error) {
     console.error('Error checking existing customer:', error)
     return null
   }
 }
-
-
-
-
-
-
-
-
 
 // Product selection dialog methods
 const showProductSelectionDialog = () => {
@@ -2784,7 +3005,7 @@ const onCustomerCreated = async (newCustomer) => {
     // Select the newly created customer
     updateActiveTabData({
       khachHang: newCustomer,
-      diaChiGiaoHang: null // Clear any previously selected address
+      diaChiGiaoHang: null, // Clear any previously selected address
     })
     selectedCustomer.value = newCustomer
 
@@ -2800,7 +3021,7 @@ const onCustomerCreated = async (newCustomer) => {
       severity: 'success',
       summary: 'Thành công',
       detail: `Đã chọn khách hàng ${newCustomer.hoTen} cho đơn hàng`,
-      life: 3000
+      life: 3000,
     })
   } catch (error) {
     console.error('Error selecting newly created customer:', error)
@@ -2818,7 +3039,7 @@ const onAddressCreated = async (newAddress) => {
         severity: 'error',
         summary: 'Lỗi',
         detail: 'Không tìm thấy thông tin khách hàng',
-        life: 3000
+        life: 3000,
       })
       return
     }
@@ -2832,7 +3053,7 @@ const onAddressCreated = async (newAddress) => {
     const tempAddress = {
       ...newAddress,
       id: Date.now(), // Temporary ID for UI
-      nguoiDungId: activeTab.value.khachHang.id
+      nguoiDungId: activeTab.value.khachHang.id,
     }
 
     activeTab.value.khachHang.diaChis.push(tempAddress)
@@ -2844,7 +3065,7 @@ const onAddressCreated = async (newAddress) => {
       severity: 'success',
       summary: 'Thành công',
       detail: 'Đã thêm địa chỉ giao hàng và chọn làm địa chỉ giao hàng cho đơn hàng này',
-      life: 4000
+      life: 4000,
     })
   } catch (error) {
     console.error('Error handling newly created address:', error)
@@ -2852,12 +3073,10 @@ const onAddressCreated = async (newAddress) => {
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Có lỗi xảy ra khi xử lý địa chỉ mới',
-      life: 3000
+      life: 3000,
     })
   }
 }
-
-
 
 const loadAvailableVouchers = async () => {
   if (!activeTab.value) return
@@ -2870,9 +3089,9 @@ const loadAvailableVouchers = async () => {
 
     if (response.success) {
       // Filter out already applied vouchers
-      const appliedVoucherCodes = activeTab.value.voucherList.map(v => v.maPhieuGiamGia)
+      const appliedVoucherCodes = activeTab.value.voucherList.map((v) => v.maPhieuGiamGia)
       availableVouchers.value = response.data.filter(
-        voucher => !appliedVoucherCodes.includes(voucher.maPhieuGiamGia)
+        (voucher) => !appliedVoucherCodes.includes(voucher.maPhieuGiamGia),
       )
     } else {
       availableVouchers.value = []
@@ -2883,8 +3102,6 @@ const loadAvailableVouchers = async () => {
   }
 }
 
-
-
 const onDeliveryToggle = () => {
   if (!activeTab.value.giaohang) {
     // Clear address when delivery is turned off
@@ -2893,8 +3110,13 @@ const onDeliveryToggle = () => {
     // When delivery is turned on, validate current address selection
     if (activeTab.value.diaChiGiaoHang && activeTab.value.khachHang) {
       const currentAddress = activeTab.value.diaChiGiaoHang
-      if (currentAddress.nguoiDungId && currentAddress.nguoiDungId !== activeTab.value.khachHang.id) {
-        console.warn('Clearing invalid address selection: Address does not belong to current customer')
+      if (
+        currentAddress.nguoiDungId &&
+        currentAddress.nguoiDungId !== activeTab.value.khachHang.id
+      ) {
+        console.warn(
+          'Clearing invalid address selection: Address does not belong to current customer',
+        )
         updateActiveTabData({ diaChiGiaoHang: null })
       }
     }
@@ -2902,7 +3124,7 @@ const onDeliveryToggle = () => {
 
   // Validate current payment method when delivery option changes
   const currentPaymentMethod = activeTab.value.phuongThucThanhToan
-  const availablePaymentMethods = paymentMethods.value.map(m => m.value)
+  const availablePaymentMethods = paymentMethods.value.map((m) => m.value)
 
   if (currentPaymentMethod && !availablePaymentMethods.includes(currentPaymentMethod)) {
     // Clear invalid payment method
@@ -2911,14 +3133,12 @@ const onDeliveryToggle = () => {
       severity: 'warn',
       summary: 'Cảnh báo',
       detail: 'Phương thức thanh toán đã chọn không khả dụng với tùy chọn giao hàng hiện tại',
-      life: 3000
+      life: 3000,
     })
   }
 
   calculateTabTotals(activeTabId.value)
 }
-
-
 
 const removeVoucherFromTab = async (index) => {
   if (!activeTab.value) return
@@ -2936,7 +3156,7 @@ const removeVoucherFromTab = async (index) => {
     severity: 'info',
     summary: 'Thông báo',
     detail: `Đã gỡ voucher ${removedVoucher.maPhieuGiamGia}`,
-    life: 3000
+    life: 3000,
   })
 }
 
@@ -2948,12 +3168,16 @@ const selectVoucher = async (voucher) => {
     const customerId = activeTab.value.khachHang?.id || null
     const orderTotal = activeTab.value.tongTienHang || 0
 
-    const response = await voucherApi.validateVoucher(voucher.maPhieuGiamGia, customerId, orderTotal)
+    const response = await voucherApi.validateVoucher(
+      voucher.maPhieuGiamGia,
+      customerId,
+      orderTotal,
+    )
 
     if (response.success && response.data.valid) {
       // Check if voucher is already applied
       const existingVoucher = activeTab.value.voucherList.find(
-        v => v.maPhieuGiamGia === voucher.maPhieuGiamGia
+        (v) => v.maPhieuGiamGia === voucher.maPhieuGiamGia,
       )
 
       if (existingVoucher) {
@@ -2961,7 +3185,7 @@ const selectVoucher = async (voucher) => {
           severity: 'warn',
           summary: 'Cảnh báo',
           detail: 'Voucher này đã được áp dụng',
-          life: 3000
+          life: 3000,
         })
         return
       }
@@ -2978,14 +3202,14 @@ const selectVoucher = async (voucher) => {
           severity: 'info',
           summary: 'Thông báo',
           detail: `Đã gỡ ${removedVouchers.length} voucher cũ để áp dụng voucher mới`,
-          life: 3000
+          life: 3000,
         })
       }
 
       // Add voucher to active tab with validated discount amount
       const voucherData = {
         ...response.data.voucher,
-        giaTriGiam: response.data.discountAmount
+        giaTriGiam: response.data.discountAmount,
       }
 
       activeTab.value.voucherList.push(voucherData)
@@ -2993,21 +3217,21 @@ const selectVoucher = async (voucher) => {
 
       // Remove from available vouchers list
       availableVouchers.value = availableVouchers.value.filter(
-        v => v.maPhieuGiamGia !== voucher.maPhieuGiamGia
+        (v) => v.maPhieuGiamGia !== voucher.maPhieuGiamGia,
       )
 
       toast.add({
         severity: 'success',
         summary: 'Thành công',
         detail: `Áp dụng voucher ${voucher.maPhieuGiamGia} thành công`,
-        life: 3000
+        life: 3000,
       })
     } else {
       toast.add({
         severity: 'error',
         summary: 'Lỗi',
         detail: response.data.error || 'Voucher không hợp lệ',
-        life: 3000
+        life: 3000,
       })
     }
   } catch (error) {
@@ -3016,7 +3240,7 @@ const selectVoucher = async (voucher) => {
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Không thể áp dụng voucher. Vui lòng thử lại.',
-      life: 3000
+      life: 3000,
     })
   }
 }
@@ -3040,7 +3264,7 @@ const onMixedPaymentConfirm = (paymentConfig) => {
   // Store mixed payment configuration in the active tab
   updateActiveTabData({
     phuongThucThanhToan: 'MIXED',
-    mixedPayments: paymentConfig.payments
+    mixedPayments: paymentConfig.payments,
   })
 
   mixedPaymentDialogVisible.value = false
@@ -3049,13 +3273,13 @@ const onMixedPaymentConfirm = (paymentConfig) => {
     severity: 'success',
     summary: 'Thành công',
     detail: `Đã cấu hình thanh toán hỗn hợp với ${paymentConfig.payments.length} phương thức`,
-    life: 3000
+    life: 3000,
   })
 }
 
 // Helper method to get payment method label
 const getPaymentMethodLabel = (methodValue) => {
-  const method = paymentMethods.value.find(m => m.value === methodValue)
+  const method = paymentMethods.value.find((m) => m.value === methodValue)
   return method?.label || methodValue
 }
 
@@ -3070,8 +3294,6 @@ const calculateChange = () => {
   const total = activeTab.value.tongThanhToan || 0
   changeAmount.value = Math.max(0, payment - total)
 }
-
-
 
 // Automatic voucher selection methods
 const findAndApplyBestVoucher = async () => {
@@ -3089,7 +3311,7 @@ const findAndApplyBestVoucher = async () => {
 
       // Check if this voucher is already applied
       const existingVoucher = activeTab.value.voucherList.find(
-        v => v.maPhieuGiamGia === response.data.voucher.maPhieuGiamGia
+        (v) => v.maPhieuGiamGia === response.data.voucher.maPhieuGiamGia,
       )
 
       if (!existingVoucher) {
@@ -3100,7 +3322,7 @@ const findAndApplyBestVoucher = async () => {
           severity: 'success',
           summary: 'Tự động áp dụng voucher',
           detail: `Đã áp dụng voucher tốt nhất: ${response.data.voucher.maPhieuGiamGia} (Giảm ${formatCurrency(response.data.discountAmount)})`,
-          life: 4000
+          life: 4000,
         })
       }
     }
@@ -3130,10 +3352,12 @@ const generateVoucherRecommendation = async () => {
     const allVouchers = allVouchersResponse.success ? allVouchersResponse.data : []
 
     // Filter vouchers that require more spending than current total (for recommendations)
-    const futureVouchers = allVouchers.filter(voucher => {
-      const minOrder = voucher.giaTriDonHangToiThieu || 0
-      return minOrder > currentTotal
-    }).sort((a, b) => (a.giaTriDonHangToiThieu || 0) - (b.giaTriDonHangToiThieu || 0))
+    const futureVouchers = allVouchers
+      .filter((voucher) => {
+        const minOrder = voucher.giaTriDonHangToiThieu || 0
+        return minOrder > currentTotal
+      })
+      .sort((a, b) => (a.giaTriDonHangToiThieu || 0) - (b.giaTriDonHangToiThieu || 0))
 
     // Generate recommendations for multiple tiers (up to 3 recommendations)
     const recommendations = []
@@ -3150,7 +3374,7 @@ const generateVoucherRecommendation = async () => {
         voucher: voucher,
         targetAmount: targetAmount,
         additionalAmount: additionalAmount,
-        potentialDiscount: potentialDiscount
+        potentialDiscount: potentialDiscount,
       })
     }
 
@@ -3176,14 +3400,14 @@ const applyRecommendedVoucher = async (voucher) => {
         severity: 'warn',
         summary: 'Chưa đủ điều kiện',
         detail: `Cần mua thêm ${formatCurrency(additionalAmount)} để áp dụng voucher này`,
-        life: 4000
+        life: 4000,
       })
       return
     }
 
     // Check if voucher is already applied
     const existingVoucher = activeTab.value.voucherList.find(
-      v => v.maPhieuGiamGia === voucher.maPhieuGiamGia
+      (v) => v.maPhieuGiamGia === voucher.maPhieuGiamGia,
     )
 
     if (existingVoucher) {
@@ -3191,7 +3415,7 @@ const applyRecommendedVoucher = async (voucher) => {
         severity: 'warn',
         summary: 'Cảnh báo',
         detail: 'Voucher này đã được áp dụng',
-        life: 3000
+        life: 3000,
       })
       return
     }
@@ -3207,27 +3431,49 @@ const applyRecommendedVoucher = async (voucher) => {
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Không thể áp dụng voucher. Vui lòng thử lại.',
-      life: 3000
+      life: 3000,
     })
   }
 }
 
 // Order confirmation methods
-const showOrderConfirmation = () => {
+const showOrderConfirmation = async () => {
   if (!activeTab.value) return
 
-  // Perform basic validation before showing confirmation
+  // Kiểm tra các điều kiện cơ bản của đơn hàng trước
   if (!canCreateActiveOrder.value) {
     toast.add({
       severity: 'warn',
       summary: 'Cảnh báo',
       detail: 'Vui lòng hoàn tất thông tin đơn hàng trước khi thanh toán',
-      life: 3000
+      life: 3000,
     })
     return
   }
 
-  orderConfirmationVisible.value = true
+  prePaymentCheckInProgress.value = true // Bắt đầu loading
+  try {
+    // Gọi hàm kiểm tra voucher
+    const validationResult = await validateVouchersBeforePayment()
+
+    // Chỉ hiển thị dialog xác nhận cuối cùng nếu tất cả kiểm tra thành công
+    // và người dùng đã đồng ý với các lựa chọn (nếu có).
+    if (validationResult.proceed) {
+      orderConfirmationVisible.value = true
+    }
+    // Nếu validationResult.proceed là false, hàm validateVouchersBeforePayment
+    // đã tự xử lý các thông báo và cập nhật giao diện cho người dùng.
+  } catch (error) {
+    console.error('Lỗi trong quá trình xác thực voucher trước thanh toán:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi kiểm tra Voucher',
+      detail: 'Đã có lỗi xảy ra khi xác thực voucher của bạn. Vui lòng thử lại.',
+      life: 5000,
+    })
+  } finally {
+    prePaymentCheckInProgress.value = false // Dừng loading
+  }
 }
 
 const confirmAndCreateOrder = async () => {
@@ -3258,7 +3504,12 @@ const createOrderFromActiveTab = async () => {
     // Additional comprehensive scenario validation
     const scenarioValidation = await validateAllCustomerScenarios()
 
-    if (!recipientValid || !addressValid || !comprehensiveAddressValidation.valid || !scenarioValidation.valid) {
+    if (
+      !recipientValid ||
+      !addressValid ||
+      !comprehensiveAddressValidation.valid ||
+      !scenarioValidation.valid
+    ) {
       let errorDetail = 'Vui lòng kiểm tra lại thông tin người nhận và địa chỉ giao hàng'
 
       if (!comprehensiveAddressValidation.valid) {
@@ -3272,7 +3523,7 @@ const createOrderFromActiveTab = async () => {
         severity: 'warn',
         summary: 'Dữ liệu không hợp lệ',
         detail: errorDetail,
-        life: 5000
+        life: 5000,
       })
       return
     }
@@ -3284,14 +3535,14 @@ const createOrderFromActiveTab = async () => {
     // Display validation errors
     const errorMessages = []
     Object.entries(validationErrors).forEach(([, errors]) => {
-      errors.forEach(error => errorMessages.push(`- ${error}`))
+      errors.forEach((error) => errorMessages.push(`- ${error}`))
     })
 
     toast.add({
       severity: 'warn',
       summary: 'Dữ liệu không hợp lệ',
       detail: `Vui lòng kiểm tra lại:\n${errorMessages.join('\n')}`,
-      life: 7000
+      life: 7000,
     })
     return
   }
@@ -3304,9 +3555,12 @@ const performOrderCreation = async () => {
   creating.value = true
   try {
     // Handle customer creation for recipient-only orders before order creation
-    if (activeTab.value.giaohang && !activeTab.value.khachHang &&
-        recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()) {
-
+    if (
+      activeTab.value.giaohang &&
+      !activeTab.value.khachHang &&
+      recipientInfo.value.hoTen.trim() &&
+      recipientInfo.value.soDienThoai.trim()
+    ) {
       console.log('Handling recipient-only order - checking for existing customer')
       const existingCustomer = await checkExistingCustomer()
 
@@ -3317,16 +3571,19 @@ const performOrderCreation = async () => {
         console.log('Using existing customer for recipient-only order')
         updateActiveTabData({
           khachHang: existingCustomer,
-          diaChiGiaoHang: null
+          diaChiGiaoHang: null,
         })
         selectedCustomer.value = existingCustomer
       }
     }
 
     // Handle Scenario 2: Different recipient than customer - Create recipient customer if needed
-    if (activeTab.value.giaohang && activeTab.value.khachHang &&
-        recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()) {
-
+    if (
+      activeTab.value.giaohang &&
+      activeTab.value.khachHang &&
+      recipientInfo.value.hoTen.trim() &&
+      recipientInfo.value.soDienThoai.trim()
+    ) {
       const currentCustomer = activeTab.value.khachHang
       const recipientDiffersFromCustomer =
         recipientInfo.value.hoTen.trim() !== currentCustomer.hoTen ||
@@ -3370,7 +3627,7 @@ const performOrderCreation = async () => {
           severity: 'error',
           summary: 'Lỗi địa chỉ',
           detail: `Địa chỉ giao hàng không hợp lệ: ${errorMessages}`,
-          life: 5000
+          life: 5000,
         })
         return // Stop order creation if address validation fails
       }
@@ -3390,7 +3647,7 @@ const performOrderCreation = async () => {
             severity: 'error',
             summary: 'Lỗi quản lý địa chỉ',
             detail: errorDetail,
-            life: 5000
+            life: 5000,
           })
           return // Stop order creation if address management fails
         } else if (addressResult.updatedCustomer) {
@@ -3399,7 +3656,7 @@ const performOrderCreation = async () => {
             severity: 'success',
             summary: 'Thành công',
             detail: 'Đã cập nhật địa chỉ khách hàng',
-            life: 3000
+            life: 3000,
           })
         }
       }
@@ -3433,14 +3690,14 @@ const performOrderCreation = async () => {
         severity: 'error',
         summary: 'Lỗi xác thực',
         detail: `Dữ liệu không hợp lệ:\n${errorMessages.join('\n')}`,
-        life: 7000
+        life: 7000,
       })
     } else {
       toast.add({
         severity: 'error',
         summary: 'Lỗi',
         detail: 'Không thể tạo đơn hàng. Vui lòng thử lại.',
-        life: 5000
+        life: 5000,
       })
     }
   } finally {
@@ -3450,7 +3707,7 @@ const performOrderCreation = async () => {
 
 // Enhanced tab closure with unsaved changes warning
 const closeTabWithConfirmation = async (tabId) => {
-  const tab = orderTabs.value.find(t => t.id === tabId)
+  const tab = orderTabs.value.find((t) => t.id === tabId)
 
   if (!tab) {
     closeOrderTab(tabId)
@@ -3480,7 +3737,7 @@ const closeTabWithConfirmation = async (tabId) => {
     const pendingCleanup = localStorage.getItem('pendingCartReservationCleanup')
     if (pendingCleanup) {
       const tabIds = JSON.parse(pendingCleanup)
-      const updatedTabIds = tabIds.filter(id => id !== tabId)
+      const updatedTabIds = tabIds.filter((id) => id !== tabId)
       if (updatedTabIds.length > 0) {
         localStorage.setItem('pendingCartReservationCleanup', JSON.stringify(updatedTabIds))
       } else {
@@ -3507,7 +3764,7 @@ const mapTabToHoaDonDto = (tab) => {
       phuongXa: addressData.value.phuongXa,
       quanHuyen: addressData.value.quanHuyen,
       tinhThanh: addressData.value.tinhThanh,
-      loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng'
+      loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng',
     }
   }
 
@@ -3531,8 +3788,10 @@ const mapTabToHoaDonDto = (tab) => {
 
     // Delivery information - use recipient info and embedded address
     diaChiGiaoHang: deliveryAddressPayload,
-    nguoiNhanTen: tab.giaohang ? recipientInfo.value.hoTen.trim() : (tab.khachHang?.hoTen || null),
-    nguoiNhanSdt: tab.giaohang ? recipientInfo.value.soDienThoai.trim() : (tab.khachHang?.soDienThoai || null),
+    nguoiNhanTen: tab.giaohang ? recipientInfo.value.hoTen.trim() : tab.khachHang?.hoTen || null,
+    nguoiNhanSdt: tab.giaohang
+      ? recipientInfo.value.soDienThoai.trim()
+      : tab.khachHang?.soDienThoai || null,
 
     // Financial information
     tongTienHang: tab.tongTienHang || 0,
@@ -3542,21 +3801,22 @@ const mapTabToHoaDonDto = (tab) => {
 
     // Status information
     trangThaiDonHang: tab.giaohang ? 'CHO_XAC_NHAN' : 'HOAN_THANH',
-    trangThaiThanhToan: tab.phuongThucThanhToan === 'TIEN_MAT' ? 'DA_THANH_TOAN' : 'CHUA_THANH_TOAN',
+    trangThaiThanhToan:
+      tab.phuongThucThanhToan === 'TIEN_MAT' ? 'DA_THANH_TOAN' : 'CHUA_THANH_TOAN',
 
     // Order details - send individual variants (frontend-selected from groups)
-    chiTiet: tab.sanPhamList.map(item => ({
+    chiTiet: tab.sanPhamList.map((item) => ({
       sanPhamChiTietId: item.sanPhamChiTiet?.id,
       soLuong: item.soLuong,
       donGia: item.donGia,
       thanhTien: item.donGia * item.soLuong,
       // Include serial number information if available
       serialNumberId: item.sanPhamChiTiet?.serialNumberId,
-      serialNumber: item.sanPhamChiTiet?.serialNumber
+      serialNumber: item.sanPhamChiTiet?.serialNumber,
     })),
 
     // Voucher information
-    voucherCodes: tab.voucherList.map(voucher => voucher.maPhieuGiamGia)
+    voucherCodes: tab.voucherList.map((voucher) => voucher.maPhieuGiamGia),
   }
 
   console.log('Generated HoaDonDto:', dto)
@@ -3567,10 +3827,7 @@ const mapTabToHoaDonDto = (tab) => {
 const { auditOrderCreation } = useOrderAudit()
 
 // Use shared validation composable
-const {
-  validateTabData,
-  clearValidationErrors
-} = useOrderValidation()
+const { validateTabData, clearValidationErrors } = useOrderValidation()
 
 const validateActiveTab = () => {
   if (!activeTab.value) return {}
@@ -3639,7 +3896,11 @@ const validateRecipientInfo = async () => {
     }
 
     // Scenario 3: Handle recipient-only orders (no main customer selected)
-    if (!activeTab.value.khachHang && recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()) {
+    if (
+      !activeTab.value.khachHang &&
+      recipientInfo.value.hoTen.trim() &&
+      recipientInfo.value.soDienThoai.trim()
+    ) {
       try {
         // Check if customer exists for recipient info
         const existingCustomer = await checkExistingCustomer()
@@ -3654,14 +3915,20 @@ const validateRecipientInfo = async () => {
     }
 
     // Scenario 2: Validate that original customer is preserved when recipient differs
-    if (activeTab.value.khachHang && recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()) {
+    if (
+      activeTab.value.khachHang &&
+      recipientInfo.value.hoTen.trim() &&
+      recipientInfo.value.soDienThoai.trim()
+    ) {
       const currentCustomer = activeTab.value.khachHang
       const recipientDiffersFromCustomer =
         recipientInfo.value.hoTen.trim() !== currentCustomer.hoTen ||
         recipientInfo.value.soDienThoai.trim() !== currentCustomer.soDienThoai
 
       if (recipientDiffersFromCustomer) {
-        console.log('Scenario 2 validation: Recipient differs from customer, ensuring proper state management')
+        console.log(
+          'Scenario 2 validation: Recipient differs from customer, ensuring proper state management',
+        )
         // This is valid - original customer should remain as main customer
         // Recipient customer tracking is handled separately in recipientCustomer.value
       }
@@ -3687,7 +3954,7 @@ const handleAddressManagement = async (customer) => {
       return {
         success: false,
         error: 'Address validation failed',
-        validationErrors: addressErrors.value
+        validationErrors: addressErrors.value,
       }
     }
 
@@ -3699,7 +3966,7 @@ const handleAddressManagement = async (customer) => {
       if (!isAddressComplete()) {
         return {
           success: false,
-          error: 'Address information is incomplete'
+          error: 'Address information is incomplete',
         }
       }
 
@@ -3709,7 +3976,7 @@ const handleAddressManagement = async (customer) => {
       if (result.success && result.updatedCustomer) {
         // Update the customer data in the active tab
         updateActiveTabData({
-          khachHang: result.updatedCustomer
+          khachHang: result.updatedCustomer,
         })
         selectedCustomer.value = result.updatedCustomer
 
@@ -3718,12 +3985,12 @@ const handleAddressManagement = async (customer) => {
           success: true,
           message: 'New address added to customer',
           updatedCustomer: result.updatedCustomer,
-          addressAction: 'created'
+          addressAction: 'created',
         }
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to add address to customer'
+          error: result.error || 'Failed to add address to customer',
         }
       }
     } else {
@@ -3735,33 +4002,35 @@ const handleAddressManagement = async (customer) => {
           duong: addressData.value.duong.trim(),
           phuongXa: addressData.value.phuongXa,
           quanHuyen: addressData.value.quanHuyen,
-          tinhThanh: addressData.value.tinhThanh
+          tinhThanh: addressData.value.tinhThanh,
         },
-        customer.diaChis
+        customer.diaChis,
       )
 
       return {
         success: true,
         message: 'Existing address reused',
         matchingAddress: matchingAddress,
-        addressAction: 'reused'
+        addressAction: 'reused',
       }
     }
   } catch (error) {
     console.error('Error in address management:', error)
     return {
       success: false,
-      error: error.message || 'Unknown error in address management'
+      error: error.message || 'Unknown error in address management',
     }
   }
 }
 
 // Helper function to check if address is complete
 const isAddressComplete = () => {
-  return addressData.value.duong.trim() &&
-         addressData.value.phuongXa &&
-         addressData.value.quanHuyen &&
-         addressData.value.tinhThanh
+  return (
+    addressData.value.duong.trim() &&
+    addressData.value.phuongXa &&
+    addressData.value.quanHuyen &&
+    addressData.value.tinhThanh
+  )
 }
 
 // Comprehensive address validation for all customer scenarios
@@ -3820,15 +4089,14 @@ const validateAddressForScenario = async (scenario = 'default') => {
     return {
       valid: Object.keys(errors).length === 0,
       errors: errors,
-      scenario: scenario
+      scenario: scenario,
     }
-
   } catch (error) {
     console.error('Error in address validation:', error)
     return {
       valid: false,
       errors: { system: 'Lỗi hệ thống khi xác thực địa chỉ' },
-      scenario: scenario
+      scenario: scenario,
     }
   }
 }
@@ -3863,7 +4131,7 @@ const validateAddressBeforeOrderCreation = async () => {
         valid: false,
         errors: validation.errors,
         scenario: currentScenario,
-        message: 'Address validation failed'
+        message: 'Address validation failed',
       }
     }
 
@@ -3873,22 +4141,21 @@ const validateAddressBeforeOrderCreation = async () => {
         valid: false,
         errors: { incomplete: 'Địa chỉ giao hàng chưa đầy đủ thông tin' },
         scenario: currentScenario,
-        message: 'Address is incomplete'
+        message: 'Address is incomplete',
       }
     }
 
     return {
       valid: true,
       scenario: currentScenario,
-      message: 'Address validation passed'
+      message: 'Address validation passed',
     }
-
   } catch (error) {
     console.error('Error in address validation before order creation:', error)
     return {
       valid: false,
       errors: { system: 'Lỗi hệ thống khi xác thực địa chỉ' },
-      message: 'System error during address validation'
+      message: 'System error during address validation',
     }
   }
 }
@@ -3903,7 +4170,7 @@ const runCustomerScenarioIntegrationTests = async () => {
     scenario3: { passed: false, errors: [], details: {} },
     addressManagement: { passed: false, errors: [], details: {} },
     backendMapping: { passed: false, errors: [], details: {} },
-    overall: { passed: false, summary: '' }
+    overall: { passed: false, summary: '' },
   }
 
   console.log('🧪 Starting Customer Scenario Integration Tests...')
@@ -3930,7 +4197,9 @@ const runCustomerScenarioIntegrationTests = async () => {
     testResults.backendMapping = await testBackendMapping()
 
     // Calculate overall test result
-    const allTestsPassed = Object.values(testResults).slice(0, -1).every(test => test.passed)
+    const allTestsPassed = Object.values(testResults)
+      .slice(0, -1)
+      .every((test) => test.passed)
     testResults.overall.passed = allTestsPassed
     testResults.overall.summary = allTestsPassed
       ? 'All customer scenario integration tests passed successfully'
@@ -3938,7 +4207,6 @@ const runCustomerScenarioIntegrationTests = async () => {
 
     console.log('🧪 Integration Tests Completed:', testResults)
     return testResults
-
   } catch (error) {
     console.error('Error during integration testing:', error)
     testResults.overall.passed = false
@@ -3959,14 +4227,16 @@ const testScenario1 = async () => {
       id: 'test-customer-1',
       hoTen: 'Nguyễn Văn A',
       soDienThoai: '0123456789',
-      diaChis: [{
-        duong: '123 Test Street',
-        phuongXa: 'Test Ward',
-        quanHuyen: 'Test District',
-        tinhThanh: 'Test Province',
-        loaiDiaChi: 'Nhà riêng',
-        laMacDinh: true
-      }]
+      diaChis: [
+        {
+          duong: '123 Test Street',
+          phuongXa: 'Test Ward',
+          quanHuyen: 'Test District',
+          tinhThanh: 'Test Province',
+          loaiDiaChi: 'Nhà riêng',
+          laMacDinh: true,
+        },
+      ],
     }
 
     // Simulate customer selection
@@ -3987,7 +4257,9 @@ const testScenario1 = async () => {
     // Test 2: Address validation for Scenario 1
     const addressValidation = await validateAddressForScenario('scenario1')
     if (!addressValidation.valid) {
-      result.errors.push(`Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`)
+      result.errors.push(
+        `Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`,
+      )
     }
 
     // Test 3: Backend mapping validation
@@ -4003,12 +4275,11 @@ const testScenario1 = async () => {
     result.details = {
       customerAutoPopulation: recipientInfo.value.hoTen === testCustomer.hoTen,
       addressValidation: addressValidation.valid,
-      backendMapping: backendMapping.khachHangId === testCustomer.id
+      backendMapping: backendMapping.khachHangId === testCustomer.id,
     }
 
     console.log('✅ Scenario 1 test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Test execution error: ${error.message}`)
     console.error('❌ Scenario 1 test failed:', error)
@@ -4028,12 +4299,12 @@ const testScenario2 = async () => {
       id: 'test-customer-2',
       hoTen: 'Nguyễn Văn B',
       soDienThoai: '0123456788',
-      diaChis: []
+      diaChis: [],
     }
 
     const testRecipient = {
       hoTen: 'Trần Thị C',
-      soDienThoai: '0987654321'
+      soDienThoai: '0987654321',
     }
 
     // Simulate customer selection and different recipient
@@ -4056,12 +4327,14 @@ const testScenario2 = async () => {
       phuongXa: 'Different Ward',
       quanHuyen: 'Different District',
       tinhThanh: 'Different Province',
-      loaiDiaChi: 'Nhà riêng'
+      loaiDiaChi: 'Nhà riêng',
     })
 
     const addressValidation = await validateAddressForScenario('scenario2')
     if (!addressValidation.valid) {
-      result.errors.push(`Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`)
+      result.errors.push(
+        `Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`,
+      )
     }
 
     // Test 3: Backend mapping validation
@@ -4080,12 +4353,11 @@ const testScenario2 = async () => {
     result.details = {
       originalCustomerPreserved: activeTab.value.khachHang?.id === testCustomer.id,
       recipientInfoMapped: backendMapping.nguoiNhanTen === testRecipient.hoTen,
-      addressValidation: addressValidation.valid
+      addressValidation: addressValidation.valid,
     }
 
     console.log('✅ Scenario 2 test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Test execution error: ${error.message}`)
     console.error('❌ Scenario 2 test failed:', error)
@@ -4103,7 +4375,7 @@ const testScenario3 = async () => {
     // Test setup: No customer, only recipient
     const testRecipient = {
       hoTen: 'Lê Văn D',
-      soDienThoai: '0111222333'
+      soDienThoai: '0111222333',
     }
 
     // Clear customer and set recipient
@@ -4122,7 +4394,7 @@ const testScenario3 = async () => {
       createdCustomerData = payload
       return {
         id: 'test-created-customer-3',
-        ...payload
+        ...payload,
       }
     }
 
@@ -4141,7 +4413,6 @@ const testScenario3 = async () => {
       if (createdCustomerData?.soDienThoai !== testRecipient.soDienThoai) {
         result.errors.push('Customer creation: Phone not mapped correctly')
       }
-
     } finally {
       // Restore original function
       customerStore.createCustomer = originalCreateCustomer
@@ -4153,12 +4424,14 @@ const testScenario3 = async () => {
       phuongXa: 'Recipient Ward',
       quanHuyen: 'Recipient District',
       tinhThanh: 'Recipient Province',
-      loaiDiaChi: 'Nhà riêng'
+      loaiDiaChi: 'Nhà riêng',
     })
 
     const addressValidation = await validateAddressForScenario('scenario3')
     if (!addressValidation.valid) {
-      result.errors.push(`Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`)
+      result.errors.push(
+        `Address validation failed: ${Object.values(addressValidation.errors).join(', ')}`,
+      )
     }
 
     // Test 3: Backend mapping validation (after customer creation)
@@ -4176,12 +4449,11 @@ const testScenario3 = async () => {
     result.details = {
       customerCreationTriggered: customerCreationCalled,
       customerDataCorrect: createdCustomerData?.hoTen === testRecipient.hoTen,
-      addressValidation: addressValidation.valid
+      addressValidation: addressValidation.valid,
     }
 
     console.log('✅ Scenario 3 test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Test execution error: ${error.message}`)
     console.error('❌ Scenario 3 test failed:', error)
@@ -4205,9 +4477,9 @@ const testAddressManagement = async () => {
           phuongXa: 'Valid Ward',
           quanHuyen: 'Valid District',
           tinhThanh: 'Valid Province',
-          loaiDiaChi: 'Nhà riêng'
+          loaiDiaChi: 'Nhà riêng',
         },
-        shouldPass: true
+        shouldPass: true,
       },
       {
         name: 'Invalid address - too short',
@@ -4216,9 +4488,9 @@ const testAddressManagement = async () => {
           phuongXa: 'Valid Ward',
           quanHuyen: 'Valid District',
           tinhThanh: 'Valid Province',
-          loaiDiaChi: 'Nhà riêng'
+          loaiDiaChi: 'Nhà riêng',
         },
-        shouldPass: false
+        shouldPass: false,
       },
       {
         name: 'Incomplete address',
@@ -4227,10 +4499,10 @@ const testAddressManagement = async () => {
           phuongXa: '',
           quanHuyen: '',
           tinhThanh: '',
-          loaiDiaChi: 'Nhà riêng'
+          loaiDiaChi: 'Nhà riêng',
         },
-        shouldPass: false
-      }
+        shouldPass: false,
+      },
     ]
 
     for (const testCase of testAddresses) {
@@ -4238,7 +4510,9 @@ const testAddressManagement = async () => {
       const validation = validateEmbeddedAddress()
 
       if (validation !== testCase.shouldPass) {
-        result.errors.push(`Address validation failed for ${testCase.name}: expected ${testCase.shouldPass}, got ${validation}`)
+        result.errors.push(
+          `Address validation failed for ${testCase.name}: expected ${testCase.shouldPass}, got ${validation}`,
+        )
       }
     }
 
@@ -4248,7 +4522,7 @@ const testAddressManagement = async () => {
       phuongXa: 'Complete Ward',
       quanHuyen: 'Complete District',
       tinhThanh: 'Complete Province',
-      loaiDiaChi: 'Nhà riêng'
+      loaiDiaChi: 'Nhà riêng',
     })
 
     if (!isAddressComplete()) {
@@ -4261,7 +4535,9 @@ const testAddressManagement = async () => {
       const validation = await validateAddressForScenario(scenario)
       if (!validation.valid && scenario !== 'scenario2' && scenario !== 'scenario3') {
         // scenario2 and scenario3 might fail due to missing recipient info, which is expected
-        result.errors.push(`Scenario validation failed for ${scenario}: ${Object.values(validation.errors).join(', ')}`)
+        result.errors.push(
+          `Scenario validation failed for ${scenario}: ${Object.values(validation.errors).join(', ')}`,
+        )
       }
     }
 
@@ -4269,12 +4545,11 @@ const testAddressManagement = async () => {
     result.details = {
       validationTests: testAddresses.length,
       completenessCheck: isAddressComplete(),
-      scenarioValidations: scenarios.length
+      scenarioValidations: scenarios.length,
     }
 
     console.log('✅ Address Management test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Test execution error: ${error.message}`)
     console.error('❌ Address Management test failed:', error)
@@ -4293,18 +4568,18 @@ const testBackendMapping = async () => {
     const testCustomer1 = {
       id: 'test-customer-mapping-1',
       hoTen: 'Mapping Test Customer 1',
-      soDienThoai: '0123456789'
+      soDienThoai: '0123456789',
     }
 
     updateActiveTabData({
       khachHang: testCustomer1,
       giaohang: true,
       maHoaDon: 'TEST001',
-      loaiHoaDon: 'TAI_QUAY'
+      loaiHoaDon: 'TAI_QUAY',
     })
     recipientInfo.value = {
       hoTen: testCustomer1.hoTen,
-      soDienThoai: testCustomer1.soDienThoai
+      soDienThoai: testCustomer1.soDienThoai,
     }
 
     const mapping1 = mapTabToHoaDonDto(activeTab.value)
@@ -4320,18 +4595,18 @@ const testBackendMapping = async () => {
     const testCustomer2 = {
       id: 'test-customer-mapping-2',
       hoTen: 'Mapping Test Customer 2',
-      soDienThoai: '0123456788'
+      soDienThoai: '0123456788',
     }
     const testRecipient2 = {
       hoTen: 'Different Recipient',
-      soDienThoai: '0987654321'
+      soDienThoai: '0987654321',
     }
 
     updateActiveTabData({
       khachHang: testCustomer2,
       giaohang: true,
       maHoaDon: 'TEST002',
-      loaiHoaDon: 'GIAO_HANG'
+      loaiHoaDon: 'GIAO_HANG',
     })
     recipientInfo.value = { ...testRecipient2 }
 
@@ -4353,7 +4628,7 @@ const testBackendMapping = async () => {
       phuongXa: 'Test Mapping Ward',
       quanHuyen: 'Test Mapping District',
       tinhThanh: 'Test Mapping Province',
-      loaiDiaChi: 'Văn phòng'
+      loaiDiaChi: 'Văn phòng',
     })
 
     const mapping3 = mapTabToHoaDonDto(activeTab.value)
@@ -4380,14 +4655,14 @@ const testBackendMapping = async () => {
     result.passed = result.errors.length === 0
     result.details = {
       scenario1Mapping: mapping1.khachHangId === testCustomer1.id,
-      scenario2Mapping: mapping2.khachHangId === testCustomer2.id && mapping2.nguoiNhanTen === testRecipient2.hoTen,
+      scenario2Mapping:
+        mapping2.khachHangId === testCustomer2.id && mapping2.nguoiNhanTen === testRecipient2.hoTen,
       addressMapping: !!mapping3.diaChiGiaoHang,
-      nonDeliveryMapping: mapping4.diaChiGiaoHang === null
+      nonDeliveryMapping: mapping4.diaChiGiaoHang === null,
     }
 
     console.log('✅ Backend Mapping test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Test execution error: ${error.message}`)
     console.error('❌ Backend Mapping test failed:', error)
@@ -4410,7 +4685,7 @@ const executeIntegrationTests = async () => {
         severity: 'success',
         summary: 'Integration Tests Passed',
         detail: 'All customer scenario tests completed successfully',
-        life: 5000
+        life: 5000,
       })
     } else {
       const failedTests = Object.entries(testResults)
@@ -4421,7 +4696,7 @@ const executeIntegrationTests = async () => {
         severity: 'error',
         summary: 'Integration Tests Failed',
         detail: `Failed tests: ${failedTests.join(', ')}`,
-        life: 8000
+        life: 8000,
       })
     }
 
@@ -4432,7 +4707,7 @@ const executeIntegrationTests = async () => {
       severity: 'error',
       summary: 'Test Execution Error',
       detail: error.message,
-      life: 5000
+      life: 5000,
     })
   }
 }
@@ -4464,7 +4739,7 @@ const validateAllCustomerScenarios = async () => {
       scenario: currentScenario,
       valid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     }
 
     // Basic validation
@@ -4506,14 +4781,13 @@ const validateAllCustomerScenarios = async () => {
 
     console.log('✅ Scenario validation completed:', validationResults)
     return validationResults
-
   } catch (error) {
     console.error('Error validating customer scenarios:', error)
     return {
       scenario: 'error',
       valid: false,
       errors: [error.message],
-      warnings: []
+      warnings: [],
     }
   }
 }
@@ -4537,7 +4811,7 @@ const syncCustomerToRecipient = async (customer) => {
       severity: 'info',
       summary: 'Thông tin',
       detail: 'Đã tự động điền thông tin người nhận từ khách hàng',
-      life: 2000
+      life: 2000,
     })
   } catch (error) {
     console.error('Error syncing customer to recipient:', error)
@@ -4559,7 +4833,7 @@ const clearRecipientInfo = () => {
     phuongXa: '',
     quanHuyen: '',
     tinhThanh: '',
-    loaiDiaChi: 'Nhà riêng'
+    loaiDiaChi: 'Nhà riêng',
   })
 }
 
@@ -4578,7 +4852,7 @@ const createCustomerFromRecipient = async () => {
       gioiTinh: 'NAM', // Default gender
       ngaySinh: null, // No birth date from recipient info
       trangThai: 'HOAT_DONG',
-      diaChis: []
+      diaChis: [],
     }
 
     // Add address information if available with enhanced validation
@@ -4591,14 +4865,16 @@ const createCustomerFromRecipient = async () => {
         throw new Error(`Địa chỉ không hợp lệ: ${errorMessages}`)
       }
 
-      customerPayload.diaChis = [{
-        duong: addressData.value.duong.trim(),
-        phuongXa: addressData.value.phuongXa,
-        quanHuyen: addressData.value.quanHuyen,
-        tinhThanh: addressData.value.tinhThanh,
-        loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng',
-        laMacDinh: true
-      }]
+      customerPayload.diaChis = [
+        {
+          duong: addressData.value.duong.trim(),
+          phuongXa: addressData.value.phuongXa,
+          quanHuyen: addressData.value.quanHuyen,
+          tinhThanh: addressData.value.tinhThanh,
+          loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng',
+          laMacDinh: true,
+        },
+      ]
 
       console.log('Address validated and added to customer payload for Scenario 3')
     } else {
@@ -4614,7 +4890,7 @@ const createCustomerFromRecipient = async () => {
       // Set the newly created customer as the main customer for the order
       updateActiveTabData({
         khachHang: newCustomer,
-        diaChiGiaoHang: null
+        diaChiGiaoHang: null,
       })
       selectedCustomer.value = newCustomer
 
@@ -4622,7 +4898,7 @@ const createCustomerFromRecipient = async () => {
         severity: 'success',
         summary: 'Thành công',
         detail: `Đã tạo khách hàng ${newCustomer.hoTen} từ thông tin người nhận`,
-        life: 3000
+        life: 3000,
       })
 
       return newCustomer
@@ -4633,7 +4909,7 @@ const createCustomerFromRecipient = async () => {
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Không thể tạo khách hàng từ thông tin người nhận',
-      life: 3000
+      life: 3000,
     })
     throw error
   }
@@ -4654,7 +4930,7 @@ const createRecipientCustomerForScenario2 = async () => {
       gioiTinh: 'NAM', // Default gender
       ngaySinh: null, // No birth date from recipient info
       trangThai: 'HOAT_DONG',
-      diaChis: []
+      diaChis: [],
     }
 
     // Add address information if available with enhanced validation
@@ -4667,14 +4943,16 @@ const createRecipientCustomerForScenario2 = async () => {
         throw new Error(`Địa chỉ không hợp lệ cho người nhận: ${errorMessages}`)
       }
 
-      recipientCustomerPayload.diaChis = [{
-        duong: addressData.value.duong.trim(),
-        phuongXa: addressData.value.phuongXa,
-        quanHuyen: addressData.value.quanHuyen,
-        tinhThanh: addressData.value.tinhThanh,
-        loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng',
-        laMacDinh: true
-      }]
+      recipientCustomerPayload.diaChis = [
+        {
+          duong: addressData.value.duong.trim(),
+          phuongXa: addressData.value.phuongXa,
+          quanHuyen: addressData.value.quanHuyen,
+          tinhThanh: addressData.value.tinhThanh,
+          loaiDiaChi: addressData.value.loaiDiaChi || 'Nhà riêng',
+          laMacDinh: true,
+        },
+      ]
 
       console.log('Address validated and added to recipient customer payload for Scenario 2')
     } else {
@@ -4694,7 +4972,7 @@ const createRecipientCustomerForScenario2 = async () => {
         severity: 'success',
         summary: 'Thành công',
         detail: `Đã tạo khách hàng ${newRecipientCustomer.hoTen} cho người nhận`,
-        life: 3000
+        life: 3000,
       })
 
       return newRecipientCustomer
@@ -4705,7 +4983,7 @@ const createRecipientCustomerForScenario2 = async () => {
       severity: 'error',
       summary: 'Lỗi',
       detail: 'Không thể tạo khách hàng cho người nhận',
-      life: 3000
+      life: 3000,
     })
     throw error
   }
@@ -4741,7 +5019,7 @@ const handleDifferentRecipient = async () => {
           severity: 'info',
           summary: 'Thông tin',
           detail: `Đã tìm thấy khách hàng ${foundRecipientCustomer.hoTen} và tự động điền địa chỉ`,
-          life: 3000
+          life: 3000,
         })
       } else {
         // Clear recipient customer if no match found
@@ -4768,13 +5046,17 @@ const syncCustomerAndRecipient = async () => {
     const currentCustomer = activeTab.value?.khachHang
 
     // If no customer selected but recipient info exists, handle recipient-only scenario
-    if (!currentCustomer && recipientInfo.value.hoTen.trim() && recipientInfo.value.soDienThoai.trim()) {
+    if (
+      !currentCustomer &&
+      recipientInfo.value.hoTen.trim() &&
+      recipientInfo.value.soDienThoai.trim()
+    ) {
       const existingCustomer = await checkExistingCustomer()
       if (existingCustomer) {
         // Set existing customer as main customer
         updateActiveTabData({
           khachHang: existingCustomer,
-          diaChiGiaoHang: null
+          diaChiGiaoHang: null,
         })
         selectedCustomer.value = existingCustomer
 
@@ -4782,7 +5064,7 @@ const syncCustomerAndRecipient = async () => {
           severity: 'info',
           summary: 'Thông tin',
           detail: `Đã tự động chọn khách hàng ${existingCustomer.hoTen}`,
-          life: 3000
+          life: 3000,
         })
       }
     }
@@ -4816,7 +5098,7 @@ watch(
       }
     }
   },
-  { immediate: false, deep: true }
+  { immediate: false, deep: true },
 )
 
 // Watchers with proper null checks
@@ -4834,7 +5116,7 @@ watch(
       }
     }
   },
-  { immediate: false } // Don't run immediately to avoid undefined access
+  { immediate: false }, // Don't run immediately to avoid undefined access
 )
 
 // Watch for customer changes to automatically apply vouchers and sync recipient info
@@ -4867,7 +5149,7 @@ watch(
       clearRecipientInfo()
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 // Watch for delivery toggle changes to sync customer and recipient
@@ -4890,7 +5172,7 @@ watch(
       updateActiveTabData({ phiVanChuyen: 0 })
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 watch(
@@ -4903,7 +5185,7 @@ watch(
       hasUnsavedChanges.value = false
     }
   },
-  { deep: true, immediate: false } // Don't run immediately to avoid undefined access
+  { deep: true, immediate: false }, // Don't run immediately to avoid undefined access
 )
 
 watch(
@@ -4914,7 +5196,7 @@ watch(
       hasUnsavedChanges.value = isModified || false
     }
   },
-  { immediate: false } // Don't run immediately to avoid undefined access
+  { immediate: false }, // Don't run immediately to avoid undefined access
 )
 
 // Watch for new tabs to sync cart data
@@ -4926,7 +5208,7 @@ watch(
       syncCartWithDialog()
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 // Shipping calculation timeout for debouncing
@@ -4939,17 +5221,23 @@ watch(
     addressData.value.quanHuyen,
     addressData.value.phuongXa,
     addressData.value.duong,
-    activeTab.value?.tongTienHang
+    activeTab.value?.tongTienHang,
   ],
-  async ([province, district, ward, street, orderTotal], [oldProvince, oldDistrict, oldWard, oldStreet, oldOrderTotal]) => {
+  async (
+    [province, district, ward, street, orderTotal],
+    [oldProvince, oldDistrict, oldWard, oldStreet, oldOrderTotal],
+  ) => {
     // Only calculate if delivery is enabled and we have a complete address
     if (!activeTab.value?.giaohang || !province || !district || !street) {
       return
     }
 
     // Only calculate if address or order total has actually changed
-    const addressChanged = province !== oldProvince || district !== oldDistrict ||
-                          ward !== oldWard || street !== oldStreet
+    const addressChanged =
+      province !== oldProvince ||
+      district !== oldDistrict ||
+      ward !== oldWard ||
+      street !== oldStreet
     const orderTotalChanged = orderTotal !== oldOrderTotal
 
     if ((addressChanged || orderTotalChanged) && !isManualShippingOverride.value) {
@@ -4960,7 +5248,7 @@ watch(
       }, 1000) // 1 second delay
     }
   },
-  { immediate: false, deep: true }
+  { immediate: false, deep: true },
 )
 
 // Watch for price updates to detect cart price changes
@@ -4971,7 +5259,7 @@ watch(
       detectCartPriceChanges()
     }
   },
-  { deep: true, immediate: false }
+  { deep: true, immediate: false },
 )
 
 // Watch for cart items to subscribe to price updates
@@ -4979,16 +5267,14 @@ watch(
   () => activeTab.value?.sanPhamList,
   (newItems, _oldItems) => {
     if (newItems && newItems.length > 0) {
-      const variantIds = newItems
-        .map(item => item.sanPhamChiTiet?.id)
-        .filter(Boolean)
+      const variantIds = newItems.map((item) => item.sanPhamChiTiet?.id).filter(Boolean)
 
       if (variantIds.length > 0) {
         subscribeToPriceUpdates(variantIds)
       }
     }
   },
-  { deep: true, immediate: false }
+  { deep: true, immediate: false },
 )
 
 // Page refresh/close detection for cart reservation cleanup
@@ -4996,7 +5282,7 @@ const handlePageUnload = (_event) => {
   console.log('Page unload detected, releasing cart reservations...')
 
   // Get active tab IDs
-  const activeTabIds = orderTabs.value.map(tab => tab.id)
+  const activeTabIds = orderTabs.value.map((tab) => tab.id)
 
   // Store tab IDs in localStorage for cleanup on next page load
   if (activeTabIds.length > 0) {
@@ -5051,13 +5337,15 @@ const generateTestReport = async () => {
       environment: import.meta.env.MODE,
       testResults: await runCustomerScenarioIntegrationTests(),
       currentState: {
-        activeTab: activeTab.value ? {
-          hasCustomer: !!activeTab.value.khachHang,
-          hasDelivery: !!activeTab.value.giaohang,
-          recipientInfo: recipientInfo.value,
-          addressComplete: isAddressComplete()
-        } : null,
-        scenario: await validateAllCustomerScenarios()
+        activeTab: activeTab.value
+          ? {
+              hasCustomer: !!activeTab.value.khachHang,
+              hasDelivery: !!activeTab.value.giaohang,
+              recipientInfo: recipientInfo.value,
+              addressComplete: isAddressComplete(),
+            }
+          : null,
+        scenario: await validateAllCustomerScenarios(),
       },
       summary: {
         totalTests: 5,
@@ -5066,22 +5354,24 @@ const generateTestReport = async () => {
           scenario2: 'Implemented with separate recipient tracking',
           scenario3: 'Implemented with customer creation',
           addressManagement: 'Enhanced with comprehensive validation',
-          backendMapping: 'Implemented with proper customer ID preservation'
-        }
-      }
+          backendMapping: 'Implemented with proper customer ID preservation',
+        },
+      },
     }
 
     console.log('📊 Comprehensive Test Report:', report)
 
     // Display summary in toast
-    const passedTests = Object.values(report.testResults).slice(0, -1).filter(test => test.passed).length
+    const passedTests = Object.values(report.testResults)
+      .slice(0, -1)
+      .filter((test) => test.passed).length
     const totalTests = Object.values(report.testResults).slice(0, -1).length
 
     toast.add({
       severity: passedTests === totalTests ? 'success' : 'warn',
       summary: 'Test Report Generated',
       detail: `${passedTests}/${totalTests} tests passed. Check console for details.`,
-      life: 5000
+      life: 5000,
     })
 
     return report
@@ -5103,7 +5393,7 @@ const runSystemIntegrationTests = async () => {
     addressManagement: { passed: false, errors: [], details: {} },
     uiIntegration: { passed: false, errors: [], details: {} },
     performanceValidation: { passed: false, errors: [], details: {} },
-    overall: { passed: false, summary: '', totalTests: 0, passedTests: 0 }
+    overall: { passed: false, summary: '', totalTests: 0, passedTests: 0 },
   }
 
   console.log('🚀 Starting Comprehensive System Integration Tests...')
@@ -5138,8 +5428,8 @@ const runSystemIntegrationTests = async () => {
     testResults.performanceValidation = await testPerformanceValidation()
 
     // Calculate overall results
-    const testCategories = Object.keys(testResults).filter(key => key !== 'overall')
-    const passedTests = testCategories.filter(category => testResults[category].passed).length
+    const testCategories = Object.keys(testResults).filter((key) => key !== 'overall')
+    const passedTests = testCategories.filter((category) => testResults[category].passed).length
     const totalTests = testCategories.length
 
     testResults.overall = {
@@ -5147,12 +5437,11 @@ const runSystemIntegrationTests = async () => {
       summary: `${passedTests}/${totalTests} test categories passed`,
       totalTests,
       passedTests,
-      failedCategories: testCategories.filter(category => !testResults[category].passed)
+      failedCategories: testCategories.filter((category) => !testResults[category].passed),
     }
 
     console.log('🎯 System Integration Tests Completed:', testResults)
     return testResults
-
   } catch (error) {
     console.error('❌ System Integration Testing failed:', error)
     testResults.overall.passed = false
@@ -5172,7 +5461,7 @@ const testPaymentIntegrations = async () => {
     updateActiveTabData({ loaiHoaDon: 'TAI_QUAY', giaohang: false })
     const taiQuayMethods = paymentMethods.value
 
-    if (!taiQuayMethods.some(m => m.value === 'TIEN_MAT')) {
+    if (!taiQuayMethods.some((m) => m.value === 'TIEN_MAT')) {
       result.errors.push('TAI_QUAY orders should have TIEN_MAT payment method')
     }
 
@@ -5180,7 +5469,7 @@ const testPaymentIntegrations = async () => {
     updateActiveTabData({ loaiHoaDon: 'ONLINE', giaohang: true })
     const onlineMethods = paymentMethods.value
 
-    if (!onlineMethods.some(m => m.value === 'TIEN_MAT' && m.label.includes('giao hàng'))) {
+    if (!onlineMethods.some((m) => m.value === 'TIEN_MAT' && m.label.includes('giao hàng'))) {
       result.errors.push('Online delivery orders should have cash on delivery option')
     }
 
@@ -5197,8 +5486,8 @@ const testPaymentIntegrations = async () => {
     const mixedPaymentConfig = {
       payments: [
         { method: 'TIEN_MAT', amount: 50000 },
-        { method: 'CHUYEN_KHOAN', amount: 50000 }
-      ]
+        { method: 'CHUYEN_KHOAN', amount: 50000 },
+      ],
     }
 
     onMixedPaymentConfirm(mixedPaymentConfig)
@@ -5212,12 +5501,11 @@ const testPaymentIntegrations = async () => {
       taiQuayMethodsCount: taiQuayMethods.length,
       onlineMethodsCount: onlineMethods.length,
       changeCalculation: changeAmount.value,
-      mixedPaymentApplied: activeTab.value.phuongThucThanhToan === 'MIXED'
+      mixedPaymentApplied: activeTab.value.phuongThucThanhToan === 'MIXED',
     }
 
     console.log('✅ Payment Integration test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Payment integration test error: ${error.message}`)
     console.error('❌ Payment Integration test failed:', error)
@@ -5236,13 +5524,13 @@ const testVoucherIntelligence = async () => {
     const testCustomer = {
       id: 'test-customer-voucher',
       hoTen: 'Test Customer',
-      soDienThoai: '0123456789'
+      soDienThoai: '0123456789',
     }
 
     updateActiveTabData({
       khachHang: testCustomer,
       tongTienHang: 500000,
-      voucherList: []
+      voucherList: [],
     })
 
     // Mock voucher API for testing
@@ -5253,8 +5541,8 @@ const testVoucherIntelligence = async () => {
       success: true,
       data: [
         { maPhieuGiamGia: 'TEST10', tenPhieuGiamGia: 'Test 10%', giaTriGiam: 50000 },
-        { maPhieuGiamGia: 'TEST20', tenPhieuGiamGia: 'Test 20%', giaTriGiam: 100000 }
-      ]
+        { maPhieuGiamGia: 'TEST20', tenPhieuGiamGia: 'Test 20%', giaTriGiam: 100000 },
+      ],
     })
 
     voucherApi.validateVoucher = async (code, _customerId, _orderTotal) => ({
@@ -5262,8 +5550,8 @@ const testVoucherIntelligence = async () => {
       data: {
         valid: true,
         voucher: { maPhieuGiamGia: code, tenPhieuGiamGia: `Test ${code}` },
-        discountAmount: code === 'TEST10' ? 50000 : 100000
-      }
+        discountAmount: code === 'TEST10' ? 50000 : 100000,
+      },
     })
 
     try {
@@ -5286,10 +5574,12 @@ const testVoucherIntelligence = async () => {
       const secondVoucher = { maPhieuGiamGia: 'TEST20', tenPhieuGiamGia: 'Test 20%' }
       await selectVoucher(secondVoucher)
 
-      if (activeTab.value.voucherList.length !== 1 || activeTab.value.voucherList[0].maPhieuGiamGia !== 'TEST20') {
+      if (
+        activeTab.value.voucherList.length !== 1 ||
+        activeTab.value.voucherList[0].maPhieuGiamGia !== 'TEST20'
+      ) {
         result.errors.push('Single voucher restriction not working correctly')
       }
-
     } finally {
       // Restore original functions
       voucherApi.getAvailableVouchers = originalGetAvailableVouchers
@@ -5300,12 +5590,11 @@ const testVoucherIntelligence = async () => {
     result.details = {
       vouchersLoaded: availableVouchers.value.length,
       vouchersApplied: activeTab.value.voucherList.length,
-      singleVoucherRestriction: activeTab.value.voucherList.length === 1
+      singleVoucherRestriction: activeTab.value.voucherList.length === 1,
     }
 
     console.log('✅ Voucher Intelligence test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Voucher intelligence test error: ${error.message}`)
     console.error('❌ Voucher Intelligence test failed:', error)
@@ -5339,12 +5628,12 @@ const testStaffAssignment = async () => {
         {
           sanPhamChiTiet: { id: 'test-product-1' },
           soLuong: 1,
-          donGia: 100000
-        }
+          donGia: 100000,
+        },
       ],
       tongTienHang: 100000,
       tongThanhToan: 100000,
-      phuongThucThanhToan: 'TIEN_MAT'
+      phuongThucThanhToan: 'TIEN_MAT',
     })
 
     const staffOrderData = mapTabToHoaDonDto(activeTab.value)
@@ -5367,12 +5656,11 @@ const testStaffAssignment = async () => {
     result.details = {
       staffIdSetByFrontend: orderData.nhanVienId !== null,
       orderDataComplete: !!staffOrderData.maHoaDon && !!staffOrderData.loaiHoaDon,
-      staffAssignmentConsistent: order1Data.nhanVienId === order2Data.nhanVienId
+      staffAssignmentConsistent: order1Data.nhanVienId === order2Data.nhanVienId,
     }
 
     console.log('✅ Staff Assignment test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Staff assignment test error: ${error.message}`)
     console.error('❌ Staff Assignment test failed:', error)
@@ -5408,7 +5696,7 @@ const testUIIntegration = async () => {
       updateActiveTabData({ phuongThucThanhToan: 'TIEN_MAT' })
       const paymentMethodsWithDelivery = paymentMethods.value
 
-      if (!paymentMethodsWithDelivery.some(m => m.value === 'TIEN_MAT')) {
+      if (!paymentMethodsWithDelivery.some((m) => m.value === 'TIEN_MAT')) {
         result.errors.push('Payment methods not updating with delivery toggle')
       }
     }
@@ -5427,7 +5715,7 @@ const testUIIntegration = async () => {
       phuongXa: 'Test Ward',
       quanHuyen: 'Test District',
       tinhThanh: 'Test Province',
-      loaiDiaChi: 'Nhà riêng'
+      loaiDiaChi: 'Nhà riêng',
     }
 
     setAddressData(testAddress)
@@ -5439,7 +5727,7 @@ const testUIIntegration = async () => {
     // Test 5: Recipient info integration
     const testRecipient = {
       hoTen: 'Test Recipient UI',
-      soDienThoai: '0123456789'
+      soDienThoai: '0123456789',
     }
 
     recipientInfo.value = { ...testRecipient }
@@ -5455,12 +5743,11 @@ const testUIIntegration = async () => {
       paymentMethodsAvailable: paymentMethods.value.length > 0,
       customerSelectionWorking: selectedCustomer.value === null,
       addressFormWorking: addressData.value.duong === testAddress.duong,
-      recipientInfoWorking: recipientInfo.value.hoTen === testRecipient.hoTen
+      recipientInfoWorking: recipientInfo.value.hoTen === testRecipient.hoTen,
     }
 
     console.log('✅ UI Integration test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`UI integration test error: ${error.message}`)
     console.error('❌ UI Integration test failed:', error)
@@ -5483,13 +5770,14 @@ const testPerformanceValidation = async () => {
       phuongXa: 'Performance Ward',
       quanHuyen: 'Performance District',
       tinhThanh: 'Performance Province',
-      loaiDiaChi: 'Nhà riêng'
+      loaiDiaChi: 'Nhà riêng',
     })
 
     const addressValidationResult = validateEmbeddedAddress()
     const addressValidationTime = performance.now() - addressValidationStart
 
-    if (addressValidationTime > 100) { // 100ms threshold
+    if (addressValidationTime > 100) {
+      // 100ms threshold
       result.errors.push(`Address validation too slow: ${addressValidationTime}ms`)
     }
 
@@ -5498,14 +5786,15 @@ const testPerformanceValidation = async () => {
 
     updateActiveTabData({
       khachHang: { id: 'perf-test', hoTen: 'Performance Test', soDienThoai: '0123456789' },
-      giaohang: true
+      giaohang: true,
     })
     recipientInfo.value = { hoTen: 'Different Recipient', soDienThoai: '0987654321' }
 
     const scenarioValidation = await validateAllCustomerScenarios()
     const scenarioDetectionTime = performance.now() - scenarioDetectionStart
 
-    if (scenarioDetectionTime > 50) { // 50ms threshold
+    if (scenarioDetectionTime > 50) {
+      // 50ms threshold
       result.errors.push(`Scenario detection too slow: ${scenarioDetectionTime}ms`)
     }
 
@@ -5516,17 +5805,16 @@ const testPerformanceValidation = async () => {
       sanPhamList: Array.from({ length: 10 }, (_, i) => ({
         sanPhamChiTiet: { id: `perf-product-${i}` },
         soLuong: 1,
-        donGia: 100000
+        donGia: 100000,
       })),
-      voucherList: [
-        { maPhieuGiamGia: 'PERF-VOUCHER', giaTriGiam: 50000 }
-      ]
+      voucherList: [{ maPhieuGiamGia: 'PERF-VOUCHER', giaTriGiam: 50000 }],
     })
 
     const mappingResult = mapTabToHoaDonDto(activeTab.value)
     const mappingTime = performance.now() - mappingStart
 
-    if (mappingTime > 20) { // 20ms threshold
+    if (mappingTime > 20) {
+      // 20ms threshold
       result.errors.push(`Backend mapping too slow: ${mappingTime}ms`)
     }
 
@@ -5542,7 +5830,8 @@ const testPerformanceValidation = async () => {
     const memoryAfter = performance.memory ? performance.memory.usedJSHeapSize : 0
     const memoryIncrease = memoryAfter - memoryBefore
 
-    if (memoryIncrease > 10 * 1024 * 1024) { // 10MB threshold
+    if (memoryIncrease > 10 * 1024 * 1024) {
+      // 10MB threshold
       result.errors.push(`Excessive memory usage: ${memoryIncrease / 1024 / 1024}MB`)
     }
 
@@ -5554,12 +5843,11 @@ const testPerformanceValidation = async () => {
       memoryIncrease: `${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`,
       addressValidationWorking: addressValidationResult,
       scenarioDetectionWorking: scenarioValidation.valid,
-      backendMappingWorking: !!mappingResult.khachHangId
+      backendMappingWorking: !!mappingResult.khachHangId,
     }
 
     console.log('✅ Performance Validation test completed:', result)
     return result
-
   } catch (error) {
     result.errors.push(`Performance validation test error: ${error.message}`)
     console.error('❌ Performance Validation test failed:', error)
@@ -5568,18 +5856,6 @@ const testPerformanceValidation = async () => {
 }
 
 // ===== DEVELOPMENT TESTING UTILITIES =====
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Expose testing functions for development/debugging
 if (import.meta.env.DEV) {
@@ -5614,7 +5890,7 @@ if (import.meta.env.DEV) {
       console.log('🚀 Running comprehensive system integration tests...')
       const results = await runSystemIntegrationTests()
       return results
-    }
+    },
   }
   console.log('🧪 OrderCreate testing utilities available at window.orderCreateTests')
   console.log('💡 Run window.orderCreateTests.runSystemTests() for comprehensive system testing')
@@ -5638,12 +5914,6 @@ onMounted(async () => {
     switchToTab(orderTabs.value[0].id)
   }
 
-
-
-
-
-
-
   // Preload data for search functionality
   try {
     await customerStore.fetchCustomers()
@@ -5660,7 +5930,8 @@ onMounted(async () => {
     subscribeToOrderExpiration()
 
     // Subscribe to price updates for any existing cart items
-    const existingVariantIds = activeTab.value?.sanPhamList?.map(item => item.sanPhamChiTiet?.id).filter(Boolean) || []
+    const existingVariantIds =
+      activeTab.value?.sanPhamList?.map((item) => item.sanPhamChiTiet?.id).filter(Boolean) || []
     if (existingVariantIds.length > 0) {
       subscribeToPriceUpdates(existingVariantIds)
     }
@@ -5691,8 +5962,6 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handlePageUnload)
   window.removeEventListener('pagehide', handlePageUnload)
 })
-
-
 </script>
 
 <style scoped>

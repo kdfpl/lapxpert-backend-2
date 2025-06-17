@@ -4,11 +4,11 @@ import com.lapxpert.backend.vnpay.domain.VNPayService;
 import com.lapxpert.backend.vnpay.domain.VNPayConfig;
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
+import com.lapxpert.backend.payment.domain.service.BasePaymentController;
+import com.lapxpert.backend.payment.domain.service.VNPayGatewayService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,9 +20,10 @@ import java.util.Map;
 
 /**
  * Enhanced VNPay controller with improved security, error handling, and audit logging.
+ * Extends BasePaymentController for common payment functionality and Vietnamese business requirements.
  *
  * Security enhancements:
- * - Enhanced parameter validation
+ * - Enhanced parameter validation through BasePaymentController
  * - Improved error handling with security-conscious responses
  * - Better IP address detection and logging
  * - Enhanced IPN processing with comprehensive validation
@@ -32,70 +33,72 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/payment")
 @CrossOrigin(origins = "*")
-public class VNPayController {
+public class VNPayController extends BasePaymentController<VNPayGatewayService> {
 
-    @Autowired
-    private VNPayService vnPayService;
+    private static final long MAX_VNPAY_AMOUNT = 100_000_000L; // 100 million VND
+    private final VNPayService vnPayService;
+    private final HoaDonService hoaDonService;
 
-    @Autowired
-    private HoaDonService hoaDonService;
-
-    public VNPayController(VNPayService vnPayService, HoaDonService hoaDonService) {
+    public VNPayController(VNPayGatewayService vnPayGatewayService, VNPayService vnPayService, HoaDonService hoaDonService) {
+        super(vnPayGatewayService);
         this.vnPayService = vnPayService;
         this.hoaDonService = hoaDonService;
+    }
+
+    @Override
+    protected String getGatewayName() {
+        return "VNPay";
+    }
+
+    @Override
+    protected long getMaxPaymentAmount() {
+        return MAX_VNPAY_AMOUNT;
     }
 
     /**
      * Create VNPay payment order with enhanced validation and error handling.
      *
-     * @param orderTotal Payment amount in VND
-     * @param orderInfo Order information
+     * @param orderTotal Payment amount in VND (số tiền thanh toán)
+     * @param orderInfo Order information (thông tin đơn hàng)
      * @param request HTTP request for IP detection
      * @return Payment URL response
      */
     @PostMapping("/create-order")
-    public ResponseEntity<Map<String, String>> createOrder(
+    public ResponseEntity<Map<String, Object>> createOrder(
             @RequestParam("amount") int orderTotal,
             @RequestParam("orderInfo") String orderInfo,
             HttpServletRequest request) {
 
-        String clientIp = VNPayConfig.getIpAddress(request);
-        log.info("VNPay create order request - Amount: {}, ClientIP: {}", orderTotal, clientIp);
-
-        Map<String, String> response = new HashMap<>();
-
         try {
-            // Enhanced parameter validation
-            if (orderTotal <= 0) {
-                log.warn("Invalid payment amount: {} from IP: {}", orderTotal, clientIp);
-                response.put("error", "Invalid payment amount");
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            if (orderInfo == null || orderInfo.trim().isEmpty()) {
-                log.warn("Empty order info from IP: {}", clientIp);
-                response.put("error", "Order information is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-
+            String clientIp = getClientIpAddress(request);
             String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+
+            // Validate payment parameters using base controller
+            validatePaymentParameters(orderTotal, orderInfo, "VNPay-" + System.currentTimeMillis(), baseUrl);
+
+            // Create audit log for payment creation
+            Map<String, Object> auditInfo = new HashMap<>();
+            auditInfo.put("userAgent", request.getHeader("User-Agent"));
+            auditInfo.put("referer", request.getHeader("Referer"));
+            createAuditLog("CREATE_PAYMENT", "VNPay-" + System.currentTimeMillis(), (long) orderTotal, clientIp, auditInfo);
+
             String vnpayUrl = vnPayService.createOrder(orderTotal, orderInfo, baseUrl);
 
-            response.put("paymentUrl", vnpayUrl);
-            response.put("status", "success");
+            // Prepare response data
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("paymentUrl", vnpayUrl);
+            responseData.put("paymentMethod", "VNPAY");
 
-            log.info("VNPay payment URL created successfully for amount: {} from IP: {}", orderTotal, clientIp);
-            return ResponseEntity.ok(response);
+            return createSuccessResponse(responseData, "Tạo liên kết thanh toán VNPay thành công");
 
         } catch (IllegalArgumentException e) {
-            log.warn("VNPay create order validation error: {} from IP: {}", e.getMessage(), clientIp);
-            response.put("error", "Invalid request parameters");
-            return ResponseEntity.badRequest().body(response);
-
+            log.warn("Invalid VNPay payment parameters: {}", e.getMessage());
+            return createErrorResponse(e.getMessage(), "INVALID_PARAMETERS",
+                org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("Error creating VNPay payment order from IP: {} - {}", clientIp, e.getMessage(), e);
-            response.put("error", "Unable to create payment order");
-            return ResponseEntity.status(500).body(response);
+            log.error("Error creating VNPay payment order: {}", e.getMessage(), e);
+            return createErrorResponse("Không thể tạo liên kết thanh toán VNPay", "PAYMENT_CREATION_FAILED",
+                org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -177,9 +180,25 @@ public class VNPayController {
      */
     @PostMapping("/vnpay-ipn")
     public ResponseEntity<Map<String, String>> handleVNPayIPN(HttpServletRequest request) {
-        String clientIp = VNPayConfig.getIpAddress(request);
+        String clientIp = getClientIpAddress(request);
         String vnp_TxnRef = request.getParameter("vnp_TxnRef");
         String vnp_TransactionNo = request.getParameter("vnp_TransactionNo");
+        String vnp_Amount = request.getParameter("vnp_Amount");
+
+        // Validate callback request using base controller
+        if (!validateCallbackRequest(request)) {
+            Map<String, String> response = new HashMap<>();
+            response.put("RspCode", "97");
+            response.put("Message", "Invalid IPN request");
+            return ResponseEntity.ok(response);
+        }
+
+        // Create audit log for IPN processing
+        Map<String, Object> auditInfo = new HashMap<>();
+        auditInfo.put("vnp_TransactionNo", vnp_TransactionNo);
+        auditInfo.put("vnp_Amount", vnp_Amount);
+        auditInfo.put("ipnType", "INSTANT_NOTIFICATION");
+        createAuditLog("PROCESS_IPN", vnp_TxnRef, vnp_Amount != null ? Long.parseLong(vnp_Amount) / 100 : null, clientIp, auditInfo);
 
         log.info("VNPay IPN received from IP: {} - TxnRef: {}, TransactionNo: {}",
                 clientIp, vnp_TxnRef, vnp_TransactionNo);

@@ -1,6 +1,6 @@
 package com.lapxpert.backend.nguoidung.domain.service;
 
-import com.lapxpert.backend.common.service.EmailService;
+import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.UrlService;
 import com.lapxpert.backend.nguoidung.domain.entity.DiaChi;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
@@ -9,6 +9,7 @@ import com.lapxpert.backend.nguoidung.domain.entity.VaiTro;
 import com.lapxpert.backend.nguoidung.domain.entity.TrangThaiNguoiDung;
 import com.lapxpert.backend.nguoidung.application.dto.KhachHangDTO;
 import com.lapxpert.backend.nguoidung.application.dto.NhanVienDTO;
+import com.lapxpert.backend.nguoidung.application.dto.NguoiDungDto;
 import com.lapxpert.backend.nguoidung.application.dto.DiaChiDto;
 import com.lapxpert.backend.nguoidung.application.mapper.NguoiDungMapper;
 import com.lapxpert.backend.nguoidung.application.mapper.DiaChiMapper;
@@ -20,14 +21,19 @@ import com.lapxpert.backend.nguoidung.domain.repository.DiaChiRepository;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungAuditHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
-public class NguoiDungService {
+public class NguoiDungService extends BusinessEntityService<NguoiDung, Long, NguoiDungDto, NguoiDungAuditHistory> {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -41,9 +47,6 @@ public class NguoiDungService {
     private DiaChiRepository diaChiRepository;
 
     @Autowired
-    private EmailService emailService;
-
-    @Autowired
     private UrlService urlService;
 
     @Autowired
@@ -51,6 +54,9 @@ public class NguoiDungService {
 
     @Autowired
     private DiaChiMapper diaChiMapper;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public KhachHangDTO getKhachHang(Long id) {
@@ -575,5 +581,180 @@ public class NguoiDungService {
         return auditHistoryRepository.findByNguoiDungIdOrderByThoiGianThayDoiDesc(nguoiDungId);
     }
 
+    // ==================== BUSINESSENTITYSERVICE TEMPLATE METHODS ====================
+
+    @Override
+    protected NguoiDungRepository getRepository() {
+        return nguoiDungRepository;
+    }
+
+    @Override
+    protected NguoiDungAuditHistoryRepository getAuditRepository() {
+        return auditHistoryRepository;
+    }
+
+    @Override
+    protected ApplicationEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    @Override
+    protected String getCacheName() {
+        return "nguoiDungCache";
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Người dùng";
+    }
+
+    @Override
+    protected Long getEntityId(NguoiDung entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected void setEntityId(NguoiDung entity, Long id) {
+        entity.setId(id);
+    }
+
+    @Override
+    protected NguoiDungDto toDto(NguoiDung entity) {
+        return nguoiDungMapper.toDto(entity);
+    }
+
+    @Override
+    protected NguoiDung toEntity(NguoiDungDto dto) {
+        return nguoiDungMapper.toEntity(dto);
+    }
+
+    @Override
+    protected void validateEntity(NguoiDung entity) {
+        if (entity.getHoTen() == null || entity.getHoTen().trim().isEmpty()) {
+            throw new IllegalArgumentException("Họ tên không được để trống");
+        }
+        if (entity.getEmail() == null || entity.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email không được để trống");
+        }
+        if (entity.getVaiTro() == null) {
+            throw new IllegalArgumentException("Vai trò không được để trống");
+        }
+        if (entity.getTrangThai() == null) {
+            throw new IllegalArgumentException("Trạng thái không được để trống");
+        }
+        // Validate CCCD for staff members
+        if ((entity.getVaiTro() == VaiTro.STAFF || entity.getVaiTro() == VaiTro.ADMIN) &&
+            (entity.getCccd() == null || entity.getCccd().trim().isEmpty())) {
+            throw new IllegalArgumentException("CCCD không được để trống cho nhân viên");
+        }
+    }
+
+    @Override
+    protected void setSoftDeleteStatus(NguoiDung entity, boolean isActive) {
+        if (isActive) {
+            entity.setTrangThai(TrangThaiNguoiDung.HOAT_DONG);
+        } else {
+            entity.setTrangThai(TrangThaiNguoiDung.KHONG_HOAT_DONG);
+        }
+    }
+
+    @Override
+    protected String buildAuditJson(NguoiDung entity) {
+        return createAuditValues(entity);
+    }
+
+    @Override
+    protected NguoiDungAuditHistory createAuditEntry(Long entityId, String action, String oldValues, String newValues, String nguoiThucHien, String lyDo) {
+        return NguoiDungAuditHistory.builder()
+                .nguoiDungId(entityId)
+                .hanhDong(action)
+                .thoiGianThayDoi(java.time.Instant.now())
+                .nguoiThucHien(nguoiThucHien)
+                .lyDoThayDoi(lyDo)
+                .giaTriCu(oldValues)
+                .giaTriMoi(newValues)
+                .build();
+    }
+
+    @Override
+    protected void publishEntityCreatedEvent(NguoiDung entity) {
+        // TODO: Implement real-time event publishing for user creation
+        log.debug("Publishing user created event for user ID: {}", entity.getId());
+        // eventPublisher.publishEvent(new NguoiDungCreatedEvent(entity));
+    }
+
+    @Override
+    protected void publishEntityUpdatedEvent(NguoiDung entity, NguoiDung oldEntity) {
+        // TODO: Implement real-time event publishing for user updates
+        log.debug("Publishing user updated event for user ID: {}", entity.getId());
+        // eventPublisher.publishEvent(new NguoiDungUpdatedEvent(entity, oldEntity));
+    }
+
+    @Override
+    protected void publishEntityDeletedEvent(Long entityId) {
+        // TODO: Implement real-time event publishing for user deletion
+        log.debug("Publishing user deleted event for user ID: {}", entityId);
+        // eventPublisher.publishEvent(new NguoiDungDeletedEvent(entityId));
+    }
+
+    @Override
+    protected void validateBusinessRules(NguoiDung entity) {
+        // Validate email and phone uniqueness
+        validateUniqueEmailAndPhone(entity.getEmail(), entity.getSoDienThoai(), null);
+
+        // Validate role-specific rules
+        if (entity.getVaiTro() == VaiTro.CUSTOMER) {
+            // Customers don't need CCCD
+            entity.setCccd(null);
+        } else if (entity.getVaiTro() == VaiTro.STAFF || entity.getVaiTro() == VaiTro.ADMIN) {
+            // Staff and admin need CCCD
+            if (entity.getCccd() == null || entity.getCccd().trim().isEmpty()) {
+                throw new IllegalArgumentException("CCCD không được để trống cho nhân viên");
+            }
+        }
+    }
+
+    @Override
+    protected void validateBusinessRulesForUpdate(NguoiDung entity, NguoiDung existingEntity) {
+        // Validate email and phone uniqueness if changed
+        if (!existingEntity.getEmail().equals(entity.getEmail()) ||
+            !Objects.equals(existingEntity.getSoDienThoai(), entity.getSoDienThoai())) {
+            validateUniqueEmailAndPhone(entity.getEmail(), entity.getSoDienThoai(), entity.getId());
+        }
+
+        // Validate role changes
+        if (!existingEntity.getVaiTro().equals(entity.getVaiTro())) {
+            // Role changes require special validation
+            log.info("Role change detected for user {}: {} -> {}",
+                    entity.getId(), existingEntity.getVaiTro(), entity.getVaiTro());
+        }
+    }
+
+    @Override
+    protected NguoiDung cloneEntity(NguoiDung entity) {
+        // Create a shallow clone for event publishing
+        NguoiDung clone = new NguoiDung();
+        clone.setId(entity.getId());
+        clone.setMaNguoiDung(entity.getMaNguoiDung());
+        clone.setHoTen(entity.getHoTen());
+        clone.setGioiTinh(entity.getGioiTinh());
+        clone.setNgaySinh(entity.getNgaySinh());
+        clone.setEmail(entity.getEmail());
+        clone.setSoDienThoai(entity.getSoDienThoai());
+        clone.setCccd(entity.getCccd());
+        clone.setAvatar(entity.getAvatar());
+        clone.setVaiTro(entity.getVaiTro());
+        clone.setTrangThai(entity.getTrangThai());
+        clone.setNgayTao(entity.getNgayTao());
+        clone.setNgayCapNhat(entity.getNgayCapNhat());
+        clone.setNguoiTao(entity.getNguoiTao());
+        clone.setNguoiCapNhat(entity.getNguoiCapNhat());
+        return clone;
+    }
+
+    @Override
+    protected List<NguoiDungAuditHistory> getAuditHistoryByEntityId(Long entityId) {
+        return auditHistoryRepository.findByNguoiDungIdOrderByThoiGianThayDoiDesc(entityId);
+    }
 
 }

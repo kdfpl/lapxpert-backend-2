@@ -1,5 +1,6 @@
 package com.lapxpert.backend.hoadon.domain.service;
 
+import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.hoadon.domain.dto.HoaDonDto;
 import com.lapxpert.backend.hoadon.domain.dto.HoaDonChiTietDto;
 import com.lapxpert.backend.hoadon.domain.dto.PaymentSummaryDto;
@@ -42,6 +43,7 @@ import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +55,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class HoaDonService {
+public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto, HoaDonAuditHistory> {
 
     private final HoaDonRepository hoaDonRepository;
     private final HoaDonAuditHistoryRepository auditHistoryRepository;
@@ -74,6 +76,7 @@ public class HoaDonService {
     private final PaymentServiceFactory paymentServiceFactory;
     private final ShippingCalculatorService shippingCalculatorService;
     private final ShippingProviderComparator shippingProviderComparator;
+    private final ApplicationEventPublisher eventPublisher;
 
     public HoaDonService(HoaDonRepository hoaDonRepository,
                          HoaDonAuditHistoryRepository auditHistoryRepository,
@@ -93,7 +96,8 @@ public class HoaDonService {
                          VietQRGatewayService vietQRGatewayService,
                          PaymentServiceFactory paymentServiceFactory,
                          ShippingCalculatorService shippingCalculatorService,
-                         ShippingProviderComparator shippingProviderComparator) {
+                         ShippingProviderComparator shippingProviderComparator,
+                         ApplicationEventPublisher eventPublisher) {
         this.hoaDonRepository = hoaDonRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.hoaDonThanhToanRepository = hoaDonThanhToanRepository;
@@ -113,6 +117,7 @@ public class HoaDonService {
         this.paymentServiceFactory = paymentServiceFactory;
         this.shippingCalculatorService = shippingCalculatorService;
         this.shippingProviderComparator = shippingProviderComparator;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -1771,6 +1776,183 @@ public class HoaDonService {
             .weight(totalWeight)
             .value(hoaDon.getTongTienHang()) // Order value for insurance
             .build();
+    }
+
+    // ==================== BUSINESSENTITYSERVICE TEMPLATE METHODS ====================
+
+    @Override
+    protected HoaDonRepository getRepository() {
+        return hoaDonRepository;
+    }
+
+
+
+    @Override
+    protected HoaDonAuditHistoryRepository getAuditRepository() {
+        return auditHistoryRepository;
+    }
+
+    @Override
+    protected ApplicationEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    @Override
+    protected String getCacheName() {
+        return "hoaDonCache";
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Hóa đơn";
+    }
+
+    @Override
+    protected Long getEntityId(HoaDon entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected void setEntityId(HoaDon entity, Long id) {
+        entity.setId(id);
+    }
+
+    @Override
+    protected HoaDonDto toDto(HoaDon entity) {
+        return hoaDonMapper.toDto(entity);
+    }
+
+    @Override
+    protected HoaDon toEntity(HoaDonDto dto) {
+        return hoaDonMapper.toEntity(dto);
+    }
+
+    @Override
+    protected void validateEntity(HoaDon entity) {
+        if (entity.getMaHoaDon() == null || entity.getMaHoaDon().trim().isEmpty()) {
+            throw new IllegalArgumentException("Mã hóa đơn không được để trống");
+        }
+        if (entity.getLoaiHoaDon() == null) {
+            throw new IllegalArgumentException("Loại hóa đơn không được để trống");
+        }
+        if (entity.getTrangThaiDonHang() == null) {
+            throw new IllegalArgumentException("Trạng thái đơn hàng không được để trống");
+        }
+        if (entity.getTrangThaiThanhToan() == null) {
+            throw new IllegalArgumentException("Trạng thái thanh toán không được để trống");
+        }
+    }
+
+    @Override
+    protected void setSoftDeleteStatus(HoaDon entity, boolean isActive) {
+        // HoaDon doesn't use soft delete, use status instead
+        if (!isActive) {
+            entity.setTrangThaiDonHang(TrangThaiDonHang.DA_HUY);
+        }
+    }
+
+    @Override
+    protected String buildAuditJson(HoaDon entity) {
+        return createAuditValues(entity);
+    }
+
+    @Override
+    protected HoaDonAuditHistory createAuditEntry(Long entityId, String action, String oldValues, String newValues, String nguoiThucHien, String lyDo) {
+        return HoaDonAuditHistory.builder()
+                .hoaDonId(entityId)
+                .hanhDong(action)
+                .thoiGianThayDoi(java.time.Instant.now())
+                .nguoiThucHien(nguoiThucHien)
+                .lyDoThayDoi(lyDo)
+                .giaTriCu(oldValues)
+                .giaTriMoi(newValues)
+                .build();
+    }
+
+    @Override
+    protected void publishEntityCreatedEvent(HoaDon entity) {
+        // TODO: Implement real-time event publishing for order creation
+        log.debug("Publishing order created event for order ID: {}", entity.getId());
+        // eventPublisher.publishEvent(new HoaDonCreatedEvent(entity));
+    }
+
+    @Override
+    protected void publishEntityUpdatedEvent(HoaDon entity, HoaDon oldEntity) {
+        // TODO: Implement real-time event publishing for order updates
+        log.debug("Publishing order updated event for order ID: {}", entity.getId());
+        // eventPublisher.publishEvent(new HoaDonUpdatedEvent(entity, oldEntity));
+    }
+
+    @Override
+    protected void publishEntityDeletedEvent(Long entityId) {
+        // TODO: Implement real-time event publishing for order deletion
+        log.debug("Publishing order deleted event for order ID: {}", entityId);
+        // eventPublisher.publishEvent(new HoaDonDeletedEvent(entityId));
+    }
+
+    @Override
+    protected void validateBusinessRules(HoaDon entity) {
+        // Validate order type specific rules
+        if (entity.getLoaiHoaDon() == LoaiHoaDon.ONLINE && entity.getKhachHang() == null) {
+            throw new IllegalArgumentException("Đơn hàng online phải có thông tin khách hàng");
+        }
+
+        // Validate order totals
+        if (entity.getTongThanhToan() != null && entity.getTongThanhToan().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Tổng thanh toán không được âm");
+        }
+
+        // Validate order items
+        if (entity.getHoaDonChiTiets() == null || entity.getHoaDonChiTiets().isEmpty()) {
+            throw new IllegalArgumentException("Hóa đơn phải có ít nhất một sản phẩm");
+        }
+    }
+
+    @Override
+    protected void validateBusinessRulesForUpdate(HoaDon entity, HoaDon existingEntity) {
+        // Validate status transitions
+        if (existingEntity.getTrangThaiDonHang() == TrangThaiDonHang.HOAN_THANH) {
+            throw new IllegalArgumentException("Không thể cập nhật đơn hàng đã hoàn thành");
+        }
+
+        if (existingEntity.getTrangThaiDonHang() == TrangThaiDonHang.DA_HUY) {
+            throw new IllegalArgumentException("Không thể cập nhật đơn hàng đã hủy");
+        }
+
+        // Validate payment status transitions
+        if (existingEntity.getTrangThaiThanhToan() == TrangThaiThanhToan.DA_HOAN_TIEN) {
+            throw new IllegalArgumentException("Không thể cập nhật đơn hàng đã hoàn tiền");
+        }
+    }
+
+    @Override
+    protected HoaDon cloneEntity(HoaDon entity) {
+        // Create a shallow clone for event publishing
+        HoaDon clone = new HoaDon();
+        clone.setId(entity.getId());
+        clone.setMaHoaDon(entity.getMaHoaDon());
+        clone.setLoaiHoaDon(entity.getLoaiHoaDon());
+        clone.setTrangThaiDonHang(entity.getTrangThaiDonHang());
+        clone.setTrangThaiThanhToan(entity.getTrangThaiThanhToan());
+        clone.setTongThanhToan(entity.getTongThanhToan());
+        clone.setTongTienHang(entity.getTongTienHang());
+        clone.setPhiVanChuyen(entity.getPhiVanChuyen());
+        clone.setGiaTriGiamGiaVoucher(entity.getGiaTriGiamGiaVoucher());
+        clone.setKhachHang(entity.getKhachHang());
+        clone.setNhanVien(entity.getNhanVien());
+        clone.setDiaChiGiaoHang(entity.getDiaChiGiaoHang());
+        clone.setNguoiNhanTen(entity.getNguoiNhanTen());
+        clone.setNguoiNhanSdt(entity.getNguoiNhanSdt());
+        clone.setNgayTao(entity.getNgayTao());
+        clone.setNgayCapNhat(entity.getNgayCapNhat());
+        clone.setNguoiTao(entity.getNguoiTao());
+        clone.setNguoiCapNhat(entity.getNguoiCapNhat());
+        return clone;
+    }
+
+    @Override
+    protected List<HoaDonAuditHistory> getAuditHistoryByEntityId(Long entityId) {
+        return auditHistoryRepository.findByHoaDonIdOrderByThoiGianThayDoiDesc(entityId);
     }
 
 }

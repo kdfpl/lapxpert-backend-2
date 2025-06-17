@@ -35,7 +35,7 @@ public class DotGiamGiaController {
 
     @GetMapping("{id}")
     public ResponseEntity<DotGiamGiaDto> findById(@PathVariable @NotNull Long id) {
-        return ResponseEntity.ok(service.findById(id));
+        return ResponseEntity.ok(service.getDotGiamGiaById(id));
     }
 
     @PutMapping
@@ -225,7 +225,7 @@ public class DotGiamGiaController {
 
     @GetMapping("{id}/audit-history")
     public ResponseEntity<List<DotGiamGiaAuditHistoryDto>> getAuditHistory(@PathVariable @NotNull Long id) {
-        List<DotGiamGiaAuditHistoryDto> auditHistory = service.getAuditHistory(id);
+        List<DotGiamGiaAuditHistoryDto> auditHistory = service.getAuditHistoryDtos(id);
         return ResponseEntity.ok(auditHistory);
     }
 }

@@ -35,7 +35,7 @@ public class SanPhamController {
     @GetMapping("/{id}")
     public ResponseEntity<SanPhamDto> getProductById(@PathVariable Long id) {
         try {
-            SanPhamDto product = sanPhamService.findById(id);
+            SanPhamDto product = sanPhamService.getSanPhamById(id);
             return ResponseEntity.ok(product);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

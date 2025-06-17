@@ -4,7 +4,9 @@ import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaDto;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaAuditHistoryDto;
 import com.lapxpert.backend.dotgiamgia.application.dto.DotGiamGiaMapper;
 import com.lapxpert.backend.common.enums.TrangThaiCampaign;
+import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.VietnamTimeZoneService;
+import com.lapxpert.backend.common.util.ValidationUtils;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGia;
 import com.lapxpert.backend.dotgiamgia.domain.entity.DotGiamGiaAuditHistory;
 import com.lapxpert.backend.dotgiamgia.domain.exception.CampaignConflictException;
@@ -19,6 +21,8 @@ import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,35 +37,39 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class DotGiamGiaService {
+public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, DotGiamGiaDto, DotGiamGiaAuditHistory> {
     private final DotGiamGiaRepository dotGiamGiaRepository;
     private final DotGiamGiaAuditHistoryRepository auditHistoryRepository;
     private final DotGiamGiaMapper dotGiamGiaMapper;
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
     private final SanPhamChiTietMapper sanPhamChiTietMapper;
     private final VietnamTimeZoneService vietnamTimeZoneService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DotGiamGiaService(DotGiamGiaRepository dotGiamGiaRepository,
                            DotGiamGiaAuditHistoryRepository auditHistoryRepository,
                            @Qualifier("dotGiamGiaMapperImpl") DotGiamGiaMapper dotGiamGiaMapper,
                            SanPhamChiTietRepository sanPhamChiTietRepository,
                            SanPhamChiTietMapper sanPhamChiTietMapper,
-                           VietnamTimeZoneService vietnamTimeZoneService) {
+                           VietnamTimeZoneService vietnamTimeZoneService,
+                           ApplicationEventPublisher eventPublisher) {
         this.dotGiamGiaRepository = dotGiamGiaRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.dotGiamGiaMapper = dotGiamGiaMapper;
         this.sanPhamChiTietRepository = sanPhamChiTietRepository;
         this.sanPhamChiTietMapper = sanPhamChiTietMapper;
         this.vietnamTimeZoneService = vietnamTimeZoneService;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<DotGiamGiaDto> findAll() {
-        // Return all campaigns except cancelled ones (BI_HUY)
-        return dotGiamGiaMapper.toDtos(
-            dotGiamGiaRepository.findAll().stream()
+        // Use inherited findAll method with caching from BusinessEntityService
+        List<DotGiamGiaDto> allCampaigns = super.findAll();
+
+        // Filter out cancelled campaigns (BI_HUY) for public API
+        return allCampaigns.stream()
                 .filter(campaign -> campaign.getTrangThai() != TrangThaiCampaign.BI_HUY)
-                .collect(Collectors.toList())
-        );
+                .collect(Collectors.toList());
     }
 
     // ==================== ADMIN MANAGEMENT METHODS ====================
@@ -140,10 +148,10 @@ public class DotGiamGiaService {
     }
 
     @Transactional(readOnly = true)
-    public DotGiamGiaDto findById(Long id) {
-        DotGiamGia entity = dotGiamGiaRepository.findById(id)
+    public DotGiamGiaDto getDotGiamGiaById(Long id) {
+        // Use inherited findById method with caching from BusinessEntityService
+        return findById(id)
                 .orElseThrow(() -> new CampaignNotFoundException(id));
-        return dotGiamGiaMapper.toDto(entity);
     }
 
     @Transactional
@@ -160,65 +168,21 @@ public class DotGiamGiaService {
         // Validate campaign data
         validateCampaignData(dto);
 
-        DotGiamGia entity = dotGiamGiaMapper.toEntity(dto);
+        // Update status based on dates using Vietnam timezone
+        dto.setTrangThai(DotGiamGia.fromDates(dto.getNgayBatDau(), dto.getNgayKetThuc()));
 
-        if (entity.getId() != null) {
-            // Update existing campaign
-            DotGiamGia existingEntity = dotGiamGiaRepository.findById(entity.getId())
-                    .orElseThrow(() -> new CampaignNotFoundException(entity.getId()));
-
-            // FIXED AUDIT TRAIL LOGIC - Capture old values BEFORE modification (following PhieuGiamGia pattern)
-            String oldValues = buildAuditJson(existingEntity);
-
-            // Preserve audit fields
-            entity.setNgayTao(existingEntity.getNgayTao());
-            entity.setNguoiTao(existingEntity.getNguoiTao());
-
-            // Update status based on dates using Vietnam timezone (following PhieuGiamGia pattern)
-            entity.setTrangThai(DotGiamGia.fromDates(entity.getNgayBatDau(), entity.getNgayKetThuc()));
-
-            // Capture new values AFTER modification but BEFORE saving (following PhieuGiamGia pattern)
-            String newValues = buildAuditJson(entity);
-
-            // Create audit entry for update with proper reason
+        if (dto.getId() != null) {
+            // Update existing campaign using inherited update method
             String auditReason = lyDoThayDoi != null && !lyDoThayDoi.trim().isEmpty()
                 ? lyDoThayDoi.trim()
                 : "Cập nhật thông tin đợt giảm giá";
 
-            DotGiamGiaAuditHistory auditEntry = DotGiamGiaAuditHistory.updateEntry(
-                entity.getId(),
-                oldValues,
-                newValues,
-                entity.getNguoiCapNhat(),
-                auditReason
-            );
-            auditHistoryRepository.save(auditEntry);
-
-            // Save updated entity AFTER audit trail creation
-            DotGiamGia savedEntity = dotGiamGiaRepository.save(entity);
-
-            return ResponseEntity.ok(dotGiamGiaMapper.toDto(savedEntity));
+            DotGiamGiaDto updatedDto = update(dto.getId(), dto, "SYSTEM", auditReason);
+            return ResponseEntity.ok(updatedDto);
         } else {
-            // Create new campaign
-            // Check for duplicate campaign code
-            if (dotGiamGiaRepository.existsByMaDotGiamGia(entity.getMaDotGiamGia())) {
-                throw CampaignConflictException.duplicateCode(entity.getMaDotGiamGia());
-            }
-
-            // Save new entity
-            DotGiamGia savedEntity = dotGiamGiaRepository.save(entity);
-
-            // Create audit entry for creation
-            String newValues = buildAuditJson(savedEntity);
-            DotGiamGiaAuditHistory auditEntry = DotGiamGiaAuditHistory.createEntry(
-                savedEntity.getId(),
-                newValues,
-                savedEntity.getNguoiTao(),
-                "Tạo đợt giảm giá mới"
-            );
-            auditHistoryRepository.save(auditEntry);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(dotGiamGiaMapper.toDto(savedEntity));
+            // Create new campaign using inherited create method
+            DotGiamGiaDto createdDto = create(dto, "SYSTEM", "Tạo đợt giảm giá mới");
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdDto);
         }
     }
 
@@ -639,13 +603,184 @@ public class DotGiamGiaService {
         public long getFinishedCampaigns() { return finishedCampaigns; }
     }
 
+    // ==================== BUSINESSENTITYSERVICE ABSTRACT METHOD IMPLEMENTATIONS ====================
+
+    @Override
+    protected JpaRepository<DotGiamGia, Long> getRepository() {
+        return dotGiamGiaRepository;
+    }
+
+    @Override
+    protected JpaRepository<DotGiamGiaAuditHistory, Long> getAuditRepository() {
+        return auditHistoryRepository;
+    }
+
+    @Override
+    protected DotGiamGiaDto toDto(DotGiamGia entity) {
+        return dotGiamGiaMapper.toDto(entity);
+    }
+
+    @Override
+    protected DotGiamGia toEntity(DotGiamGiaDto dto) {
+        return dotGiamGiaMapper.toEntity(dto);
+    }
+
+    @Override
+    protected DotGiamGiaAuditHistory createAuditEntry(Long entityId, String action, String oldValues, String newValues, String nguoiThucHien, String lyDo) {
+        switch (action) {
+            case "CREATE":
+                return DotGiamGiaAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+            case "UPDATE":
+                return DotGiamGiaAuditHistory.updateEntry(entityId, oldValues, newValues, nguoiThucHien, lyDo);
+            case "SOFT_DELETE":
+            case "DELETE":
+                return DotGiamGiaAuditHistory.deleteEntry(entityId, oldValues, nguoiThucHien, lyDo);
+            default:
+                return DotGiamGiaAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+        }
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Đợt giảm giá";
+    }
+
+    @Override
+    protected void validateEntity(DotGiamGia entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Đợt giảm giá không được null");
+        }
+
+        // Validate campaign code
+        ValidationUtils.validateProductCode(entity.getMaDotGiamGia(), "Mã đợt giảm giá");
+
+        // Validate campaign name
+        if (entity.getTenDotGiamGia() == null || entity.getTenDotGiamGia().trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên đợt giảm giá không được để trống");
+        }
+
+        // Validate discount percentage
+        ValidationUtils.validatePercentage(entity.getPhanTramGiam(), "Phần trăm giảm");
+
+        // Validate date range
+        if (entity.getNgayBatDau() != null && entity.getNgayKetThuc() != null) {
+            if (entity.getNgayKetThuc().isBefore(entity.getNgayBatDau())) {
+                throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
+            }
+
+            // Campaign must run for at least 1 hour
+            if (entity.getNgayKetThuc().isBefore(entity.getNgayBatDau().plusSeconds(3600))) {
+                throw new IllegalArgumentException("Đợt giảm giá phải diễn ra ít nhất 1 giờ");
+            }
+        }
+    }
+
+    @Override
+    protected void evictCache() {
+        // Cache eviction is handled by @CacheEvict annotations in BusinessEntityService
+        log.debug("Cache evicted for DotGiamGia");
+    }
+
+    @Override
+    protected Long getEntityId(DotGiamGia entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected void setEntityId(DotGiamGia entity, Long id) {
+        entity.setId(id);
+    }
+
+    @Override
+    protected void setSoftDeleteStatus(DotGiamGia entity, boolean status) {
+        // DotGiamGia uses TrangThaiCampaign.BI_HUY for soft delete
+        if (!status) {
+            entity.setTrangThai(TrangThaiCampaign.BI_HUY);
+        }
+    }
+
+    @Override
+    protected List<DotGiamGiaAuditHistory> getAuditHistoryByEntityId(Long entityId) {
+        return auditHistoryRepository.findByDotGiamGiaIdOrderByThoiGianThayDoiDesc(entityId);
+    }
+
+    @Override
+    protected ApplicationEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    @Override
+    protected String getCacheName() {
+        return "dotGiamGiaCache";
+    }
+
+    @Override
+    protected void publishEntityCreatedEvent(DotGiamGia entity) {
+        // TODO: Implement campaign created event publishing for real-time updates
+        log.debug("Publishing campaign created event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityUpdatedEvent(DotGiamGia entity, DotGiamGia oldEntity) {
+        // TODO: Implement campaign updated event publishing for real-time updates
+        log.debug("Publishing campaign updated event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityDeletedEvent(Long entityId) {
+        // TODO: Implement campaign deleted event publishing for real-time updates
+        log.debug("Publishing campaign deleted event for ID: {}", entityId);
+    }
+
+    @Override
+    protected void validateBusinessRules(DotGiamGia entity) {
+        // Validate campaign-specific business rules
+        if (entity.getPhanTramGiam().compareTo(BigDecimal.ZERO) <= 0 ||
+            entity.getPhanTramGiam().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Phần trăm giảm phải từ 0.01% đến 100%");
+        }
+
+        // Check for duplicate campaign code only for new entities (ID is null)
+        if (entity.getId() == null && dotGiamGiaRepository.existsByMaDotGiamGia(entity.getMaDotGiamGia())) {
+            throw CampaignConflictException.duplicateCode(entity.getMaDotGiamGia());
+        }
+    }
+
+    @Override
+    protected void validateBusinessRulesForUpdate(DotGiamGia entity, DotGiamGia existingEntity) {
+        validateBusinessRules(entity);
+
+        // Additional validation for updates
+        if (existingEntity.getTrangThai() == TrangThaiCampaign.KET_THUC) {
+            throw new IllegalArgumentException("Không thể cập nhật đợt giảm giá đã kết thúc");
+        }
+
+        if (existingEntity.getTrangThai() == TrangThaiCampaign.BI_HUY) {
+            throw new IllegalArgumentException("Không thể cập nhật đợt giảm giá đã bị hủy");
+        }
+    }
+
+    @Override
+    protected DotGiamGia cloneEntity(DotGiamGia entity) {
+        DotGiamGia clone = new DotGiamGia();
+        clone.setId(entity.getId());
+        clone.setMaDotGiamGia(entity.getMaDotGiamGia());
+        clone.setTenDotGiamGia(entity.getTenDotGiamGia());
+        clone.setPhanTramGiam(entity.getPhanTramGiam());
+        clone.setNgayBatDau(entity.getNgayBatDau());
+        clone.setNgayKetThuc(entity.getNgayKetThuc());
+        clone.setTrangThai(entity.getTrangThai());
+        return clone;
+    }
+
     /**
      * Build JSON representation of discount campaign for audit trail
      * Following PhieuGiamGia pattern exactly
      * @param entity the discount campaign entity
      * @return JSON string representation
      */
-    private String buildAuditJson(DotGiamGia entity) {
+    @Override
+    protected String buildAuditJson(DotGiamGia entity) {
         if (entity == null) return "{}";
 
         try {
@@ -668,11 +803,12 @@ public class DotGiamGiaService {
 
 
     /**
-     * Get audit history for a specific campaign
+     * Get audit history for a specific campaign as DTOs
      */
     @Transactional(readOnly = true)
-    public List<DotGiamGiaAuditHistoryDto> getAuditHistory(Long dotGiamGiaId) {
-        List<DotGiamGiaAuditHistory> auditHistory = auditHistoryRepository.findByDotGiamGiaIdOrderByThoiGianThayDoiDesc(dotGiamGiaId);
+    public List<DotGiamGiaAuditHistoryDto> getAuditHistoryDtos(Long dotGiamGiaId) {
+        // Use inherited getAuditHistory method from BaseService
+        List<DotGiamGiaAuditHistory> auditHistory = super.getAuditHistory(dotGiamGiaId);
         return dotGiamGiaMapper.toAuditHistoryDtos(auditHistory);
     }
 }

@@ -2,14 +2,11 @@ package com.lapxpert.backend.vietqr.application;
 
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
+import com.lapxpert.backend.payment.domain.service.BasePaymentController;
 import com.lapxpert.backend.payment.domain.service.VietQRGatewayService;
 import com.lapxpert.backend.payment.domain.service.PaymentGatewayService;
-import com.lapxpert.backend.vietqr.domain.VietQRService;
-import com.lapxpert.backend.vietqr.domain.VietQRResponse;
-import com.lapxpert.backend.vietqr.domain.PaymentIPNResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +19,16 @@ import java.util.Map;
 
 /**
  * Enhanced VietQR payment controller compliant with NAPAS standards and VietQR Version 2.13.
+ * Extends BasePaymentController for common payment functionality and Vietnamese business requirements.
  *
  * NAPAS Compliance Features:
  * - VietQR Version 2.13 specification support
- * - Enhanced security with proper validation
+ * - Enhanced security with proper validation through BasePaymentController
  * - Comprehensive error handling and audit logging
  * - Support for both Quick Link and Full API v2
  *
  * Security enhancements:
- * - Enhanced parameter validation
+ * - Enhanced parameter validation through BasePaymentController
  * - Improved error handling with security-conscious responses
  * - Better IP address detection and logging
  * - Enhanced IPN processing with comprehensive validation
@@ -40,14 +38,24 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/payment")
-public class VietQRController {
+public class VietQRController extends BasePaymentController<VietQRGatewayService> {
 
-    private final VietQRGatewayService vietQRGatewayService;
+    private static final long MAX_VIETQR_AMOUNT = 500_000_000L; // 500 million VND
     private final HoaDonService hoaDonService;
 
     public VietQRController(VietQRGatewayService vietQRGatewayService, HoaDonService hoaDonService) {
-        this.vietQRGatewayService = vietQRGatewayService;
+        super(vietQRGatewayService);
         this.hoaDonService = hoaDonService;
+    }
+
+    @Override
+    protected String getGatewayName() {
+        return "VietQR";
+    }
+
+    @Override
+    protected long getMaxPaymentAmount() {
+        return MAX_VIETQR_AMOUNT;
     }
 
     /**
@@ -98,11 +106,10 @@ public class VietQRController {
             log.info("Received VietQR payment notification: {}", transactionData);
             
             // Verify payment
-            PaymentGatewayService.PaymentVerificationResult verificationResult = 
-                vietQRGatewayService.verifyPaymentWithTransactionData(transactionData);
+            PaymentGatewayService.PaymentVerificationResult verificationResult =
+                paymentGatewayService.verifyPaymentWithTransactionData(transactionData);
             
             String orderId = transactionData.get("orderId");
-            String status = transactionData.get("status");
             
             if (verificationResult.isValid() && verificationResult.isSuccessful()) {
                 // Payment successful - update order status
@@ -143,9 +150,9 @@ public class VietQRController {
 
     /**
      * Create VietQR payment for order
-     * @param orderId Order ID
-     * @param amount Payment amount
-     * @param orderInfo Order information
+     * @param orderId Order ID (mã đơn hàng)
+     * @param amount Payment amount in VND (số tiền thanh toán)
+     * @param orderInfo Order information (thông tin đơn hàng)
      * @param request HTTP request for base URL
      * @return VietQR payment instructions
      */
@@ -155,28 +162,39 @@ public class VietQRController {
             @RequestParam("amount") int amount,
             @RequestParam("orderInfo") String orderInfo,
             HttpServletRequest request) {
-        
+
         try {
-            String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
             String clientIp = getClientIpAddress(request);
-            
+            String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+
+            // Validate payment parameters using base controller
+            validatePaymentParameters(amount, orderInfo, orderId.toString(), baseUrl);
+
+            // Create audit log for payment creation
+            Map<String, Object> auditInfo = new HashMap<>();
+            auditInfo.put("userAgent", request.getHeader("User-Agent"));
+            auditInfo.put("referer", request.getHeader("Referer"));
+            createAuditLog("CREATE_PAYMENT", orderId.toString(), (long) amount, clientIp, auditInfo);
+
             // Create VietQR payment URL (QR code image)
-            String qrUrl = vietQRGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
-            
+            String qrUrl = paymentGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
+
             // Generate payment instructions
-            Map<String, Object> paymentInstructions = vietQRGatewayService.generatePaymentInstructions(orderId.toString(), amount);
+            Map<String, Object> paymentInstructions = paymentGatewayService.generatePaymentInstructions(orderId.toString(), amount);
             paymentInstructions.put("qrUrl", qrUrl);
             paymentInstructions.put("orderId", orderId.toString());
             paymentInstructions.put("paymentMethod", "VIETQR");
-            
-            return ResponseEntity.ok(paymentInstructions);
-            
+
+            return createSuccessResponse(paymentInstructions, "Tạo thanh toán VietQR thành công");
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid VietQR payment parameters for order {}: {}", orderId, e.getMessage());
+            return createErrorResponse(e.getMessage(), "INVALID_PARAMETERS",
+                org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Error creating VietQR payment for order {}: {}", orderId, e.getMessage(), e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Không thể tạo thanh toán VietQR");
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return createErrorResponse("Không thể tạo thanh toán VietQR", "PAYMENT_CREATION_FAILED",
+                org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -194,7 +212,7 @@ public class VietQRController {
             @RequestParam(value = "bankTransactionId", required = false) String bankTransactionId) {
         
         try {
-            Map<String, Object> statusResult = vietQRGatewayService.checkPaymentStatus(orderId, expectedAmount, bankTransactionId);
+            Map<String, Object> statusResult = paymentGatewayService.checkPaymentStatus(orderId, expectedAmount, bankTransactionId);
             return ResponseEntity.ok(statusResult);
             
         } catch (Exception e) {
@@ -236,8 +254,8 @@ public class VietQRController {
             transactionData.put("bankTransactionId", bankTransactionId);
             
             // Verify and confirm payment
-            PaymentGatewayService.PaymentVerificationResult verificationResult = 
-                vietQRGatewayService.verifyPaymentWithTransactionData(transactionData);
+            PaymentGatewayService.PaymentVerificationResult verificationResult =
+                paymentGatewayService.verifyPaymentWithTransactionData(transactionData);
             
             if (verificationResult.isValid() && verificationResult.isSuccessful()) {
                 Long orderIdLong = Long.parseLong(orderId);
@@ -261,39 +279,5 @@ public class VietQRController {
         }
     }
 
-    /**
-     * Enhanced client IP address detection with comprehensive proxy header support.
-     *
-     * @param request HTTP request
-     * @return Client IP address
-     */
-    private String getClientIpAddress(HttpServletRequest request) {
-        if (request == null) {
-            return "unknown";
-        }
-
-        String[] headerNames = {
-            "X-Forwarded-For",
-            "X-Real-IP",
-            "X-Forwarded",
-            "X-Cluster-Client-IP",
-            "Proxy-Client-IP",
-            "WL-Proxy-Client-IP"
-        };
-
-        for (String headerName : headerNames) {
-            String ip = request.getHeader(headerName);
-            if (ip != null && !ip.trim().isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                // Handle comma-separated IPs (first one is usually the real client IP)
-                if (ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                return ip;
-            }
-        }
-
-        // Fallback to remote address
-        String ip = request.getRemoteAddr();
-        return ip != null ? ip : "unknown";
-    }
+    // IP address detection is now handled by BasePaymentController.getClientIpAddress()
 }

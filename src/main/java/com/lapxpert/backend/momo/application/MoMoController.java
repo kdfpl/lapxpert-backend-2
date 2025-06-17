@@ -2,9 +2,9 @@ package com.lapxpert.backend.momo.application;
 
 import com.lapxpert.backend.hoadon.domain.enums.PhuongThucThanhToan;
 import com.lapxpert.backend.hoadon.domain.service.HoaDonService;
+import com.lapxpert.backend.payment.domain.service.BasePaymentController;
 import com.lapxpert.backend.payment.domain.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.domain.service.PaymentGatewayService;
-import com.lapxpert.backend.momo.domain.MoMoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +19,10 @@ import java.util.Map;
 
 /**
  * Enhanced MoMo payment controller with improved security, error handling, and audit logging.
+ * Extends BasePaymentController for common payment functionality and Vietnamese business requirements.
  *
  * Security enhancements:
- * - Enhanced parameter validation
+ * - Enhanced parameter validation through BasePaymentController
  * - Improved error handling with security-conscious responses
  * - Better IP address detection and logging
  * - Enhanced IPN processing with comprehensive validation
@@ -36,14 +37,24 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/payment")
-public class MoMoController {
+public class MoMoController extends BasePaymentController<MoMoGatewayService> {
 
-    private final MoMoGatewayService moMoGatewayService;
+    private static final long MAX_MOMO_AMOUNT = 50_000_000L; // 50 million VND
     private final HoaDonService hoaDonService;
 
     public MoMoController(MoMoGatewayService moMoGatewayService, HoaDonService hoaDonService) {
-        this.moMoGatewayService = moMoGatewayService;
+        super(moMoGatewayService);
         this.hoaDonService = hoaDonService;
+    }
+
+    @Override
+    protected String getGatewayName() {
+        return "MoMo";
+    }
+
+    @Override
+    protected long getMaxPaymentAmount() {
+        return MAX_MOMO_AMOUNT;
     }
 
     /**
@@ -58,8 +69,8 @@ public class MoMoController {
             Map<String, String> callbackData = extractCallbackParameters(request);
             
             // Verify payment
-            PaymentGatewayService.PaymentVerificationResult verificationResult = 
-                moMoGatewayService.verifyPaymentWithCallback(callbackData);
+            PaymentGatewayService.PaymentVerificationResult verificationResult =
+                paymentGatewayService.verifyPaymentWithCallback(callbackData);
             
             String orderId = callbackData.get("orderId");
             String transId = callbackData.get("transId");
@@ -99,6 +110,22 @@ public class MoMoController {
         String clientIp = getClientIpAddress(request);
         String orderId = ipnData.get("orderId");
         String transId = ipnData.get("transId");
+        String amount = ipnData.get("amount");
+
+        // Validate callback request using base controller
+        if (!validateCallbackRequest(request)) {
+            Map<String, String> response = new HashMap<>();
+            response.put("resultCode", "1");
+            response.put("message", "Invalid IPN request");
+            return ResponseEntity.ok(response);
+        }
+
+        // Create audit log for IPN processing
+        Map<String, Object> auditInfo = new HashMap<>();
+        auditInfo.put("transId", transId);
+        auditInfo.put("amount", amount);
+        auditInfo.put("ipnType", "INSTANT_NOTIFICATION");
+        createAuditLog("PROCESS_IPN", orderId, amount != null ? Long.parseLong(amount) : null, clientIp, auditInfo);
 
         log.info("MoMo IPN received from IP: {} - OrderID: {}, TransID: {}",
                 clientIp, orderId, transId);
@@ -116,7 +143,7 @@ public class MoMoController {
 
             // Verify payment using enhanced verification
             PaymentGatewayService.PaymentVerificationResult verificationResult =
-                moMoGatewayService.verifyPaymentWithCallback(ipnData);
+                paymentGatewayService.verifyPaymentWithCallback(ipnData);
 
             if (verificationResult.isValid() && verificationResult.isSuccessful()) {
                 // Payment successful - update order status
@@ -161,38 +188,51 @@ public class MoMoController {
 
     /**
      * Create MoMo payment URL for order
-     * @param orderId Order ID
-     * @param amount Payment amount
-     * @param orderInfo Order information
+     * @param orderId Order ID (mã đơn hàng)
+     * @param amount Payment amount in VND (số tiền thanh toán)
+     * @param orderInfo Order information (thông tin đơn hàng)
      * @param request HTTP request for base URL
      * @return Payment URL response
      */
     @PostMapping("/momo/create-payment")
-    public ResponseEntity<Map<String, String>> createPayment(
+    public ResponseEntity<Map<String, Object>> createPayment(
             @RequestParam("orderId") Long orderId,
             @RequestParam("amount") int amount,
             @RequestParam("orderInfo") String orderInfo,
             HttpServletRequest request) {
-        
+
         try {
-            String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
             String clientIp = getClientIpAddress(request);
-            
-            String paymentUrl = moMoGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("paymentUrl", paymentUrl);
-            response.put("orderId", orderId.toString());
-            response.put("paymentMethod", "MOMO");
-            
-            return ResponseEntity.ok(response);
-            
+
+            // Validate payment parameters using base controller
+            validatePaymentParameters(amount, orderInfo, orderId.toString(),
+                request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());
+
+            // Create audit log for payment creation
+            Map<String, Object> auditInfo = new HashMap<>();
+            auditInfo.put("userAgent", request.getHeader("User-Agent"));
+            auditInfo.put("referer", request.getHeader("Referer"));
+            createAuditLog("CREATE_PAYMENT", orderId.toString(), (long) amount, clientIp, auditInfo);
+
+            String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+            String paymentUrl = paymentGatewayService.createPaymentUrl(orderId, amount, orderInfo, baseUrl, clientIp);
+
+            // Prepare response data
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("paymentUrl", paymentUrl);
+            responseData.put("orderId", orderId.toString());
+            responseData.put("paymentMethod", "MOMO");
+
+            return createSuccessResponse(responseData, "Tạo liên kết thanh toán MoMo thành công");
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid MoMo payment parameters for order {}: {}", orderId, e.getMessage());
+            return createErrorResponse(e.getMessage(), "INVALID_PARAMETERS",
+                org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Error creating MoMo payment for order {}: {}", orderId, e.getMessage(), e);
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Không thể tạo liên kết thanh toán MoMo");
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return createErrorResponse("Không thể tạo liên kết thanh toán MoMo", "PAYMENT_CREATION_FAILED",
+                org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -208,7 +248,7 @@ public class MoMoController {
             @RequestParam("requestId") String requestId) {
         
         try {
-            Map<String, Object> statusResult = moMoGatewayService.queryTransactionStatus(orderId, requestId);
+            Map<String, Object> statusResult = paymentGatewayService.queryTransactionStatus(orderId, requestId);
             return ResponseEntity.ok(statusResult);
             
         } catch (Exception e) {
@@ -246,39 +286,5 @@ public class MoMoController {
         return params;
     }
 
-    /**
-     * Enhanced client IP address detection with comprehensive proxy header support.
-     *
-     * @param request HTTP request
-     * @return Client IP address
-     */
-    private String getClientIpAddress(HttpServletRequest request) {
-        if (request == null) {
-            return "unknown";
-        }
-
-        String[] headerNames = {
-            "X-Forwarded-For",
-            "X-Real-IP",
-            "X-Forwarded",
-            "X-Cluster-Client-IP",
-            "Proxy-Client-IP",
-            "WL-Proxy-Client-IP"
-        };
-
-        for (String headerName : headerNames) {
-            String ip = request.getHeader(headerName);
-            if (ip != null && !ip.trim().isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                // Handle comma-separated IPs (first one is usually the real client IP)
-                if (ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                return ip;
-            }
-        }
-
-        // Fallback to remote address
-        String ip = request.getRemoteAddr();
-        return ip != null ? ip : "unknown";
-    }
+    // IP address detection is now handled by BasePaymentController.getClientIpAddress()
 }

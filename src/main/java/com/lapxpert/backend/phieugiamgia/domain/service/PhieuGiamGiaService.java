@@ -2,8 +2,10 @@ package com.lapxpert.backend.phieugiamgia.domain.service;
 
 import com.lapxpert.backend.common.enums.TrangThaiCampaign;
 import com.lapxpert.backend.common.enums.LoaiGiamGia;
+import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.EmailService;
 import com.lapxpert.backend.common.service.VietnamTimeZoneService;
+import com.lapxpert.backend.common.util.ValidationUtils;
 import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
 import com.lapxpert.backend.phieugiamgia.application.dto.PhieuGiamGiaDto;
@@ -22,6 +24,8 @@ import com.lapxpert.backend.hoadon.domain.repository.HoaDonPhieuGiamGiaRepositor
 import com.lapxpert.backend.phieugiamgia.domain.repository.PhieuGiamGiaNguoiDungRepository;
 import com.lapxpert.backend.phieugiamgia.domain.repository.PhieuGiamGiaRepository;
 import com.lapxpert.backend.phieugiamgia.domain.repository.PhieuGiamGiaAuditHistoryRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +43,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PhieuGiamGiaService {
+public class PhieuGiamGiaService extends BusinessEntityService<PhieuGiamGia, Long, PhieuGiamGiaDto, PhieuGiamGiaAuditHistory> {
 
     private final PhieuGiamGiaRepository phieuGiamGiaRepository;
     private final PhieuGiamGiaNguoiDungRepository phieuGiamGiaNguoiDungRepository;
@@ -50,10 +54,17 @@ public class PhieuGiamGiaService {
     private final PhieuGiamGiaMapper phieuGiamGiaMapper;
     private final VietnamTimeZoneService vietnamTimeZoneService;
     private final PhieuGiamGiaDtoMapper phieuGiamGiaDtoMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<PhieuGiamGiaDto> getAllPhieuGiamGia() {
-        List<PhieuGiamGia> phieuGiamGias = phieuGiamGiaRepository.findAll();
-        return phieuGiamGiaDtoMapper.toDtosWithTimezone(phieuGiamGias);
+        // Use inherited findAll method with caching from BusinessEntityService
+        List<PhieuGiamGiaDto> dtos = findAll();
+
+        // Apply timezone conversion for compatibility
+        List<PhieuGiamGia> entities = dtos.stream()
+                .map(this::toEntity)
+                .toList();
+        return phieuGiamGiaDtoMapper.toDtosWithTimezone(entities);
     }
 
     @Transactional
@@ -63,44 +74,31 @@ public class PhieuGiamGiaService {
 
     @Transactional
     public PhieuGiamGiaDto taoPhieuWithAudit(PhieuGiamGiaDto req, String reason) {
-        // Use enhanced mapper for entity conversion
-        PhieuGiamGia phieu = phieuGiamGiaDtoMapper.toEntity(req);
-
         // Set defaults if needed
-        if (phieu.getLoaiGiamGia() == null) {
-            phieu.setLoaiGiamGia(LoaiGiamGia.SO_TIEN_CO_DINH);
+        if (req.getLoaiGiamGia() == null) {
+            req.setLoaiGiamGia(LoaiGiamGia.SO_TIEN_CO_DINH);
         }
-        if (phieu.getSoLuongBanDau() == null) {
-            phieu.setSoLuongBanDau(0);
+        if (req.getSoLuongBanDau() == null) {
+            req.setSoLuongBanDau(0);
         }
-        if (phieu.getSoLuongDaDung() == null) {
-            phieu.setSoLuongDaDung(0);
+        if (req.getSoLuongDaDung() == null) {
+            req.setSoLuongDaDung(0);
         }
-        phieu.setMoTa(req.getMoTa());
 
-        // Note: Audit information is handled by PhieuGiamGiaAuditHistory, not inline audit fields
+        // Use inherited create method with audit trail and cache management
+        PhieuGiamGiaDto savedDto = create(req, "SYSTEM", reason != null ? reason : "Tạo phiếu giảm giá mới");
 
-        // Validation will be handled by @PrePersist in entity
-        PhieuGiamGia savedPhieu = phieuGiamGiaRepository.save(phieu);
-
-        // Save audit history entry for creation
-        String newValues = buildAuditJson(savedPhieu);
-        PhieuGiamGiaAuditHistory auditEntry = PhieuGiamGiaAuditHistory.createEntry(
-            savedPhieu.getId(),
-            newValues,
-            savedPhieu.getNguoiTao(),
-            reason != null ? reason : "Tạo phiếu giảm giá mới"
-        );
-        auditHistoryRepository.save(auditEntry);
+        // Convert back to entity for additional processing
+        PhieuGiamGia savedPhieu = toEntity(savedDto);
 
         // Create user assignments for private vouchers
         if (req.getDanhSachNguoiDung() != null && !req.getDanhSachNguoiDung().isEmpty()) {
             // Nếu phiếu giảm giá là riêng tư
             for (Long nguoiDungId : req.getDanhSachNguoiDung()) {
-                PhieuGiamGiaNguoiDungId id = new PhieuGiamGiaNguoiDungId(phieu.getId(), nguoiDungId);
+                PhieuGiamGiaNguoiDungId id = new PhieuGiamGiaNguoiDungId(savedPhieu.getId(), nguoiDungId);
                 PhieuGiamGiaNguoiDung phieuND = new PhieuGiamGiaNguoiDung();
                 phieuND.setId(id);
-                phieuND.setPhieuGiamGia(phieu);
+                phieuND.setPhieuGiamGia(savedPhieu);
                 phieuND.setNguoiDung(nguoiDungRepository.findById(nguoiDungId)
                         .orElseThrow(() -> new IllegalArgumentException("Người dùng với ID " + nguoiDungId + " không tồn tại")));
                 phieuGiamGiaNguoiDungRepository.save(phieuND);
@@ -116,10 +114,10 @@ public class PhieuGiamGiaService {
 
             String subject = "Ưu đãi đặc biệt dành riêng cho bạn!";
             String text = "Chào bạn,\n\n"
-                    + "LapXpert trân trọng gửi đến bạn phiếu giảm giá có mã là **" + phieu.getMaPhieuGiamGia() + "** "
+                    + "LapXpert trân trọng gửi đến bạn phiếu giảm giá có mã là **" + savedPhieu.getMaPhieuGiamGia() + "** "
                     + "với những ưu đãi đặc biệt. Mã này được tạo dành riêng cho bạn và có hiệu lực từ ngày "
-                    + phieu.getNgayBatDau() + " đến " + phieu.getNgayKetThuc() + ".\n\n"
-                    +"Phiếu sẽ được áp dụng với hóa đơn từ"+phieu.getGiaTriDonHangToiThieu()+".\n\n"
+                    + savedPhieu.getNgayBatDau() + " đến " + savedPhieu.getNgayKetThuc() + ".\n\n"
+                    +"Phiếu sẽ được áp dụng với hóa đơn từ"+savedPhieu.getGiaTriDonHangToiThieu()+".\n\n"
                     + "Hãy nhanh tay sử dụng để không bỏ lỡ nhé!\n\n"
                     + "Trân trọng,\nLapXpert Team";
             // Log notification for selected customers
@@ -138,8 +136,8 @@ public class PhieuGiamGiaService {
 
             String subject = "Ưu đãi mới cho tất cả khách hàng LapXpert!";
             String text = "Chào bạn,\n\n"
-                    + "Chúng tôi vừa phát hành Phiếu giảm giá có mã là **" + phieu.getMaPhieuGiamGia() + "** áp dụng cho tất cả khách hàng, "
-                    + "có hiệu lực từ ngày " + phieu.getNgayBatDau() + " đến " + phieu.getNgayKetThuc() + ".\n\n"
+                    + "Chúng tôi vừa phát hành Phiếu giảm giá có mã là **" + savedPhieu.getMaPhieuGiamGia() + "** áp dụng cho tất cả khách hàng, "
+                    + "có hiệu lực từ ngày " + savedPhieu.getNgayBatDau() + " đến " + savedPhieu.getNgayKetThuc() + ".\n\n"
                     + "Nhanh tay sử dụng để nhận ưu đãi hấp dẫn!\n\n"
                     + "Trân trọng,\nLapXpert Team";
 
@@ -152,8 +150,8 @@ public class PhieuGiamGiaService {
             // emailService.sendBulkEmail(allCustomerEmails, subject, text);
         }
 
-        // Return the created voucher as DTO
-        return phieuGiamGiaMapper.toDto(savedPhieu);
+        // Return the created voucher DTO (already created by inherited method)
+        return savedDto;
     }
     @Transactional
     public void capNhatPhieu(PhieuGiamGiaDto req, Long phieuId) {
@@ -162,37 +160,24 @@ public class PhieuGiamGiaService {
 
     @Transactional
     public void capNhatPhieuWithAudit(PhieuGiamGiaDto req, Long phieuId, String reason) {
-        PhieuGiamGia phieu = phieuGiamGiaRepository.findById(phieuId)
+        // Get existing entity to capture old status for notifications
+        PhieuGiamGia existingPhieu = phieuGiamGiaRepository.findById(phieuId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu"));
+        TrangThaiCampaign trangThaiCu = existingPhieu.getTrangThai(); // Lưu lại trạng thái cũ
 
-        // Capture old values for audit trail
-        String oldValues = buildAuditJson(phieu);
-        TrangThaiCampaign trangThaiCu = phieu.getTrangThai(); // Lưu lại trạng thái cũ
+        // Set status based on dates
+        req.setTrangThai(PhieuGiamGia.fromDates(req.getNgayBatDau(), req.getNgayKetThuc()));
 
-        // Cập nhật thông tin phiếu giảm giá
-        phieu.setMaPhieuGiamGia(req.getMaPhieuGiamGia());
-        phieu.setGiaTriGiam(req.getGiaTriGiam());
-        phieu.setGiaTriDonHangToiThieu(req.getGiaTriDonHangToiThieu());
-        phieu.setNgayBatDau(req.getNgayBatDau());
-        phieu.setNgayKetThuc(req.getNgayKetThuc());
-        // Set discount type using enum
-        phieu.setLoaiGiamGia(req.getLoaiGiamGia() != null ? req.getLoaiGiamGia() : LoaiGiamGia.SO_TIEN_CO_DINH);
-        phieu.setSoLuongBanDau(req.getSoLuongBanDau());
-        phieu.setTrangThai(PhieuGiamGia.fromDates(req.getNgayBatDau(), req.getNgayKetThuc()));
-        phieu.setMoTa(req.getMoTa());
+        // Set discount type default if needed
+        if (req.getLoaiGiamGia() == null) {
+            req.setLoaiGiamGia(LoaiGiamGia.SO_TIEN_CO_DINH);
+        }
 
-        // Save audit history entry for update
-        String newValues = buildAuditJson(phieu);
-        PhieuGiamGiaAuditHistory auditEntry = PhieuGiamGiaAuditHistory.updateEntry(
-            phieu.getId(),
-            oldValues,
-            newValues,
-            phieu.getNguoiCapNhat(),
-            reason != null ? reason : "Cập nhật thông tin phiếu giảm giá"
-        );
-        auditHistoryRepository.save(auditEntry);
+        // Use inherited update method with audit trail and cache management
+        PhieuGiamGiaDto updatedDto = update(phieuId, req, "SYSTEM", reason != null ? reason : "Cập nhật thông tin phiếu giảm giá");
 
-        phieuGiamGiaRepository.save(phieu);
+        // Convert to entity for additional processing
+        PhieuGiamGia phieu = toEntity(updatedDto);
 
         // Kiểm tra và gửi email nếu trạng thái phiếu giảm giá thay đổi
         if (trangThaiCu != phieu.getTrangThai()) {
@@ -312,10 +297,9 @@ public class PhieuGiamGiaService {
         }
     }
     public PhieuGiamGiaDto getPhieuGiamGiaById(Long id) {
-        PhieuGiamGia phieuGiamGia = phieuGiamGiaRepository.findById(id)
+        // Use inherited findById method with caching from BusinessEntityService
+        return findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Phiếu không tồn tại với ID: " + id));
-
-        return phieuGiamGiaMapper.toDto(phieuGiamGia);
     }
 
     /**
@@ -324,7 +308,8 @@ public class PhieuGiamGiaService {
      * @return List of audit history entries
      */
     public List<PhieuGiamGiaAuditHistory> getAuditHistory(Long phieuGiamGiaId) {
-        return auditHistoryRepository.findByPhieuGiamGiaIdOrderByThoiGianThayDoiDesc(phieuGiamGiaId);
+        // Use inherited getAuditHistory method from BaseService
+        return super.getAuditHistory(phieuGiamGiaId);
     }
 
     @Transactional
@@ -685,10 +670,8 @@ public class PhieuGiamGiaService {
         }
 
         try {
-            // Get customer's order history (last 6 months)
-            Instant sixMonthsAgo = Instant.now().minusSeconds(6 * 30 * 24 * 60 * 60L);
-
             // For now, create a basic profile - this can be enhanced with actual order analysis
+            // TODO: Get customer's order history (last 6 months) for better profiling
             return CustomerPurchaseProfile.builder()
                 .customerId(customerId)
                 .averageOrderValue(BigDecimal.valueOf(1000000)) // Default 1M VND
@@ -1368,6 +1351,178 @@ public class PhieuGiamGiaService {
         public BigDecimal getDiscountAmount() { return discountAmount; }
     }
 
+    // ==================== BUSINESSENTITYSERVICE ABSTRACT METHOD IMPLEMENTATIONS ====================
+
+    @Override
+    protected JpaRepository<PhieuGiamGia, Long> getRepository() {
+        return phieuGiamGiaRepository;
+    }
+
+    @Override
+    protected JpaRepository<PhieuGiamGiaAuditHistory, Long> getAuditRepository() {
+        return auditHistoryRepository;
+    }
+
+    @Override
+    protected PhieuGiamGiaDto toDto(PhieuGiamGia entity) {
+        return phieuGiamGiaMapper.toDto(entity);
+    }
+
+    @Override
+    protected PhieuGiamGia toEntity(PhieuGiamGiaDto dto) {
+        return phieuGiamGiaDtoMapper.toEntity(dto);
+    }
+
+    @Override
+    protected PhieuGiamGiaAuditHistory createAuditEntry(Long entityId, String action, String oldValues, String newValues, String nguoiThucHien, String lyDo) {
+        switch (action) {
+            case "CREATE":
+                return PhieuGiamGiaAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+            case "UPDATE":
+                return PhieuGiamGiaAuditHistory.updateEntry(entityId, oldValues, newValues, nguoiThucHien, lyDo);
+            case "SOFT_DELETE":
+            case "DELETE":
+                return PhieuGiamGiaAuditHistory.deleteEntry(entityId, oldValues, nguoiThucHien, lyDo);
+            default:
+                return PhieuGiamGiaAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+        }
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Phiếu giảm giá";
+    }
+
+    @Override
+    protected void validateEntity(PhieuGiamGia entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Phiếu giảm giá không được null");
+        }
+
+        // Validate voucher code
+        ValidationUtils.validateProductCode(entity.getMaPhieuGiamGia(), "Mã phiếu giảm giá");
+
+        // Validate discount value
+        ValidationUtils.validatePositiveAmount(entity.getGiaTriGiam(), "Giá trị giảm");
+
+        // Validate minimum order value
+        if (entity.getGiaTriDonHangToiThieu() != null) {
+            ValidationUtils.validateAmount(entity.getGiaTriDonHangToiThieu(), "Giá trị đơn hàng tối thiểu");
+        }
+
+        // Validate quantities
+        ValidationUtils.validateQuantity(entity.getSoLuongBanDau(), "Số lượng ban đầu");
+        ValidationUtils.validateQuantity(entity.getSoLuongDaDung(), "Số lượng đã dùng");
+
+        // Validate date range
+        if (entity.getNgayBatDau() != null && entity.getNgayKetThuc() != null) {
+            if (entity.getNgayKetThuc().isBefore(entity.getNgayBatDau())) {
+                throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
+            }
+        }
+    }
+
+    @Override
+    protected void evictCache() {
+        // Cache eviction is handled by @CacheEvict annotations in BusinessEntityService
+        log.debug("Cache evicted for PhieuGiamGia");
+    }
+
+    @Override
+    protected Long getEntityId(PhieuGiamGia entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected void setEntityId(PhieuGiamGia entity, Long id) {
+        entity.setId(id);
+    }
+
+    @Override
+    protected void setSoftDeleteStatus(PhieuGiamGia entity, boolean status) {
+        // PhieuGiamGia uses TrangThaiCampaign.BI_HUY for soft delete
+        if (!status) {
+            entity.setTrangThai(TrangThaiCampaign.BI_HUY);
+        }
+    }
+
+    @Override
+    protected List<PhieuGiamGiaAuditHistory> getAuditHistoryByEntityId(Long entityId) {
+        return auditHistoryRepository.findByPhieuGiamGiaIdOrderByThoiGianThayDoiDesc(entityId);
+    }
+
+    @Override
+    protected ApplicationEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    @Override
+    protected String getCacheName() {
+        return "phieuGiamGiaCache";
+    }
+
+    @Override
+    protected void publishEntityCreatedEvent(PhieuGiamGia entity) {
+        // TODO: Implement voucher created event publishing for real-time updates
+        log.debug("Publishing voucher created event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityUpdatedEvent(PhieuGiamGia entity, PhieuGiamGia oldEntity) {
+        // TODO: Implement voucher updated event publishing for real-time updates
+        log.debug("Publishing voucher updated event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityDeletedEvent(Long entityId) {
+        // TODO: Implement voucher deleted event publishing for real-time updates
+        log.debug("Publishing voucher deleted event for ID: {}", entityId);
+    }
+
+    @Override
+    protected void validateBusinessRules(PhieuGiamGia entity) {
+        // Validate voucher-specific business rules
+        if (entity.getSoLuongDaDung() > entity.getSoLuongBanDau()) {
+            throw new IllegalArgumentException("Số lượng đã dùng không được vượt quá số lượng ban đầu");
+        }
+
+        // Validate discount type and value
+        if (entity.getLoaiGiamGia() == LoaiGiamGia.PHAN_TRAM) {
+            ValidationUtils.validatePercentage(entity.getGiaTriGiam(), "Phần trăm giảm");
+        }
+    }
+
+    @Override
+    protected void validateBusinessRulesForUpdate(PhieuGiamGia entity, PhieuGiamGia existingEntity) {
+        validateBusinessRules(entity);
+
+        // Additional validation for updates
+        if (existingEntity.getTrangThai() == TrangThaiCampaign.KET_THUC) {
+            throw new IllegalArgumentException("Không thể cập nhật phiếu giảm giá đã kết thúc");
+        }
+
+        if (existingEntity.getTrangThai() == TrangThaiCampaign.BI_HUY) {
+            throw new IllegalArgumentException("Không thể cập nhật phiếu giảm giá đã bị hủy");
+        }
+    }
+
+    @Override
+    protected PhieuGiamGia cloneEntity(PhieuGiamGia entity) {
+        PhieuGiamGia clone = new PhieuGiamGia();
+        clone.setId(entity.getId());
+        clone.setMaPhieuGiamGia(entity.getMaPhieuGiamGia());
+        clone.setLoaiGiamGia(entity.getLoaiGiamGia());
+        clone.setGiaTriGiam(entity.getGiaTriGiam());
+        clone.setGiaTriDonHangToiThieu(entity.getGiaTriDonHangToiThieu());
+        clone.setNgayBatDau(entity.getNgayBatDau());
+        clone.setNgayKetThuc(entity.getNgayKetThuc());
+        clone.setSoLuongBanDau(entity.getSoLuongBanDau());
+        clone.setSoLuongDaDung(entity.getSoLuongDaDung());
+        clone.setTrangThai(entity.getTrangThai());
+        clone.setMoTa(entity.getMoTa());
+        return clone;
+    }
+
     // ==================== AUDIT TRAIL HELPER METHODS ====================
 
     /**
@@ -1375,7 +1530,8 @@ public class PhieuGiamGiaService {
      * @param phieu the voucher entity
      * @return JSON string representation
      */
-    private String buildAuditJson(PhieuGiamGia phieu) {
+    @Override
+    protected String buildAuditJson(PhieuGiamGia phieu) {
         if (phieu == null) return "{}";
 
         try {

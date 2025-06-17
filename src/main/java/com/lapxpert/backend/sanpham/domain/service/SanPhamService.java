@@ -15,10 +15,15 @@ import com.lapxpert.backend.sanpham.domain.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.domain.repository.SanPhamRepository;
 // TODO: Import CacheKeyBuilder for consistent cache key management
 // import com.lapxpert.backend.common.cache.CacheKeyBuilder;
+import com.lapxpert.backend.common.service.BusinessEntityService;
+import com.lapxpert.backend.common.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +36,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SanPhamService {
+@Slf4j
+public class SanPhamService extends BusinessEntityService<SanPham, Long, SanPhamDto, SanPhamAuditHistory> {
     private final SanPhamRepository sanPhamRepository;
     private final SanPhamMapper sanPhamMapper;
     private final SanPhamAuditHistoryRepository auditHistoryRepository;
@@ -40,6 +46,7 @@ public class SanPhamService {
     private final SanPhamChiTietMapper sanPhamChiTietMapper;
 
     private final PricingService pricingService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public String generateMaSanPham() {
         String lastMaSanPham = sanPhamRepository.findLastMaSanPham();
@@ -105,8 +112,8 @@ public class SanPhamService {
     @Cacheable(value = "sanPhamList")
     @Transactional(readOnly = true)
     public List<SanPhamDto> findAll() {
-        List<SanPham> entities = sanPhamRepository.findAll();
-        List<SanPhamDto> dtos = sanPhamMapper.toDtos(entities);
+        // Use inherited findAll method with caching from BusinessEntityService
+        List<SanPhamDto> dtos = super.findAll();
 
         // Apply promotional pricing from DotGiamGia campaigns to all product variants
         return applyPromotionalPricingToProducts(dtos);
@@ -119,11 +126,10 @@ public class SanPhamService {
      * @throws RuntimeException if product not found
      */
     @Transactional(readOnly = true)
-    public SanPhamDto findById(Long id) {
-        SanPham entity = sanPhamRepository.findById(id)
+    public SanPhamDto getSanPhamById(Long id) {
+        // Use inherited findById method with caching from BusinessEntityService
+        SanPhamDto dto = findById(id)
                 .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại với ID: " + id));
-
-        SanPhamDto dto = sanPhamMapper.toDto(entity);
 
         // Apply promotional pricing to variants if available
         if (dto.getSanPhamChiTiets() != null && !dto.getSanPhamChiTiets().isEmpty()) {
@@ -236,20 +242,179 @@ public class SanPhamService {
             sanPham.setMaSanPham(generateMaSanPham());
         }
 
-        // Save the product
-        SanPham savedProduct = sanPhamRepository.save(sanPham);
+        // Convert to DTO and use inherited create method with audit trail and cache management
+        SanPhamDto dto = sanPhamMapper.toDto(sanPham);
+        SanPhamDto createdDto = create(dto, "SYSTEM", reason != null ? reason : "Tạo sản phẩm mới");
 
-        // Create audit trail entry for creation
-        String newValues = buildAuditJson(savedProduct);
-        SanPhamAuditHistory auditEntry = SanPhamAuditHistory.createEntry(
-            savedProduct.getId(),
-            newValues,
-            savedProduct.getNguoiTao(),
-            reason != null ? reason : "Tạo sản phẩm mới"
-        );
-        auditHistoryRepository.save(auditEntry);
+        // Convert back to entity for return compatibility
+        return sanPhamMapper.toEntity(createdDto);
+    }
 
-        return savedProduct;
+    // ==================== BUSINESSENTITYSERVICE ABSTRACT METHOD IMPLEMENTATIONS ====================
+
+    @Override
+    protected JpaRepository<SanPham, Long> getRepository() {
+        return sanPhamRepository;
+    }
+
+    @Override
+    protected JpaRepository<SanPhamAuditHistory, Long> getAuditRepository() {
+        return auditHistoryRepository;
+    }
+
+    @Override
+    protected SanPhamDto toDto(SanPham entity) {
+        return sanPhamMapper.toDto(entity);
+    }
+
+    @Override
+    protected SanPham toEntity(SanPhamDto dto) {
+        return sanPhamMapper.toEntity(dto);
+    }
+
+    @Override
+    protected SanPhamAuditHistory createAuditEntry(Long entityId, String action, String oldValues, String newValues, String nguoiThucHien, String lyDo) {
+        switch (action) {
+            case "CREATE":
+                return SanPhamAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+            case "UPDATE":
+                return SanPhamAuditHistory.updateEntry(entityId, oldValues, newValues, nguoiThucHien, lyDo);
+            case "SOFT_DELETE":
+            case "DELETE":
+                return SanPhamAuditHistory.deleteEntry(entityId, oldValues, nguoiThucHien, lyDo);
+            default:
+                return SanPhamAuditHistory.createEntry(entityId, newValues, nguoiThucHien, lyDo);
+        }
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Sản phẩm";
+    }
+
+    @Override
+    protected void validateEntity(SanPham entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Sản phẩm không được null");
+        }
+
+        // Validate product code
+        if (entity.getMaSanPham() != null) {
+            ValidationUtils.validateProductCode(entity.getMaSanPham(), "Mã sản phẩm");
+        }
+
+        // Validate product name
+        if (entity.getTenSanPham() == null || entity.getTenSanPham().trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên sản phẩm không được để trống");
+        }
+
+        if (entity.getTenSanPham().trim().length() < 3) {
+            throw new IllegalArgumentException("Tên sản phẩm phải có ít nhất 3 ký tự");
+        }
+
+        // Validate image count
+        if (entity.getHinhAnh() != null && entity.getHinhAnh().size() > 10) {
+            throw new IllegalArgumentException("Sản phẩm không được có quá 10 hình ảnh");
+        }
+    }
+
+    @Override
+    protected void evictCache() {
+        // Cache eviction is handled by @CacheEvict annotations in BusinessEntityService
+        log.debug("Cache evicted for SanPham");
+    }
+
+    @Override
+    protected Long getEntityId(SanPham entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected void setEntityId(SanPham entity, Long id) {
+        entity.setId(id);
+    }
+
+    @Override
+    protected void setSoftDeleteStatus(SanPham entity, boolean status) {
+        // SanPham uses Boolean trangThai for soft delete
+        entity.setTrangThai(status);
+    }
+
+    @Override
+    protected List<SanPhamAuditHistory> getAuditHistoryByEntityId(Long entityId) {
+        return auditHistoryRepository.findBySanPhamIdOrderByThoiGianThayDoiDesc(entityId);
+    }
+
+    @Override
+    protected ApplicationEventPublisher getEventPublisher() {
+        return eventPublisher;
+    }
+
+    @Override
+    protected String getCacheName() {
+        return "sanPhamCache";
+    }
+
+    @Override
+    protected void publishEntityCreatedEvent(SanPham entity) {
+        // TODO: Implement product created event publishing for real-time updates
+        log.debug("Publishing product created event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityUpdatedEvent(SanPham entity, SanPham oldEntity) {
+        // TODO: Implement product updated event publishing for real-time updates
+        log.debug("Publishing product updated event for ID: {}", entity.getId());
+    }
+
+    @Override
+    protected void publishEntityDeletedEvent(Long entityId) {
+        // TODO: Implement product deleted event publishing for real-time updates
+        log.debug("Publishing product deleted event for ID: {}", entityId);
+    }
+
+    @Override
+    protected void validateBusinessRules(SanPham entity) {
+        // Validate product-specific business rules
+        validateProductBusinessRules(entity);
+
+        // Check for duplicate product code only for new entities (ID is null)
+        if (entity.getId() == null && entity.getMaSanPham() != null) {
+            if (!isProductCodeUnique(entity.getMaSanPham(), null)) {
+                throw new IllegalArgumentException("Mã sản phẩm đã tồn tại: " + entity.getMaSanPham());
+            }
+        }
+    }
+
+    @Override
+    protected void validateBusinessRulesForUpdate(SanPham entity, SanPham existingEntity) {
+        validateBusinessRules(entity);
+
+        // Additional validation for updates
+        if (entity.getMaSanPham() != null && !entity.getMaSanPham().equals(existingEntity.getMaSanPham())) {
+            if (!isProductCodeUnique(entity.getMaSanPham(), existingEntity.getId())) {
+                throw new IllegalArgumentException("Mã sản phẩm đã tồn tại: " + entity.getMaSanPham());
+            }
+        }
+    }
+
+    @Override
+    protected SanPham cloneEntity(SanPham entity) {
+        SanPham clone = new SanPham();
+        clone.setId(entity.getId());
+        clone.setMaSanPham(entity.getMaSanPham());
+        clone.setTenSanPham(entity.getTenSanPham());
+        clone.setMoTa(entity.getMoTa());
+        clone.setTrangThai(entity.getTrangThai());
+        clone.setThuongHieu(entity.getThuongHieu());
+        clone.setNgayRaMat(entity.getNgayRaMat());
+        if (entity.getHinhAnh() != null) {
+            clone.setHinhAnh(entity.getHinhAnh());
+        }
+        if (entity.getDanhMucs() != null) {
+            clone.setDanhMucs(new HashSet<>(entity.getDanhMucs()));
+        }
+        return clone;
     }
 
     /**
@@ -257,7 +422,8 @@ public class SanPhamService {
      * @param sanPham SanPham entity
      * @return JSON string representation
      */
-    private String buildAuditJson(SanPham sanPham) {
+    @Override
+    protected String buildAuditJson(SanPham sanPham) {
         // Get all category names as JSON array
         String danhMucNames = "[]";
         if (sanPham.getDanhMucs() != null && !sanPham.getDanhMucs().isEmpty()) {
@@ -553,44 +719,12 @@ public class SanPhamService {
     })
     @Transactional
     public SanPham updateProductWithAudit(Long id, SanPham sanPham, String reason, String ipAddress, String userAgent) {
-        SanPham existingProduct = sanPhamRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại"));
+        // Convert to DTO and use inherited update method with audit trail and cache management
+        SanPhamDto dto = sanPhamMapper.toDto(sanPham);
+        SanPhamDto updatedDto = update(id, dto, "SYSTEM", reason != null ? reason : "Cập nhật thông tin sản phẩm");
 
-        // Capture old values for audit
-        String oldValues = buildAuditJson(existingProduct);
-
-        // Update fields
-        existingProduct.setMaSanPham(sanPham.getMaSanPham());
-        existingProduct.setTenSanPham(sanPham.getTenSanPham());
-        existingProduct.setThuongHieu(sanPham.getThuongHieu());
-        existingProduct.setMoTa(sanPham.getMoTa());
-        existingProduct.setHinhAnh(sanPham.getHinhAnh());
-        existingProduct.setNgayRaMat(sanPham.getNgayRaMat());
-        // FIX: Include trangThai in update to ensure status changes persist
-        existingProduct.setTrangThai(sanPham.getTrangThai());
-        // FIX: Update DanhMucs many-to-many relationship
-        if (sanPham.getDanhMucs() != null) {
-            existingProduct.getDanhMucs().clear();
-            existingProduct.getDanhMucs().addAll(sanPham.getDanhMucs());
-        }
-
-        // Save the updated product
-        SanPham savedProduct = sanPhamRepository.save(existingProduct);
-
-        // Capture new values for audit
-        String newValues = buildAuditJson(savedProduct);
-
-        // Create audit trail entry for update
-        SanPhamAuditHistory auditEntry = SanPhamAuditHistory.updateEntry(
-            savedProduct.getId(),
-            oldValues,
-            newValues,
-            savedProduct.getNguoiCapNhat(),
-            reason != null ? reason : "Cập nhật thông tin sản phẩm"
-        );
-        auditHistoryRepository.save(auditEntry);
-
-        return savedProduct;
+        // Convert back to entity for return compatibility
+        return sanPhamMapper.toEntity(updatedDto);
     }
 
     // Xóa mềm sản phẩm (đặt trạng thái thành false)
@@ -610,24 +744,8 @@ public class SanPhamService {
             @CacheEvict(value = "activeSanPhamList", allEntries = true)
     })
     public void softDeleteProductWithAudit(Long id, String reason, String ipAddress, String userAgent) {
-        sanPhamRepository.findById(id).ifPresent(sanPham -> {
-            // Capture old values for audit
-            String oldValues = buildAuditJson(sanPham);
-
-            sanPham.setTrangThai(false);
-
-            // Save the updated product
-            SanPham savedProduct = sanPhamRepository.save(sanPham);
-
-            // Create audit trail entry for deletion
-            SanPhamAuditHistory auditEntry = SanPhamAuditHistory.deleteEntry(
-                savedProduct.getId(),
-                oldValues,
-                savedProduct.getNguoiCapNhat(),
-                reason != null ? reason : "Xóa mềm sản phẩm"
-            );
-            auditHistoryRepository.save(auditEntry);
-        });
+        // Use inherited softDelete method with audit trail and cache management
+        softDelete(id, "SYSTEM", reason != null ? reason : "Xóa mềm sản phẩm");
     }
 
     // Cập nhật trạng thái hàng loạt sản phẩm
@@ -733,7 +851,8 @@ public class SanPhamService {
      */
     @Transactional(readOnly = true)
     public List<SanPhamAuditHistory> getAuditHistory(Long productId) {
-        return auditHistoryRepository.findBySanPhamIdOrderByThoiGianThayDoiDesc(productId);
+        // Use inherited getAuditHistory method from BaseService
+        return super.getAuditHistory(productId);
     }
 
     /**

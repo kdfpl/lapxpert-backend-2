@@ -1,6 +1,6 @@
 <template>
   <Dialog
-    v-model:visible="visible"
+    :visible="visible"
     modal
     :header="dialogTitle"
     :style="{ width: '500px' }"
@@ -137,7 +137,7 @@ const onDialogHide = () => {
 
 const onAccept = async () => {
   if (!props.suggestion) return
-  
+
   processing.value = true
   try {
     emit('accept', props.suggestion)
@@ -148,7 +148,7 @@ const onAccept = async () => {
 
 const onReject = () => {
   if (!props.suggestion) return
-  
+
   emit('reject', props.suggestion)
   emit('update:visible', false)
 }

@@ -1,4 +1,4 @@
-package com.lapxpert.backend.vietqr;
+package com.lapxpert.backend.payment.vietqr;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

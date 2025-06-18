@@ -1,4 +1,4 @@
-package com.lapxpert.backend.vietqr;
+package com.lapxpert.backend.payment.vietqr;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.lapxpert.backend.vnpay;
+package com.lapxpert.backend.payment.vnpay;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;

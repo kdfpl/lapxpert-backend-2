@@ -1,7 +1,7 @@
 package com.lapxpert.backend.payment.service;
 
 import com.lapxpert.backend.hoadon.enums.PhuongThucThanhToan;
-import com.lapxpert.backend.vnpay.VNPayService;
+import com.lapxpert.backend.payment.vnpay.VNPayService;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 

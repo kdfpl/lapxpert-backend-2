@@ -7,7 +7,7 @@ import com.lapxpert.backend.hoadon.enums.TrangThaiThanhToan;
 import com.lapxpert.backend.hoadon.service.HoaDonService;
 import com.lapxpert.backend.hoadon.service.ReceiptPreviewService;
 import com.lapxpert.backend.nguoidung.entity.NguoiDung;
-import com.lapxpert.backend.vnpay.VNPayService;
+import com.lapxpert.backend.payment.vnpay.VNPayService;
 import com.lapxpert.backend.payment.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.service.VietQRGatewayService;
 import org.springframework.http.HttpStatus;

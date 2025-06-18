@@ -1,4 +1,4 @@
-package com.lapxpert.backend.vnpay;
+package com.lapxpert.backend.payment.vnpay;
 
 import com.lapxpert.backend.hoadon.service.HoaDonService;
 import com.lapxpert.backend.hoadon.enums.PhuongThucThanhToan;

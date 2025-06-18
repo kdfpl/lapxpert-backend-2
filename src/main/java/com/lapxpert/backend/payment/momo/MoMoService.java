@@ -1,4 +1,4 @@
-package com.lapxpert.backend.momo;
+package com.lapxpert.backend.payment.momo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

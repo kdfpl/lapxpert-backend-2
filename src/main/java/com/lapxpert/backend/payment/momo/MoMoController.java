@@ -1,4 +1,4 @@
-package com.lapxpert.backend.momo;
+package com.lapxpert.backend.payment.momo;
 
 import com.lapxpert.backend.hoadon.enums.PhuongThucThanhToan;
 import com.lapxpert.backend.hoadon.service.HoaDonService;

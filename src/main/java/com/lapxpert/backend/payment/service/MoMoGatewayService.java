@@ -1,8 +1,8 @@
 package com.lapxpert.backend.payment.service;
 
 import com.lapxpert.backend.hoadon.enums.PhuongThucThanhToan;
-import com.lapxpert.backend.momo.MoMoService;
-import com.lapxpert.backend.momo.MoMoConfig;
+import com.lapxpert.backend.payment.momo.MoMoService;
+import com.lapxpert.backend.payment.momo.MoMoConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

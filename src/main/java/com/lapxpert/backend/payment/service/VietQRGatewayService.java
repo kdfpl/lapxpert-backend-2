@@ -1,8 +1,8 @@
 package com.lapxpert.backend.payment.service;
 
 import com.lapxpert.backend.hoadon.enums.PhuongThucThanhToan;
-import com.lapxpert.backend.vietqr.VietQRService;
-import com.lapxpert.backend.vietqr.VietQRConfig;
+import com.lapxpert.backend.payment.vietqr.VietQRService;
+import com.lapxpert.backend.payment.vietqr.VietQRConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

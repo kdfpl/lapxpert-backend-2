@@ -33,7 +33,7 @@ import com.lapxpert.backend.sanpham.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.sanpham.service.SerialNumberService;
 import com.lapxpert.backend.sanpham.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.service.PhieuGiamGiaService;
-import com.lapxpert.backend.vnpay.VNPayService;
+import com.lapxpert.backend.payment.vnpay.VNPayService;
 import com.lapxpert.backend.shipping.service.ShippingCalculatorService;
 import com.lapxpert.backend.shipping.service.ShippingProviderComparator;
 import com.lapxpert.backend.shipping.dto.ShippingRequest;

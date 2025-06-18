@@ -1,4 +1,4 @@
-package com.lapxpert.backend.vietqr;
+package com.lapxpert.backend.payment.vietqr;
 
 /**
  * Result class for VietQR IPN (Instant Payment Notification) processing.

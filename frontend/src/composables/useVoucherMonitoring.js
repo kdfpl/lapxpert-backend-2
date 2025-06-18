@@ -26,6 +26,14 @@ export function useVoucherMonitoring() {
   const showVoucherNotifications = ref(true)
   const autoApplyAlternatives = ref(false)
 
+  // Enhanced integration support
+  const integrationCallbacks = ref({
+    onVoucherExpired: null,
+    onNewVoucher: null,
+    onAlternativeRecommendation: null,
+    onBetterSuggestion: null
+  })
+
   // Watch for voucher-related messages
   watch(messageHistory, (newHistory) => {
     const voucherMessages = newHistory.filter(msg =>
@@ -95,6 +103,11 @@ export function useVoucherMonitoring() {
 
     expiredVouchers.value.unshift(expiredVoucher)
 
+    // Call integration callback
+    if (integrationCallbacks.value.onVoucherExpired) {
+      integrationCallbacks.value.onVoucherExpired(expiredVoucher)
+    }
+
     if (showVoucherNotifications.value) {
       showExpiredVoucherNotification(expiredVoucher)
     }
@@ -126,6 +139,11 @@ export function useVoucherMonitoring() {
 
     newVouchers.value.unshift(newVoucher)
 
+    // Call integration callback
+    if (integrationCallbacks.value.onNewVoucher) {
+      integrationCallbacks.value.onNewVoucher(newVoucher)
+    }
+
     if (showVoucherNotifications.value) {
       showNewVoucherNotification(newVoucher)
     }
@@ -153,6 +171,11 @@ export function useVoucherMonitoring() {
     }
 
     alternativeRecommendations.value.unshift(recommendation)
+
+    // Call integration callback
+    if (integrationCallbacks.value.onAlternativeRecommendation) {
+      integrationCallbacks.value.onAlternativeRecommendation(recommendation)
+    }
 
     if (showVoucherNotifications.value) {
       showAlternativeRecommendationNotification(recommendation)
@@ -183,6 +206,11 @@ export function useVoucherMonitoring() {
     }
 
     betterVoucherSuggestions.value.unshift(suggestion)
+
+    // Call integration callback
+    if (integrationCallbacks.value.onBetterSuggestion) {
+      integrationCallbacks.value.onBetterSuggestion(suggestion)
+    }
 
     if (showVoucherNotifications.value) {
       showBetterVoucherSuggestionNotification(suggestion)
@@ -456,6 +484,14 @@ export function useVoucherMonitoring() {
     handleExpiredVoucher,
     handleNewVoucher,
     handleAlternativeRecommendations,
-    handleBetterVoucherSuggestion
+    handleBetterVoucherSuggestion,
+
+    // Integration support
+    integrationCallbacks,
+    setIntegrationCallback: (type, callback) => {
+      if (integrationCallbacks.value.hasOwnProperty(type)) {
+        integrationCallbacks.value[type] = callback
+      }
+    }
   }
 }

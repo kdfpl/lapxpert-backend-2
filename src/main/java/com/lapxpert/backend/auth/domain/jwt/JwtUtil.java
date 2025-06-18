@@ -1,6 +1,6 @@
 package com.lapxpert.backend.auth.domain.jwt;
 
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
+import com.lapxpert.backend.nguoidung.entity.NguoiDung;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

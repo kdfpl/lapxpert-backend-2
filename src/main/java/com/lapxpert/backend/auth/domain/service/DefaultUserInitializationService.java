@@ -1,9 +1,9 @@
 package com.lapxpert.backend.auth.domain.service;
 
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
-import com.lapxpert.backend.nguoidung.domain.entity.TrangThaiNguoiDung;
-import com.lapxpert.backend.nguoidung.domain.entity.VaiTro;
-import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
+import com.lapxpert.backend.nguoidung.entity.NguoiDung;
+import com.lapxpert.backend.nguoidung.entity.TrangThaiNguoiDung;
+import com.lapxpert.backend.nguoidung.entity.VaiTro;
+import com.lapxpert.backend.nguoidung.repository.NguoiDungRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

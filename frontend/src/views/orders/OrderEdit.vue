@@ -506,9 +506,9 @@ import ToggleButton from 'primevue/togglebutton'
 import Tag from 'primevue/tag'
 
 // Custom Components
-import FastCustomerCreate from '@/components/orders/FastCustomerCreate.vue'
-import FastAddressCreate from '@/components/orders/FastAddressCreate.vue'
-import ProductVariantDialog from '@/components/orders/ProductVariantDialog.vue'
+import FastCustomerCreate from '@/views/orders/components/FastCustomerCreate.vue'
+import FastAddressCreate from '@/views/orders/components/FastAddressCreate.vue'
+import ProductVariantDialog from '@/views/orders/components/ProductVariantDialog.vue'
 
 // Composables
 const route = useRoute()

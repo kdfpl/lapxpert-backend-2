@@ -187,23 +187,41 @@ public abstract class BusinessEntityService<T, ID, DTO, AUDIT> extends BaseServi
     }
 
     /**
-     * Find all with caching
+     * Find all with caching - Fixed self-invocation issue
      */
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "#{target.cacheName}")
     public List<DTO> findAll() {
-        return super.findAll();
+        try {
+            List<T> entities = getRepository().findAll();
+            return entities.stream()
+                    .map(this::toDto)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Lỗi khi tìm tất cả {}: {}", getEntityName(), e.getMessage(), e);
+            throw ExceptionHandlingUtils.createBusinessException(
+                String.format("Không thể tải danh sách %s", getEntityName()), e);
+        }
     }
 
     /**
-     * Find by ID with caching
+     * Find by ID with caching - Fixed self-invocation issue
      */
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "#{target.cacheName}", key = "#id")
     public Optional<DTO> findById(ID id) {
-        return super.findById(id);
+        try {
+            ValidationUtils.validateId(id, getEntityName());
+
+            Optional<T> entityOpt = getRepository().findById(id);
+            return entityOpt.map(this::toDto);
+        } catch (Exception e) {
+            log.error("Lỗi khi tìm {} với ID {}: {}", getEntityName(), id, e.getMessage(), e);
+            throw ExceptionHandlingUtils.createBusinessException(
+                String.format("Không thể tìm %s với ID %s", getEntityName(), id), e);
+        }
     }
 
     /**
@@ -265,7 +283,7 @@ public abstract class BusinessEntityService<T, ID, DTO, AUDIT> extends BaseServi
      */
     @Override
     @CacheEvict(value = "#{target.cacheName}", allEntries = true)
-    protected void evictCache() {
+    public void evictCache() {
         log.debug("Đã xóa cache cho {}", getEntityName());
     }
 

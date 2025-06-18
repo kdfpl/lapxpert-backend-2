@@ -650,7 +650,7 @@ import Toast from 'primevue/toast'
 import Textarea from 'primevue/textarea'
 
 // Order Components
-import OrderCancelDialog from '@/components/orders/OrderCancelDialog.vue'
+import OrderCancelDialog from '@/views/orders/components/OrderCancelDialog.vue'
 
 // --- 1. Store Access ---
 const orderStore = useOrderStore()

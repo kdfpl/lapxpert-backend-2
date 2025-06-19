@@ -206,6 +206,21 @@ const router = createRouter({
             icon: 'pi pi-eye'
           }
         },
+        {
+          path: '/orders/payment-return',
+          name: 'PaymentReturn',
+          component: () => import('@/views/orders/PaymentReturn.vue'),
+          meta: {
+            title: 'Kết quả thanh toán',
+            breadcrumb: [
+              { label: 'Trang chủ', to: '/' },
+              { label: 'Quản lý đơn hàng', to: '/orders' },
+              { label: 'Kết quả thanh toán', to: null }
+            ],
+            permissions: ['ORDER_VIEW'],
+            icon: 'pi pi-credit-card'
+          }
+        },
 
         // WebSocket Test Page (Development only)
         {

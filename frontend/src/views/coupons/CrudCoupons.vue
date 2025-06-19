@@ -969,7 +969,7 @@ async function submitVoucher() {
   isSubmitting.value = true;
 
   try {
-    // Prepare clean voucher data - only send required fields for creation
+    // Prepare clean voucher data - only send required fields for creation/update
     // Backend handles audit fields, status calculation, and soLuongDaDung automatically
     const voucherData = {
       maPhieuGiamGia: voucher.value.maPhieuGiamGia.trim(),

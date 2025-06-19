@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1750216362426-13" author="obscurites">
+        <addColumn tableName="hoa_don_chi_tiet">
+            <column name="version" type="BIGINT" defaultValueNumeric="0"/>
+        </addColumn>
+    </changeSet>
+
+    <!--
+      - Changeset này giờ sẽ chạy được vì changeset -13 đã đảm bảo không có giá trị NULL.
+    -->
+    <changeSet id="1750216362426-14" author="obscurites">
+        <addNotNullConstraint columnName="version"
+                              tableName="hoa_don_chi_tiet"
+                              columnDataType="BIGINT"/> <!-- Thêm columnDataType là một good practice -->
+    </changeSet>
+
+    <!--
+      - Tương tự, thêm 'defaultValueNumeric="0"' cho bảng san_pham_chi_tiet.
+    -->
+    <changeSet id="1750216362426-15" author="obscurites">
+        <addColumn tableName="san_pham_chi_tiet">
+            <column name="version" type="BIGINT" defaultValueNumeric="0"/>
+        </addColumn>
+    </changeSet>
+
+    <!--
+      - Changeset này cũng sẽ chạy được.
+    -->
+    <changeSet id="1750216362426-16" author="obscurites">
+        <addNotNullConstraint columnName="version"
+                              tableName="san_pham_chi_tiet"
+                              columnDataType="BIGINT"/> <!-- Thêm columnDataType là một good practice -->
+    </changeSet>
+
+    <!--
+      - Lời khuyên: Bạn nên thêm các changeset cho việc tạo index và comment như trong file SQL gốc.
+      - Tôi thêm chúng ở đây để bạn có một file hoàn chỉnh. Bạn có thể xóa đi nếu không muốn.
+    -->
+    <changeSet id="1750216362426-17" author="obscurites">
+        <createIndex indexName="idx_san_pham_chi_tiet_version" tableName="san_pham_chi_tiet">
+            <column name="version"/>
+        </createIndex>
+        <createIndex indexName="idx_hoa_don_chi_tiet_version" tableName="hoa_don_chi_tiet">
+            <column name="version"/>
+        </createIndex>
+        <setColumnRemarks tableName="san_pham_chi_tiet"
+                          columnName="version"
+                          remarks="Version field for optimistic locking to prevent race conditions during inventory operations"/>
+        <setColumnRemarks tableName="hoa_don_chi_tiet"
+                          columnName="version"
+                          remarks="Version field for optimistic locking to prevent race conditions during order processing"/>
+    </changeSet>
+
+</databaseChangeLog>

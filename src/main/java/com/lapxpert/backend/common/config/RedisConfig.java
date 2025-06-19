@@ -1,8 +1,8 @@
 package com.lapxpert.backend.common.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
@@ -22,7 +22,15 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 
+// Redisson imports for distributed locking
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.redisson.config.SingleServerConfig;
+
 import java.time.Duration;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * Simplified Redis configuration for caching
@@ -32,6 +40,10 @@ import java.time.Duration;
 @Configuration
 @Slf4j
 public class RedisConfig {
+
+    // Inject centralized ObjectMapper from CommonBeansConfig
+    @Autowired
+    private ObjectMapper centralObjectMapper;
 
     @Value("${spring.data.redis.host}")
     private String redisHost;
@@ -139,7 +151,52 @@ public class RedisConfig {
                 .build();
     }
 
+    // ==================== REDISSON CLIENT ====================
 
+    /**
+     * Redisson client for distributed locking
+     * Configured to use the same Redis instance as the cache
+     * Provides distributed locks for inventory race condition prevention
+     */
+    @Bean
+    public RedissonClient redissonClient() {
+        log.info("Configuring Redisson client for distributed locking");
+
+        try {
+            Config config = new Config();
+
+            // Configure single server setup to match existing Redis configuration
+            SingleServerConfig singleServerConfig = config.useSingleServer()
+                    .setAddress("redis://" + redisHost + ":" + redisPort)
+                    .setDatabase(redisDatabase)
+                    .setConnectionMinimumIdleSize(2)
+                    .setConnectionPoolSize(10)
+                    .setConnectTimeout((int) timeoutMillis)
+                    .setTimeout((int) timeoutMillis)
+                    .setRetryAttempts(3)
+                    .setRetryInterval(1500);
+
+            // Set password if provided
+            if (redisPassword != null && !redisPassword.trim().isEmpty()) {
+                singleServerConfig.setPassword(redisPassword);
+                log.info("Redisson password authentication enabled");
+            } else {
+                log.info("Redisson password authentication disabled");
+            }
+
+            // Configure lock watchdog timeout for automatic lock renewal
+            config.setLockWatchdogTimeout(30000); // 30 seconds
+
+            RedissonClient redissonClient = Redisson.create(config);
+
+            log.info("Redisson client configured successfully for distributed locking");
+            return redissonClient;
+
+        } catch (Exception e) {
+            log.error("Failed to configure Redisson client: {}", e.getMessage(), e);
+            throw new RuntimeException("Redisson configuration failed", e);
+        }
+    }
 
     // ==================== REDIS TEMPLATE ====================
 
@@ -246,8 +303,27 @@ public class RedisConfig {
         return new ConcurrentMapCacheManager(
             "productRatings", "sanPhamList", "activeSanPhamList",
             "searchResults", "popularProducts", "userSessions",
-            "cartData", "categories", "systemConfig", "shippingFees"
+            "cartData", "categories", "systemConfig"
         );
+    }
+
+    // ==================== HYBRID CONSISTENCY INITIALIZATION ====================
+
+    /**
+     * Initialize hybrid cache consistency model on startup
+     */
+    @PostConstruct
+    public void initializeHybridConsistency() {
+        try {
+            log.info("Initializing hybrid cache consistency model for LapXpert system");
+
+            // The CacheConsistencyManager will initialize its mappings via @PostConstruct
+            // This method serves as a coordination point for Redis-specific initialization
+            log.info("Redis configuration ready for hybrid cache consistency model");
+
+        } catch (Exception e) {
+            log.error("Failed to initialize hybrid cache consistency model: {}", e.getMessage(), e);
+        }
     }
 
     // ==================== HELPER METHODS ====================
@@ -291,22 +367,15 @@ public class RedisConfig {
     }
 
     /**
-     * Create simplified Jackson JSON serializer
-     * Basic configuration for Java 8 time types without complex polymorphic handling
+     * Create simplified Jackson JSON serializer using centralized ObjectMapper.
+     * Uses the ObjectMapper from CommonBeansConfig to ensure consistent JSON processing
+     * across Redis caching and other application components.
      */
     private Jackson2JsonRedisSerializer<Object> createJsonSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper();
+        log.debug("Creating Redis JSON serializer using centralized ObjectMapper");
 
-        // Register Java 8 time module for LocalDateTime, Instant, etc.
-        objectMapper.registerModule(new JavaTimeModule());
-
-        // Disable writing dates as timestamps
-        objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        // Configure to handle unknown properties gracefully
-        objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        // Use the newer constructor that accepts ObjectMapper directly
-        return new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
+        // Use centralized ObjectMapper from CommonBeansConfig instead of creating new instance
+        // This ensures consistent JSON serialization across Redis and other components
+        return new Jackson2JsonRedisSerializer<>(centralObjectMapper, Object.class);
     }
 }

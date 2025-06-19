@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import productService from '@/apis/product'
 import productDetailService from '@/apis/productdetail'
+import { useRealTimeSync } from '@/composables/useRealTimeSync'
+import { useToast } from 'primevue/usetoast'
 
 export const useProductStore = defineStore('product', {
   state: () => ({
@@ -27,8 +29,62 @@ export const useProductStore = defineStore('product', {
       trangThai: null
     },
     serialNumbers: {},
-    variantSerialNumbers: {}
+    variantSerialNumbers: {},
+
+    // Real-time state management
+    realTimeState: {
+      isConnected: false,
+      lastSyncTime: null,
+      cacheInvalidationCount: 0,
+      lastCacheInvalidation: null,
+      realTimeSync: null
+    }
   }),
+
+  // Initialize real-time sync when store is created
+  $onAction({ name, store, args, after, onError }) {
+    // Initialize real-time sync on first action
+    if (!store.realTimeState.realTimeSync) {
+      const { useRealTimeSync } = require('@/composables/useRealTimeSync')
+      const { useToast } = require('primevue/usetoast')
+
+      const toast = useToast()
+
+      store.realTimeState.realTimeSync = useRealTimeSync({
+        entityName: 'sanPham',
+        storeKey: 'productStore',
+        enablePersistence: true,
+        enableCrossTab: true,
+        validateState: (state) => {
+          if (!state || typeof state !== 'object') return false
+          if (state.tenSanPham && typeof state.tenSanPham !== 'string') return false
+          if (state.gia && typeof state.gia !== 'number') return false
+          return true
+        }
+      })
+
+      // Setup real-time sync event listeners
+      store.realTimeState.realTimeSync.addEventListener('CACHE_INVALIDATION', (event) => {
+        const { scope, entityId, requiresRefresh } = event.data
+
+        if (scope === 'PRICING_DATA' || scope === 'PRODUCT_DATA') {
+          store.handleCacheInvalidation(scope, entityId, requiresRefresh)
+        }
+      })
+
+      store.realTimeState.realTimeSync.addEventListener('WEBSOCKET_PRICE_UPDATE', (event) => {
+        const { priceData } = event.data
+        store.handlePriceUpdate(priceData)
+      })
+
+      store.realTimeState.realTimeSync.addEventListener('WEBSOCKET_STATE_UPDATE', (event) => {
+        const { stateData } = event.data
+        if (stateData && (stateData.tenSanPham || stateData.maSanPham)) {
+          store.handleProductUpdate(stateData)
+        }
+      })
+    }
+  },
 
   getters: {
     // Status enum options for variants (Boolean)
@@ -601,6 +657,101 @@ export const useProductStore = defineStore('product', {
         this.error = error
         throw error
       }
+    },
+
+    // Real-time update handlers
+    handleCacheInvalidation(scope, entityId, requiresRefresh) {
+      console.log(`🔄 ProductStore: Cache invalidation received - scope: ${scope}, entityId: ${entityId}, requiresRefresh: ${requiresRefresh}`)
+
+      this.realTimeState.cacheInvalidationCount++
+      this.realTimeState.lastCacheInvalidation = new Date().toISOString()
+
+      if (requiresRefresh) {
+        // Invalidate relevant cache entries
+        if (scope === 'PRODUCT_DATA') {
+          if (entityId) {
+            this.productCache.delete(entityId)
+          } else {
+            // Clear all product cache
+            this.productCache.clear()
+            this.lastFetch = null
+          }
+        } else if (scope === 'PRICING_DATA') {
+          // For pricing updates, we might need to refresh specific products
+          if (entityId) {
+            // Find and refresh the product containing this variant
+            const product = this.products.find(p =>
+              p.sanPhamChiTiets?.some(variant => variant.id === entityId)
+            )
+            if (product) {
+              this.productCache.delete(product.id)
+            }
+          }
+        }
+      }
+    },
+
+    handlePriceUpdate(priceData) {
+      console.log(`💰 ProductStore: Price update received:`, priceData)
+
+      const variantId = priceData?.variantId || priceData?.sanPhamChiTietId
+      if (!variantId) return
+
+      // Update price in products array
+      this.products.forEach(product => {
+        const variantIndex = product.sanPhamChiTiets?.findIndex(v => v.id === variantId)
+        if (variantIndex !== -1) {
+          product.sanPhamChiTiets[variantIndex].gia = priceData.newPrice || priceData.gia
+          product.sanPhamChiTiets[variantIndex].giaKhuyenMai = priceData.promotionalPrice || priceData.giaKhuyenMai
+        }
+      })
+
+      // Update price in activeProductsDetailed array
+      const detailIndex = this.activeProductsDetailed.findIndex(detail => detail.id === variantId)
+      if (detailIndex !== -1) {
+        this.activeProductsDetailed[detailIndex].gia = priceData.newPrice || priceData.gia
+        this.activeProductsDetailed[detailIndex].giaKhuyenMai = priceData.promotionalPrice || priceData.giaKhuyenMai
+      }
+
+      // Update cached products
+      this.productCache.forEach((product, productId) => {
+        const variantIndex = product.sanPhamChiTiets?.findIndex(v => v.id === variantId)
+        if (variantIndex !== -1) {
+          product.sanPhamChiTiets[variantIndex].gia = priceData.newPrice || priceData.gia
+          product.sanPhamChiTiets[variantIndex].giaKhuyenMai = priceData.promotionalPrice || priceData.giaKhuyenMai
+          this.productCache.set(productId, product)
+        }
+      })
+    },
+
+    handleProductUpdate(stateData) {
+      console.log(`📦 ProductStore: Product update received:`, stateData)
+
+      const productId = stateData.id
+      if (!productId) return
+
+      // Update product in products array
+      const productIndex = this.products.findIndex(p => p.id === productId)
+      if (productIndex !== -1) {
+        this.products[productIndex] = { ...this.products[productIndex], ...stateData }
+      }
+
+      // Update cached product
+      if (this.productCache.has(productId)) {
+        const cachedProduct = this.productCache.get(productId)
+        this.productCache.set(productId, { ...cachedProduct, ...stateData })
+      }
+
+      // Sync with real-time system
+      if (this.realTimeState.realTimeSync) {
+        this.realTimeState.realTimeSync.syncStateData(stateData, { merge: true })
+      }
+    },
+
+    // Force refresh products from API (for DataTable integration)
+    async forceRefreshProducts() {
+      console.log('🔄 ProductStore: Force refreshing products for real-time update')
+      return await this.fetchProducts(true)
     }
   }
 })

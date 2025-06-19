@@ -4,12 +4,12 @@ import { privateApi } from './axiosAPI'
 const SHIPPING_BASE_URL = '/shipping'
 
 /**
- * Shipping API service for GHTK integration
+ * Shipping API service for GHN integration
  * Handles shipping fee calculation and delivery management
  */
 const shippingApi = {
   /**
-   * Calculate shipping fee using GHTK API
+   * Calculate shipping fee using GHN API
    * @param {Object} shippingRequest - Shipping calculation request
    * @param {string} shippingRequest.pickProvince - Pickup province
    * @param {string} shippingRequest.pickDistrict - Pickup district
@@ -44,6 +44,55 @@ const shippingApi = {
           errorMessage: error.response?.data?.message || error.message || 'Failed to calculate shipping fee'
         },
         message: error.response?.data?.message || error.message || 'Failed to calculate shipping fee'
+      }
+    }
+  },
+
+  /**
+   * Calculate shipping fee using GHN API
+   * @param {Object} shippingRequest - Shipping calculation request
+   * @returns {Promise<Object>} API response with GHN shipping fee data
+   */
+  async calculateGHNShippingFee(shippingRequest) {
+    try {
+      const response = await privateApi.post(`${SHIPPING_BASE_URL}/ghn/calculate`, shippingRequest)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'GHN shipping fee calculated successfully'
+      }
+    } catch (error) {
+      console.error('Error calculating GHN shipping fee:', error)
+      return {
+        success: false,
+        data: { fee: 0, isManualOverride: true, errorMessage: error.response?.data?.message || error.message },
+        message: error.response?.data?.message || error.message || 'Failed to calculate GHN shipping fee'
+      }
+    }
+  },
+
+
+
+  /**
+   * Get GHN service availability
+   * @returns {Promise<Object>} API response with GHN availability status
+   */
+  async getGHNAvailability() {
+    try {
+      const response = await privateApi.get(`${SHIPPING_BASE_URL}/ghn/availability`)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'GHN availability checked successfully'
+      }
+    } catch (error) {
+      console.error('Error checking GHN availability:', error)
+      return {
+        success: false,
+        data: { available: false, provider: 'GHN' },
+        message: error.response?.data?.message || error.message || 'Failed to check GHN availability'
       }
     }
   },
@@ -222,29 +271,37 @@ const shippingApi = {
   },
 
   /**
-   * Calculate shipping fee with fallback to manual entry
+   * Calculate shipping fee with fallback to manual entry using GHN service
    * This is a convenience method that handles errors gracefully
    * @param {Object} shippingRequest - Shipping calculation request
    * @returns {Promise<Object>} Always returns a valid response with fallback data
    */
   async calculateShippingFeeWithFallback(shippingRequest) {
     try {
-      const result = await this.calculateShippingFee(shippingRequest)
+      // Try GHN calculation first (primary method)
+      const ghnResult = await this.calculateGHNShippingFee(shippingRequest)
 
-      if (result.success) {
-        return result
+      if (ghnResult.success) {
+        return ghnResult
       } else {
-        // Return fallback data for manual entry
-        return {
-          success: true,
-          data: {
-            fee: 0,
-            isManualOverride: true,
-            isAutoCalculated: false,
-            errorMessage: result.message,
-            fallbackReason: 'API calculation failed, manual entry required'
-          },
-          message: 'Shipping fee calculation failed, please enter manually'
+        // Fallback to general calculate endpoint if GHN fails
+        const generalResult = await this.calculateShippingFee(shippingRequest)
+
+        if (generalResult.success) {
+          return generalResult
+        } else {
+          // Return fallback data for manual entry
+          return {
+            success: true,
+            data: {
+              fee: 0,
+              isManualOverride: true,
+              isAutoCalculated: false,
+              errorMessage: generalResult.message,
+              fallbackReason: 'GHN calculation failed, manual entry required'
+            },
+            message: 'Shipping fee calculation failed, please enter manually'
+          }
         }
       }
     } catch (error) {

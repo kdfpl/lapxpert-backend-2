@@ -644,13 +644,14 @@ import { useOrderStore } from '@/stores/orderStore'
 import { useToast } from 'primevue/usetoast'
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api'
 import { useDataTableSorting } from '@/composables/useDataTableSorting'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime'
 
 // PrimeVue Components
 import Toast from 'primevue/toast'
 import Textarea from 'primevue/textarea'
 
 // Order Components
-import OrderCancelDialog from '@/components/orders/OrderCancelDialog.vue'
+import OrderCancelDialog from '@/views/orders/components/OrderCancelDialog.vue'
 
 // --- 1. Store Access ---
 const orderStore = useOrderStore()
@@ -668,6 +669,21 @@ const {
   defaultSortField: 'ngayCapNhat',
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
+})
+
+// --- Real-time DataTable Integration ---
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'hoaDon',
+  storeKey: 'orderList',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 OrderList: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh order data from store
+    await orderStore.fetchOrders()
+  },
+  debounceDelay: 250,
+  enableSelectiveUpdates: true,
+  topicFilters: ['hoa-don', 'order']
 })
 
 // --- 2. State ---

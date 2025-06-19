@@ -1,6 +1,6 @@
 package com.lapxpert.backend.common.audit;
 
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
+import com.lapxpert.backend.nguoidung.entity.NguoiDung;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;

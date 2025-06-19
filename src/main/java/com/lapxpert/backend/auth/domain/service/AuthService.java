@@ -1,8 +1,8 @@
 package com.lapxpert.backend.auth.domain.service;
 
 import com.lapxpert.backend.auth.domain.jwt.JwtUtil;
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
-import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
+import com.lapxpert.backend.nguoidung.entity.NguoiDung;
+import com.lapxpert.backend.nguoidung.repository.NguoiDungRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

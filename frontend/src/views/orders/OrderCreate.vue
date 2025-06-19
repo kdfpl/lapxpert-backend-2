@@ -522,7 +522,7 @@
                         outlined
                         @click="calculateShippingFeeForCurrentAddress"
                         :loading="isCalculatingShipping"
-                        v-tooltip.top="'Tính phí tự động'"
+                        v-tooltip.top="'Tính phí vận chuyển GHN'"
                       />
                       <Button
                         v-if="isManualShippingOverride"
@@ -544,6 +544,8 @@
                     <small v-if="shippingError" class="p-error">{{ shippingError }}</small>
                   </div>
 
+
+
                   <!-- Estimated Delivery Time -->
                   <div v-if="estimatedDeliveryTime" class="mb-3">
                     <div class="text-sm text-surface-600 flex items-center gap-2">
@@ -558,7 +560,7 @@
                     class="text-xs text-green-600 flex items-center gap-1"
                   >
                     <i class="pi pi-check-circle"></i>
-                    <span>Phí vận chuyển được tính tự động qua GHTK</span>
+                    <span>Phí vận chuyển được tính tự động qua GHN</span>
                   </div>
                   <div
                     v-else-if="isManualShippingOverride"
@@ -566,6 +568,12 @@
                   >
                     <i class="pi pi-pencil"></i>
                     <span>Phí vận chuyển được nhập thủ công</span>
+                  </div>
+
+                  <!-- GHN Calculation Loading -->
+                  <div v-if="isCalculatingShipping" class="text-xs text-blue-600 flex items-center gap-1">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Đang tính phí vận chuyển...</span>
                   </div>
                 </div>
               </div>
@@ -1213,7 +1221,13 @@
     :has-delivery="activeTab?.giaohang || false"
     @confirm="onMixedPaymentConfirm"
   />
-
+  <!-- Voucher Suggestion Dialog -->
+  <VoucherSuggestionDialog
+    v-model:visible="suggestionDialogVisible"
+    :suggestion="currentSuggestion"
+    @accept="onAcceptBetterVoucher"
+    @reject="onRejectBetterVoucher"
+  />
   <!-- QR Scanner Dialog -->
   <Dialog
     v-model:visible="showQRScanner"
@@ -1486,6 +1500,7 @@ import { useShippingCalculator } from '@/composables/useShippingCalculator'
 import { useOrderExpiration } from '@/composables/useOrderExpiration'
 import storageApi from '@/apis/storage'
 import serialNumberApi from '@/apis/serialNumberApi'
+import orderApi from '@/apis/orderApi'
 
 // PrimeVue Components
 import Toast from 'primevue/toast'
@@ -1502,11 +1517,12 @@ import { useConfirm } from 'primevue/useconfirm'
 const confirm = useConfirm()
 
 // Custom Components
-import ProductVariantDialog from '@/components/orders/ProductVariantDialog.vue'
-import FastCustomerCreate from '@/components/orders/FastCustomerCreate.vue'
-import FastAddressCreate from '@/components/orders/FastAddressCreate.vue'
-import MixedPaymentDialog from '@/components/orders/MixedPaymentDialog.vue'
-import PriceChangeWarning from '@/components/orders/PriceChangeWarning.vue'
+import ProductVariantDialog from '@/views/orders/components/ProductVariantDialog.vue'
+import FastCustomerCreate from '@/views/orders/components/FastCustomerCreate.vue'
+import FastAddressCreate from '@/views/orders/components/FastAddressCreate.vue'
+import MixedPaymentDialog from '@/views/orders/components/MixedPaymentDialog.vue'
+import PriceChangeWarning from '@/views/orders/components/PriceChangeWarning.vue'
+import VoucherSuggestionDialog from '@/views/orders/components/VoucherSuggestionDialog.vue'
 
 // QR Scanner
 import { QrcodeStream } from 'vue-qrcode-reader'
@@ -1637,6 +1653,7 @@ const {
   subscribeToPriceUpdates,
   showPriceWarnings,
   getLatestPriceForVariant,
+  getPriceUpdatesForVariant,
   hasRecentPriceChange,
   formatCurrency: formatPricingCurrency,
 } = useRealTimePricing()
@@ -1645,9 +1662,15 @@ const {
   expiredVouchers,
   newVouchers,
   alternativeRecommendations,
+  betterVoucherSuggestions,
   hasVoucherUpdates,
+  hasBetterVoucherSuggestions,
   subscribeToVoucherMonitoring,
   showVoucherNotifications,
+  suggestionDialogVisible,
+  currentSuggestion,
+  processBetterVoucherSuggestion,
+  closeSuggestionDialog
 } = useVoucherMonitoring()
 
 // Shipping calculator composable
@@ -1660,6 +1683,7 @@ const {
   estimatedDeliveryTime,
   shippingStatus,
   calculateShippingFee,
+  calculateShippingFeeWithComparison,
   enableManualOverride: enableManualShippingOverride,
   enableAutoCalculation: enableAutoShippingCalculation,
   setManualShippingFee,
@@ -1914,7 +1938,7 @@ const formattedDeliveryAddress = computed(() => {
   return parts.length > 0 ? parts.join(', ') : 'Chưa nhập địa chỉ giao hàng'
 })
 
-// Computed property for processed cart items with price change detection
+// Computed property for processed cart items with standardized price change detection
 const processedCartItems = computed(() => {
   if (!activeTab.value?.sanPhamList?.length) return []
 
@@ -1922,15 +1946,22 @@ const processedCartItems = computed(() => {
     const variantId = item.sanPhamChiTiet?.id
     if (!variantId) return { ...item, hasPriceChange: false }
 
-    // Check if this variant has recent price changes
-    const hasPriceChange = hasRecentPriceChange(variantId)
-    const latestPrice = getLatestPriceForVariant(variantId)
+    // STANDARDIZED PRICE CHANGE DETECTION: Check for original price changes
+    const currentOriginalPrice = item.sanPhamChiTiet?.giaBan
+    const latestOriginalPrice = getLatestOriginalPriceForVariant(variantId)
+    const hasPriceChange = latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice
+
+    // Calculate latest effective price preserving promotional pricing logic
+    const latestEffectivePrice = latestOriginalPrice
+      ? calculateEffectivePrice(latestOriginalPrice, item.sanPhamChiTiet?.giaKhuyenMai)
+      : item.donGia
 
     return {
       ...item,
       hasPriceChange,
-      latestPrice,
-      originalIndex: index,
+      latestPrice: latestEffectivePrice,
+      latestOriginalPrice,
+      originalIndex: index
     }
   })
 })
@@ -1956,6 +1987,29 @@ const acknowledgePriceChange = (index) => {
   }
 }
 
+// Helper function to get latest original price (giaBan) for a variant
+// Integrates with useRealTimePricing composable for consistent price comparison
+const getLatestOriginalPriceForVariant = (variantId) => {
+  // First check real-time price updates for original price changes
+  const priceUpdate = getPriceUpdatesForVariant(variantId)?.[0]
+  if (priceUpdate?.originalNewPrice) {
+    return priceUpdate.originalNewPrice
+  }
+
+  // Fallback to latest effective price from real-time updates
+  // This maintains compatibility with existing useRealTimePricing integration
+  return getLatestPriceForVariant(variantId)
+}
+
+// Helper function to calculate effective price (preserves promotional pricing logic)
+// Uses giaKhuyenMai when available and lower than giaBan, otherwise uses giaBan
+const calculateEffectivePrice = (originalPrice, promotionalPrice) => {
+  if (promotionalPrice && promotionalPrice < originalPrice) {
+    return promotionalPrice
+  }
+  return originalPrice
+}
+
 const detectCartPriceChanges = () => {
   if (!activeTab.value?.sanPhamList?.length) return
 
@@ -1965,8 +2019,12 @@ const detectCartPriceChanges = () => {
     const variantId = item.sanPhamChiTiet?.id
     if (!variantId) return
 
-    const latestPrice = getLatestPriceForVariant(variantId)
-    if (latestPrice && latestPrice !== item.donGia) {
+    // STANDARDIZED PRICE CHANGE DETECTION: Use original prices (giaBan) for change detection
+    // while preserving effective pricing logic (giaKhuyenMai/donGia) for actual pricing
+    const currentOriginalPrice = item.sanPhamChiTiet?.giaBan
+    const latestOriginalPrice = getLatestOriginalPriceForVariant(variantId)
+
+    if (latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice) {
       const changeId = `${variantId}-${item.sanPhamChiTiet?.serialNumber || ''}`
 
       // Check if this change is already acknowledged
@@ -1980,14 +2038,20 @@ const detectCartPriceChanges = () => {
       )
 
       if (!existingChange) {
+        // Calculate effective prices for display (preserve promotional pricing logic)
+        const currentEffectivePrice = item.donGia
+        const latestEffectivePrice = calculateEffectivePrice(latestOriginalPrice, item.sanPhamChiTiet?.giaKhuyenMai)
+
         newPriceChanges.push({
           variantId,
           serialNumber: item.sanPhamChiTiet?.serialNumber || '',
           productName: getCartItemName(item),
           variantInfo: getVariantDisplayInfo(item),
-          oldPrice: item.donGia,
-          newPrice: latestPrice,
-          changeType: latestPrice > item.donGia ? 'INCREASE' : 'DECREASE',
+          oldPrice: currentEffectivePrice,
+          newPrice: latestEffectivePrice,
+          originalOldPrice: currentOriginalPrice,
+          originalNewPrice: latestOriginalPrice,
+          changeType: latestOriginalPrice > currentOriginalPrice ? 'INCREASE' : 'DECREASE',
           timestamp: new Date(),
           cartIndex: index,
         })
@@ -2064,13 +2128,17 @@ const calculateShippingFeeForCurrentAddress = async () => {
   }
 
   const orderValue = activeTab.value.tongTienHang || 0
-  const success = await calculateShippingFee(deliveryAddress, orderValue)
+
+  // Use GHN service for shipping calculation
+  const success = await calculateShippingFeeWithComparison(deliveryAddress, orderValue)
 
   if (success) {
     // Update the tab's shipping fee
     updateActiveTabData({ phiVanChuyen: shippingFee.value })
   }
 }
+
+
 
 const onShippingFeeChange = (value) => {
   if (isManualShippingOverride.value) {
@@ -2177,12 +2245,16 @@ const addVariantToActiveTab = async (variantData) => {
   const { sanPhamChiTiet, soLuong, groupInfo } = variantData
   let { donGia, thanhTien } = variantData
 
-  // Check if there's a more recent price for this variant
-  const latestPrice = getLatestPriceForVariant(sanPhamChiTiet.id)
-  if (latestPrice && latestPrice !== donGia) {
-    console.log(`Price updated for variant ${sanPhamChiTiet.id}: ${donGia} -> ${latestPrice}`)
-    donGia = latestPrice
-    thanhTien = latestPrice * soLuong
+  // Check if there's a more recent price for this variant using standardized price detection
+  const latestOriginalPrice = getLatestOriginalPriceForVariant(sanPhamChiTiet.id)
+  const currentOriginalPrice = sanPhamChiTiet.giaBan
+
+  if (latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice) {
+    // Calculate new effective price preserving promotional pricing logic
+    const newEffectivePrice = calculateEffectivePrice(latestOriginalPrice, sanPhamChiTiet.giaKhuyenMai)
+    console.log(`Price updated for variant ${sanPhamChiTiet.id}: ${donGia} -> ${newEffectivePrice} (original: ${currentOriginalPrice} -> ${latestOriginalPrice})`)
+    donGia = newEffectivePrice
+    thanhTien = newEffectivePrice * soLuong
   }
 
   // Check if this specific variant with the same serial number already exists in cart
@@ -2238,7 +2310,18 @@ const addVariantToActiveTab = async (variantData) => {
       serialNumbers: sanPhamChiTiet.serialNumber ? [sanPhamChiTiet.serialNumber] : undefined,
     }
 
-    await reserveForCart(reservationRequest)
+    const reservationResponse = await reserveForCart(reservationRequest)
+
+    // Update sanPhamChiTiet with actual reserved serial number from API response
+    // This fixes the serial number mismatch issue where API returns correct S/N but cart displays different S/N
+    if (reservationResponse?.serialNumbers?.length > 0) {
+      sanPhamChiTiet.serialNumber = reservationResponse.serialNumbers[0]
+      // Also update serialNumberId if available in the response
+      if (reservationResponse.serialNumberId) {
+        sanPhamChiTiet.serialNumberId = reservationResponse.serialNumberId
+      }
+      console.log('Updated cart item with reserved serial number:', sanPhamChiTiet.serialNumber)
+    }
 
     // Add new variant to cart after successful reservation
     const newCartItem = {
@@ -2982,14 +3065,28 @@ const showProductSelectionDialog = () => {
   variantDialogVisible.value = true
 }
 
-// Sync cart data with product variant dialog
+// Enhanced sync cart data with product variant dialog for real-time inventory synchronization
 const syncCartWithDialog = () => {
+  const cartItems = activeTab.value?.sanPhamList || []
+
+  console.log(`🔄 [SYNC DEBUG] syncCartWithDialog called:`, {
+    hasDialogRef: !!productVariantDialogRef.value,
+    hasCartItems: !!activeTab.value?.sanPhamList,
+    cartItemsCount: cartItems.length,
+    cartSerials: cartItems.map(item => item.sanPhamChiTiet?.serialNumber).filter(Boolean)
+  })
+
   if (productVariantDialogRef.value && activeTab.value?.sanPhamList) {
     // Pass current active tab's cart data for immediate UI updates
+    // This triggers cache invalidation and real-time sync in ProductVariantDialog
     productVariantDialogRef.value.updateUsedSerialNumbers(activeTab.value.sanPhamList)
+    console.log(`🔄 [SYNC DEBUG] Cart sync completed with ${cartItems.length} items`)
 
     // Note: Real-time inventory checking is now handled within ProductVariantDialog
-    // via the backend API to ensure cross-tab accuracy
+    // via the backend API and cache invalidation to ensure cross-tab accuracy
+    // This fixes the inventory count discrepancy issue
+  } else {
+    console.log(`⚠️ [SYNC DEBUG] Cannot sync - dialog ref or cart items not available`)
   }
 }
 
@@ -3283,6 +3380,68 @@ const getPaymentMethodLabel = (methodValue) => {
   return method?.label || methodValue
 }
 
+// Better voucher suggestion handlers
+const onAcceptBetterVoucher = async (suggestion) => {
+  if (!activeTab.value || !suggestion) return
+
+  try {
+    // Process the suggestion acceptance
+    const result = processBetterVoucherSuggestion(suggestion, 'accept')
+
+    if (result.type === 'ACCEPT_BETTER_VOUCHER') {
+      // Remove current voucher and apply better voucher
+      const currentVoucherIndex = activeTab.value.voucherList.findIndex(
+        v => v.maPhieuGiamGia === suggestion.currentVoucherCode
+      )
+
+      if (currentVoucherIndex !== -1) {
+        // Remove current voucher
+        activeTab.value.voucherList.splice(currentVoucherIndex, 1)
+      }
+
+      // Apply better voucher
+      await selectVoucher(suggestion.betterVoucher)
+
+      // Close dialog
+      closeSuggestionDialog()
+
+      toast.add({
+        severity: 'success',
+        summary: 'Voucher đã được cập nhật',
+        detail: `Đã áp dụng voucher tốt hơn: ${suggestion.betterVoucher.maPhieuGiamGia}. Tiết kiệm thêm ${formatCurrency(suggestion.savingsAmount)}`,
+        life: 5000
+      })
+    }
+  } catch (error) {
+    console.error('Error accepting better voucher:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi',
+      detail: 'Không thể áp dụng voucher tốt hơn. Vui lòng thử lại.',
+      life: 3000
+    })
+  }
+}
+
+const onRejectBetterVoucher = (suggestion) => {
+  if (!suggestion) return
+
+  // Process the suggestion rejection
+  const result = processBetterVoucherSuggestion(suggestion, 'reject')
+
+  if (result.type === 'REJECT_BETTER_VOUCHER') {
+    // Close dialog
+    closeSuggestionDialog()
+
+    toast.add({
+      severity: 'info',
+      summary: 'Đã từ chối',
+      detail: 'Tiếp tục sử dụng voucher hiện tại',
+      life: 3000
+    })
+  }
+}
+
 // Calculate change amount for cash payments
 const calculateChange = () => {
   if (!activeTab.value || activeTab.value.phuongThucThanhToan !== 'TIEN_MAT') {
@@ -3478,7 +3637,113 @@ const showOrderConfirmation = async () => {
 
 const confirmAndCreateOrder = async () => {
   orderConfirmationVisible.value = false
-  await createOrderFromActiveTab()
+
+  // Check if this is a MoMo or VNPay payment that requires gateway redirect
+  if (activeTab.value?.phuongThucThanhToan === 'MOMO' || activeTab.value?.phuongThucThanhToan === 'VNPAY') {
+    await handleGatewayPayment()
+  } else {
+    // For cash payments and other methods, create order directly
+    await createOrderFromActiveTab()
+  }
+}
+
+const handleGatewayPayment = async () => {
+  if (!activeTab.value) return
+
+  // Store payment method and order data before creating order (tab gets closed after creation)
+  const paymentMethod = activeTab.value.phuongThucThanhToan
+  const orderTotal = activeTab.value.tongThanhToan
+
+  // Perform all validations first (same as createOrderFromActiveTab)
+  const validationErrors = validateActiveTab()
+
+  // Validate recipient information and address if delivery is enabled
+  if (activeTab.value.giaohang) {
+    const recipientValid = await validateRecipientInfo()
+    const addressValid = validateEmbeddedAddress()
+    const comprehensiveAddressValidation = await validateAddressBeforeOrderCreation()
+    const scenarioValidation = await validateAllCustomerScenarios()
+
+    if (!recipientValid || !addressValid || !comprehensiveAddressValidation.valid || !scenarioValidation.valid) {
+      let errorDetail = 'Vui lòng kiểm tra lại thông tin người nhận và địa chỉ giao hàng'
+
+      if (!comprehensiveAddressValidation.valid) {
+        const errorMessages = Object.values(comprehensiveAddressValidation.errors || {}).join(', ')
+        errorDetail = errorMessages || 'Địa chỉ giao hàng không hợp lệ'
+      } else if (!scenarioValidation.valid) {
+        errorDetail = scenarioValidation.errors.join(', ') || 'Lỗi xác thực kịch bản khách hàng'
+      }
+
+      toast.add({
+        severity: 'warn',
+        summary: 'Dữ liệu không hợp lệ',
+        detail: errorDetail,
+        life: 5000
+      })
+      return
+    }
+  }
+
+  if (Object.keys(validationErrors).length > 0) {
+    const errorMessages = []
+    Object.entries(validationErrors).forEach(([, errors]) => {
+      errors.forEach(error => errorMessages.push(`- ${error}`))
+    })
+
+    toast.add({
+      severity: 'warn',
+      summary: 'Dữ liệu không hợp lệ',
+      detail: `Vui lòng kiểm tra lại:\n${errorMessages.join('\n')}`,
+      life: 7000
+    })
+    return
+  }
+
+  try {
+    creating.value = true
+
+    // Create order first to get order ID
+    const result = await createOrderFromTab()
+
+    if (!result) {
+      throw new Error('Không thể tạo đơn hàng')
+    }
+
+    // Use stored payment method and order data (activeTab is now closed)
+    const paymentData = {
+      amount: result.tongThanhToan || orderTotal,
+      orderInfo: `Thanh toán đơn hàng ${result.maHoaDon}`,
+      returnUrl: window.location.origin + '/orders/payment-return'
+    }
+
+    let paymentResponse
+    if (paymentMethod === 'MOMO') {
+      paymentResponse = await orderApi.processMoMoPayment(result.id, paymentData)
+    } else if (paymentMethod === 'VNPAY') {
+      paymentResponse = await orderApi.processVNPayPayment(result.id, paymentData)
+    }
+
+    if (paymentResponse?.success && paymentResponse.data?.paymentUrl) {
+      // Clear unsaved changes flag before redirect
+      hasUnsavedChanges.value = false
+
+      // Redirect to payment gateway
+      window.location.href = paymentResponse.data.paymentUrl
+    } else {
+      throw new Error(paymentResponse?.message || 'Không thể khởi tạo thanh toán')
+    }
+
+  } catch (error) {
+    console.error('Error handling gateway payment:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi thanh toán',
+      detail: error.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.',
+      life: 5000
+    })
+  } finally {
+    creating.value = false
+  }
 }
 
 const createOrderFromActiveTab = async () => {
@@ -3662,6 +3927,23 @@ const performOrderCreation = async () => {
       }
     }
 
+    // ENHANCED: Validate complete serial number data before order creation
+    console.log('Validating serial number payload completeness...')
+    const serialValidation = validateCartSerialNumberCompleteness(activeTab.value.sanPhamList)
+
+    if (!serialValidation.valid) {
+      console.error('Serial number validation failed:', serialValidation.issues)
+      toast.add({
+        severity: 'error',
+        summary: 'Dữ liệu serial number không đầy đủ',
+        detail: `Vui lòng kiểm tra lại thông tin serial number:\n${serialValidation.issues.join('\n')}`,
+        life: 7000
+      })
+      return // Stop order creation if serial number validation fails
+    }
+
+    console.log('✅ Serial number validation passed - all cart items have complete serial number data')
+
     // Map frontend data to HoaDonDto structure for validation and logging
     const orderData = mapTabToHoaDonDto(activeTab.value)
     console.log('Creating order with data:', orderData)
@@ -3751,6 +4033,81 @@ const closeTabWithConfirmation = async (tabId) => {
   // Close tab
   closeOrderTab(tabId)
   hasUnsavedChanges.value = false
+}
+
+// Serial number validation helpers for order payload completeness
+const validateSerialNumberId = (serialNumberId) => {
+  // Ensure serialNumberId is properly populated and valid
+  if (serialNumberId === undefined || serialNumberId === null) {
+    console.warn('Serial number ID is missing from cart item')
+    return null
+  }
+
+  // Validate that it's a valid number
+  if (typeof serialNumberId !== 'number' || serialNumberId <= 0) {
+    console.warn('Invalid serial number ID:', serialNumberId)
+    return null
+  }
+
+  return serialNumberId
+}
+
+const validateSerialNumber = (serialNumber) => {
+  // Ensure serialNumber string is properly populated
+  if (!serialNumber || typeof serialNumber !== 'string' || serialNumber.trim() === '') {
+    console.warn('Serial number value is missing or invalid from cart item')
+    return null
+  }
+
+  // Basic format validation for serial numbers
+  const trimmedSerial = serialNumber.trim()
+  if (trimmedSerial.length < 3 || trimmedSerial.length > 50) {
+    console.warn('Serial number format appears invalid:', trimmedSerial)
+    return null
+  }
+
+  return trimmedSerial
+}
+
+// Validate complete serial number data for all cart items
+const validateCartSerialNumberCompleteness = (cartItems) => {
+  const validationResults = {
+    valid: true,
+    issues: [],
+    itemsWithIssues: []
+  }
+
+  cartItems.forEach((item, index) => {
+    const variantId = item.sanPhamChiTiet?.id
+    const serialNumberId = item.sanPhamChiTiet?.serialNumberId
+    const serialNumber = item.sanPhamChiTiet?.serialNumber
+
+    // Check for missing serial number data
+    if (!serialNumberId && !serialNumber) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing both serial number ID and value`)
+      validationResults.itemsWithIssues.push(index)
+    } else if (!serialNumberId) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing serial number ID`)
+      validationResults.itemsWithIssues.push(index)
+    } else if (!serialNumber) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing serial number value`)
+      validationResults.itemsWithIssues.push(index)
+    }
+
+    // Log validation details for debugging
+    console.log(`Cart item ${index + 1} serial validation:`, {
+      variantId,
+      serialNumberId,
+      serialNumber,
+      hasValidId: !!validateSerialNumberId(serialNumberId),
+      hasValidSerial: !!validateSerialNumber(serialNumber)
+    })
+  })
+
+  return validationResults
 }
 
 // Map frontend tab data to backend HoaDonDto structure
@@ -5380,588 +5737,6 @@ const generateTestReport = async () => {
     return { error: error.message }
   }
 }
-
-// ===== COMPREHENSIVE SYSTEM INTEGRATION TESTING =====
-
-// Comprehensive integration testing for all Order Management System enhancements
-const runSystemIntegrationTests = async () => {
-  const testResults = {
-    paymentIntegrations: { passed: false, errors: [], details: {} },
-    voucherIntelligence: { passed: false, errors: [], details: {} },
-    staffAssignment: { passed: false, errors: [], details: {} },
-    customerScenarios: { passed: false, errors: [], details: {} },
-    addressManagement: { passed: false, errors: [], details: {} },
-    uiIntegration: { passed: false, errors: [], details: {} },
-    performanceValidation: { passed: false, errors: [], details: {} },
-    overall: { passed: false, summary: '', totalTests: 0, passedTests: 0 },
-  }
-
-  console.log('🚀 Starting Comprehensive System Integration Tests...')
-
-  try {
-    // Test Payment Integrations
-    console.log('🧪 Testing Payment Integrations...')
-    testResults.paymentIntegrations = await testPaymentIntegrations()
-
-    // Test Voucher Intelligence System
-    console.log('🧪 Testing Voucher Intelligence System...')
-    testResults.voucherIntelligence = await testVoucherIntelligence()
-
-    // Test Staff Assignment Functionality
-    console.log('🧪 Testing Staff Assignment...')
-    testResults.staffAssignment = await testStaffAssignment()
-
-    // Test Customer Scenarios (existing tests)
-    console.log('🧪 Testing Customer Scenarios...')
-    testResults.customerScenarios = await runCustomerScenarioIntegrationTests()
-
-    // Test Address Management (existing tests)
-    console.log('🧪 Testing Address Management...')
-    testResults.addressManagement = await testAddressManagement()
-
-    // Test UI Integration
-    console.log('🧪 Testing UI Integration...')
-    testResults.uiIntegration = await testUIIntegration()
-
-    // Test Performance Validation
-    console.log('🧪 Testing Performance...')
-    testResults.performanceValidation = await testPerformanceValidation()
-
-    // Calculate overall results
-    const testCategories = Object.keys(testResults).filter((key) => key !== 'overall')
-    const passedTests = testCategories.filter((category) => testResults[category].passed).length
-    const totalTests = testCategories.length
-
-    testResults.overall = {
-      passed: passedTests === totalTests,
-      summary: `${passedTests}/${totalTests} test categories passed`,
-      totalTests,
-      passedTests,
-      failedCategories: testCategories.filter((category) => !testResults[category].passed),
-    }
-
-    console.log('🎯 System Integration Tests Completed:', testResults)
-    return testResults
-  } catch (error) {
-    console.error('❌ System Integration Testing failed:', error)
-    testResults.overall.passed = false
-    testResults.overall.summary = `System integration testing failed: ${error.message}`
-    return testResults
-  }
-}
-
-// Test Payment Integrations
-const testPaymentIntegrations = async () => {
-  const result = { passed: false, errors: [], details: {} }
-
-  try {
-    console.log('🧪 Testing Payment Integration System...')
-
-    // Test 1: Payment method availability based on order type
-    updateActiveTabData({ loaiHoaDon: 'TAI_QUAY', giaohang: false })
-    const taiQuayMethods = paymentMethods.value
-
-    if (!taiQuayMethods.some((m) => m.value === 'TIEN_MAT')) {
-      result.errors.push('TAI_QUAY orders should have TIEN_MAT payment method')
-    }
-
-    // Test 2: Online order payment methods
-    updateActiveTabData({ loaiHoaDon: 'ONLINE', giaohang: true })
-    const onlineMethods = paymentMethods.value
-
-    if (!onlineMethods.some((m) => m.value === 'TIEN_MAT' && m.label.includes('giao hàng'))) {
-      result.errors.push('Online delivery orders should have cash on delivery option')
-    }
-
-    // Test 3: Payment method validation
-    updateActiveTabData({ phuongThucThanhToan: 'TIEN_MAT', tongThanhToan: 100000 })
-    customerPayment.value = 150000
-    calculateChange()
-
-    if (changeAmount.value !== 50000) {
-      result.errors.push('Change calculation incorrect')
-    }
-
-    // Test 4: Mixed payment functionality
-    const mixedPaymentConfig = {
-      payments: [
-        { method: 'TIEN_MAT', amount: 50000 },
-        { method: 'CHUYEN_KHOAN', amount: 50000 },
-      ],
-    }
-
-    onMixedPaymentConfirm(mixedPaymentConfig)
-
-    if (activeTab.value.phuongThucThanhToan !== 'MIXED') {
-      result.errors.push('Mixed payment configuration not applied correctly')
-    }
-
-    result.passed = result.errors.length === 0
-    result.details = {
-      taiQuayMethodsCount: taiQuayMethods.length,
-      onlineMethodsCount: onlineMethods.length,
-      changeCalculation: changeAmount.value,
-      mixedPaymentApplied: activeTab.value.phuongThucThanhToan === 'MIXED',
-    }
-
-    console.log('✅ Payment Integration test completed:', result)
-    return result
-  } catch (error) {
-    result.errors.push(`Payment integration test error: ${error.message}`)
-    console.error('❌ Payment Integration test failed:', error)
-    return result
-  }
-}
-
-// Test Voucher Intelligence System
-const testVoucherIntelligence = async () => {
-  const result = { passed: false, errors: [], details: {} }
-
-  try {
-    console.log('🧪 Testing Voucher Intelligence System...')
-
-    // Test 1: Voucher loading for customer
-    const testCustomer = {
-      id: 'test-customer-voucher',
-      hoTen: 'Test Customer',
-      soDienThoai: '0123456789',
-    }
-
-    updateActiveTabData({
-      khachHang: testCustomer,
-      tongTienHang: 500000,
-      voucherList: [],
-    })
-
-    // Mock voucher API for testing
-    const originalGetAvailableVouchers = voucherApi.getAvailableVouchers
-    const originalValidateVoucher = voucherApi.validateVoucher
-
-    voucherApi.getAvailableVouchers = async (_customerId, _orderTotal) => ({
-      success: true,
-      data: [
-        { maPhieuGiamGia: 'TEST10', tenPhieuGiamGia: 'Test 10%', giaTriGiam: 50000 },
-        { maPhieuGiamGia: 'TEST20', tenPhieuGiamGia: 'Test 20%', giaTriGiam: 100000 },
-      ],
-    })
-
-    voucherApi.validateVoucher = async (code, _customerId, _orderTotal) => ({
-      success: true,
-      data: {
-        valid: true,
-        voucher: { maPhieuGiamGia: code, tenPhieuGiamGia: `Test ${code}` },
-        discountAmount: code === 'TEST10' ? 50000 : 100000,
-      },
-    })
-
-    try {
-      // Test voucher loading
-      await loadAvailableVouchers()
-
-      if (availableVouchers.value.length !== 2) {
-        result.errors.push('Available vouchers not loaded correctly')
-      }
-
-      // Test voucher application
-      const testVoucher = availableVouchers.value[0]
-      await selectVoucher(testVoucher)
-
-      if (activeTab.value.voucherList.length !== 1) {
-        result.errors.push('Voucher not applied correctly')
-      }
-
-      // Test single voucher restriction
-      const secondVoucher = { maPhieuGiamGia: 'TEST20', tenPhieuGiamGia: 'Test 20%' }
-      await selectVoucher(secondVoucher)
-
-      if (
-        activeTab.value.voucherList.length !== 1 ||
-        activeTab.value.voucherList[0].maPhieuGiamGia !== 'TEST20'
-      ) {
-        result.errors.push('Single voucher restriction not working correctly')
-      }
-    } finally {
-      // Restore original functions
-      voucherApi.getAvailableVouchers = originalGetAvailableVouchers
-      voucherApi.validateVoucher = originalValidateVoucher
-    }
-
-    result.passed = result.errors.length === 0
-    result.details = {
-      vouchersLoaded: availableVouchers.value.length,
-      vouchersApplied: activeTab.value.voucherList.length,
-      singleVoucherRestriction: activeTab.value.voucherList.length === 1,
-    }
-
-    console.log('✅ Voucher Intelligence test completed:', result)
-    return result
-  } catch (error) {
-    result.errors.push(`Voucher intelligence test error: ${error.message}`)
-    console.error('❌ Voucher Intelligence test failed:', error)
-    return result
-  }
-}
-
-// Test Staff Assignment Functionality
-const testStaffAssignment = async () => {
-  const result = { passed: false, errors: [], details: {} }
-
-  try {
-    console.log('🧪 Testing Staff Assignment System...')
-
-    // Test 1: Automatic staff assignment (backend handled)
-    // Since staff assignment is handled automatically by the backend,
-    // we test that the frontend doesn't interfere with this process
-
-    const orderData = mapTabToHoaDonDto(activeTab.value)
-
-    if (orderData.nhanVienId !== null) {
-      result.errors.push('Frontend should not set staff ID - should be handled by backend')
-    }
-
-    // Test 2: Order creation without manual staff selection
-    // Verify that orders can be created without requiring staff selection in UI
-    updateActiveTabData({
-      maHoaDon: 'TEST-STAFF-001',
-      loaiHoaDon: 'TAI_QUAY',
-      sanPhamList: [
-        {
-          sanPhamChiTiet: { id: 'test-product-1' },
-          soLuong: 1,
-          donGia: 100000,
-        },
-      ],
-      tongTienHang: 100000,
-      tongThanhToan: 100000,
-      phuongThucThanhToan: 'TIEN_MAT',
-    })
-
-    const staffOrderData = mapTabToHoaDonDto(activeTab.value)
-
-    // Verify order data is complete without staff assignment
-    if (!staffOrderData.maHoaDon || !staffOrderData.loaiHoaDon) {
-      result.errors.push('Order data incomplete for staff assignment test')
-    }
-
-    // Test 3: Staff assignment consistency
-    // Multiple order creations should not have conflicting staff assignments
-    const order1Data = mapTabToHoaDonDto(activeTab.value)
-    const order2Data = mapTabToHoaDonDto(activeTab.value)
-
-    if (order1Data.nhanVienId !== order2Data.nhanVienId) {
-      result.errors.push('Staff assignment inconsistent between order mappings')
-    }
-
-    result.passed = result.errors.length === 0
-    result.details = {
-      staffIdSetByFrontend: orderData.nhanVienId !== null,
-      orderDataComplete: !!staffOrderData.maHoaDon && !!staffOrderData.loaiHoaDon,
-      staffAssignmentConsistent: order1Data.nhanVienId === order2Data.nhanVienId,
-    }
-
-    console.log('✅ Staff Assignment test completed:', result)
-    return result
-  } catch (error) {
-    result.errors.push(`Staff assignment test error: ${error.message}`)
-    console.error('❌ Staff Assignment test failed:', error)
-    return result
-  }
-}
-
-// Test UI Integration
-const testUIIntegration = async () => {
-  const result = { passed: false, errors: [], details: {} }
-
-  try {
-    console.log('🧪 Testing UI Integration...')
-
-    // Test 1: Tab management
-    const initialTabCount = orderTabs.value.length
-    createNewOrderTab()
-
-    if (orderTabs.value.length !== initialTabCount + 1) {
-      result.errors.push('Tab creation not working correctly')
-    }
-
-    // Test 2: Delivery toggle integration
-    const currentTab = activeTab.value
-    if (currentTab) {
-      updateActiveTabData({ giaohang: true })
-
-      if (!activeTab.value.giaohang) {
-        result.errors.push('Delivery toggle not updating correctly')
-      }
-
-      // Test payment method validation with delivery change
-      updateActiveTabData({ phuongThucThanhToan: 'TIEN_MAT' })
-      const paymentMethodsWithDelivery = paymentMethods.value
-
-      if (!paymentMethodsWithDelivery.some((m) => m.value === 'TIEN_MAT')) {
-        result.errors.push('Payment methods not updating with delivery toggle')
-      }
-    }
-
-    // Test 3: Customer search integration
-    selectedCustomer.value = null
-
-    // Test customer selection functionality
-    if (selectedCustomer.value !== null) {
-      result.errors.push('Customer selection not clearing correctly')
-    }
-
-    // Test 4: Address form integration
-    const testAddress = {
-      duong: 'Test Street Integration',
-      phuongXa: 'Test Ward',
-      quanHuyen: 'Test District',
-      tinhThanh: 'Test Province',
-      loaiDiaChi: 'Nhà riêng',
-    }
-
-    setAddressData(testAddress)
-
-    if (addressData.value.duong !== testAddress.duong) {
-      result.errors.push('Address form integration not working correctly')
-    }
-
-    // Test 5: Recipient info integration
-    const testRecipient = {
-      hoTen: 'Test Recipient UI',
-      soDienThoai: '0123456789',
-    }
-
-    recipientInfo.value = { ...testRecipient }
-
-    if (recipientInfo.value.hoTen !== testRecipient.hoTen) {
-      result.errors.push('Recipient info integration not working correctly')
-    }
-
-    result.passed = result.errors.length === 0
-    result.details = {
-      tabManagement: orderTabs.value.length > initialTabCount,
-      deliveryToggle: activeTab.value?.giaohang === true,
-      paymentMethodsAvailable: paymentMethods.value.length > 0,
-      customerSelectionWorking: selectedCustomer.value === null,
-      addressFormWorking: addressData.value.duong === testAddress.duong,
-      recipientInfoWorking: recipientInfo.value.hoTen === testRecipient.hoTen,
-    }
-
-    console.log('✅ UI Integration test completed:', result)
-    return result
-  } catch (error) {
-    result.errors.push(`UI integration test error: ${error.message}`)
-    console.error('❌ UI Integration test failed:', error)
-    return result
-  }
-}
-
-// Test Performance Validation
-const testPerformanceValidation = async () => {
-  const result = { passed: false, errors: [], details: {} }
-
-  try {
-    console.log('🧪 Testing Performance Validation...')
-
-    // Test 1: Address validation performance
-    const addressValidationStart = performance.now()
-
-    setAddressData({
-      duong: 'Performance Test Street',
-      phuongXa: 'Performance Ward',
-      quanHuyen: 'Performance District',
-      tinhThanh: 'Performance Province',
-      loaiDiaChi: 'Nhà riêng',
-    })
-
-    const addressValidationResult = validateEmbeddedAddress()
-    const addressValidationTime = performance.now() - addressValidationStart
-
-    if (addressValidationTime > 100) {
-      // 100ms threshold
-      result.errors.push(`Address validation too slow: ${addressValidationTime}ms`)
-    }
-
-    // Test 2: Customer scenario detection performance
-    const scenarioDetectionStart = performance.now()
-
-    updateActiveTabData({
-      khachHang: { id: 'perf-test', hoTen: 'Performance Test', soDienThoai: '0123456789' },
-      giaohang: true,
-    })
-    recipientInfo.value = { hoTen: 'Different Recipient', soDienThoai: '0987654321' }
-
-    const scenarioValidation = await validateAllCustomerScenarios()
-    const scenarioDetectionTime = performance.now() - scenarioDetectionStart
-
-    if (scenarioDetectionTime > 50) {
-      // 50ms threshold
-      result.errors.push(`Scenario detection too slow: ${scenarioDetectionTime}ms`)
-    }
-
-    // Test 3: Backend mapping performance
-    const mappingStart = performance.now()
-
-    updateActiveTabData({
-      sanPhamList: Array.from({ length: 10 }, (_, i) => ({
-        sanPhamChiTiet: { id: `perf-product-${i}` },
-        soLuong: 1,
-        donGia: 100000,
-      })),
-      voucherList: [{ maPhieuGiamGia: 'PERF-VOUCHER', giaTriGiam: 50000 }],
-    })
-
-    const mappingResult = mapTabToHoaDonDto(activeTab.value)
-    const mappingTime = performance.now() - mappingStart
-
-    if (mappingTime > 20) {
-      // 20ms threshold
-      result.errors.push(`Backend mapping too slow: ${mappingTime}ms`)
-    }
-
-    // Test 4: Memory usage validation
-    const memoryBefore = performance.memory ? performance.memory.usedJSHeapSize : 0
-
-    // Simulate multiple operations
-    for (let i = 0; i < 100; i++) {
-      validateEmbeddedAddress()
-      await validateAllCustomerScenarios()
-    }
-
-    const memoryAfter = performance.memory ? performance.memory.usedJSHeapSize : 0
-    const memoryIncrease = memoryAfter - memoryBefore
-
-    if (memoryIncrease > 10 * 1024 * 1024) {
-      // 10MB threshold
-      result.errors.push(`Excessive memory usage: ${memoryIncrease / 1024 / 1024}MB`)
-    }
-
-    result.passed = result.errors.length === 0
-    result.details = {
-      addressValidationTime: `${addressValidationTime.toFixed(2)}ms`,
-      scenarioDetectionTime: `${scenarioDetectionTime.toFixed(2)}ms`,
-      backendMappingTime: `${mappingTime.toFixed(2)}ms`,
-      memoryIncrease: `${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`,
-      addressValidationWorking: addressValidationResult,
-      scenarioDetectionWorking: scenarioValidation.valid,
-      backendMappingWorking: !!mappingResult.khachHangId,
-    }
-
-    console.log('✅ Performance Validation test completed:', result)
-    return result
-  } catch (error) {
-    result.errors.push(`Performance validation test error: ${error.message}`)
-    console.error('❌ Performance Validation test failed:', error)
-    return result
-  }
-}
-
-// ===== DEVELOPMENT TESTING UTILITIES =====
-
-// Expose testing functions for development/debugging
-if (import.meta.env.DEV) {
-  window.orderCreateTests = {
-    // System Integration Tests
-    runSystemIntegrationTests,
-    testPaymentIntegrations,
-    testVoucherIntelligence,
-    testStaffAssignment,
-    testUIIntegration,
-    testPerformanceValidation,
-
-    // Customer Scenario Tests
-    runIntegrationTests: executeIntegrationTests,
-    validateScenarios: validateAllCustomerScenarios,
-    testScenario1,
-    testScenario2,
-    testScenario3,
-    testAddressManagement,
-    testBackendMapping,
-
-    // Reporting
-    generateReport: generateTestReport,
-
-    // Quick test runners
-    runAll: async () => {
-      console.log('🚀 Running all customer scenario tests...')
-      const report = await generateTestReport()
-      return report
-    },
-    runSystemTests: async () => {
-      console.log('🚀 Running comprehensive system integration tests...')
-      const results = await runSystemIntegrationTests()
-      return results
-    },
-  }
-  console.log('🧪 OrderCreate testing utilities available at window.orderCreateTests')
-  console.log('💡 Run window.orderCreateTests.runSystemTests() for comprehensive system testing')
-  console.log('💡 Run window.orderCreateTests.runAll() for customer scenario tests')
-}
-
-// Initialize
-onMounted(async () => {
-  // Staff assignment is now handled automatically by the backend
-
-  // Cleanup any pending cart reservations from previous session
-  await cleanupPendingReservations()
-
-  // Create first tab if none exist
-  if (!hasActiveTabs.value) {
-    createNewOrderTab()
-  }
-
-  // Ensure we have an active tab after initialization
-  if (!activeTab.value && orderTabs.value.length > 0) {
-    switchToTab(orderTabs.value[0].id)
-  }
-
-  // Preload data for search functionality
-  try {
-    await customerStore.fetchCustomers()
-  } catch (error) {
-    console.error('Failed to preload data:', error)
-  }
-
-  // Initialize real-time features
-  try {
-    // Subscribe to voucher monitoring
-    subscribeToVoucherMonitoring()
-
-    // Subscribe to order expiration monitoring
-    subscribeToOrderExpiration()
-
-    // Subscribe to price updates for any existing cart items
-    const existingVariantIds =
-      activeTab.value?.sanPhamList?.map((item) => item.sanPhamChiTiet?.id).filter(Boolean) || []
-    if (existingVariantIds.length > 0) {
-      subscribeToPriceUpdates(existingVariantIds)
-    }
-
-    console.log('✅ Real-time features initialized successfully')
-  } catch (error) {
-    console.warn('⚠️ Failed to initialize real-time features:', error)
-  }
-
-  // Initialize shipping configuration
-  try {
-    await loadShippingConfig()
-    console.log('✅ Shipping configuration loaded successfully')
-  } catch (error) {
-    console.warn('⚠️ Failed to load shipping configuration:', error)
-  }
-
-  // Add beforeunload event listener for page refresh/close detection
-  window.addEventListener('beforeunload', handlePageUnload)
-
-  // Also add pagehide event for better mobile browser support
-  window.addEventListener('pagehide', handlePageUnload)
-})
-
-// Cleanup event listeners on component unmount
-onUnmounted(() => {
-  // Remove event listeners
-  window.removeEventListener('beforeunload', handlePageUnload)
-  window.removeEventListener('pagehide', handlePageUnload)
-})
 </script>
 
 <style scoped>

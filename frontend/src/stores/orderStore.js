@@ -1,9 +1,15 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import orderApi from '@/apis/orderApi'
 import { useToast } from 'primevue/usetoast'
 import { useOrderCache } from '@/composables/useOrderCache'
 import { usePerformanceOptimization } from '@/composables/usePerformanceOptimization'
+import { useEntityStore } from '@/composables/useEntityStore'
+import { useOptimisticUpdates } from '@/composables/useOptimisticUpdates'
+import { useRealTimeSync } from '@/composables/useRealTimeSync'
+import { useOptimisticMutation } from '@/composables/useOptimisticMutation'
+import { createConflictResolver, RESOLUTION_STRATEGIES } from '@/utils/StateConflictResolver'
+import { createVietnameseEntityAdapter } from '@/utils/EntityAdapter'
 
 export const useOrderStore = defineStore('order', () => {
   const toast = useToast()
@@ -12,21 +18,182 @@ export const useOrderStore = defineStore('order', () => {
   const orderCache = useOrderCache()
   const { debounce, deduplicateRequest, measurePerformance } = usePerformanceOptimization()
 
-  // State
-  const orders = ref([])
+  // Real-time synchronization layer
+  const realTimeSync = useRealTimeSync({
+    entityName: 'hoaDon',
+    storeKey: 'orderStore',
+    enablePersistence: true,
+    enableCrossTab: true,
+    validateState: (state) => {
+      // Validate order state structure
+      if (!state || typeof state !== 'object') return false
+      if (state.maHoaDon && typeof state.maHoaDon !== 'string') return false
+      if (state.tongThanhToan && typeof state.tongThanhToan !== 'number') return false
+      return true
+    },
+    mergeStrategy: (currentState, incomingState) => {
+      // Custom merge strategy for orders
+      return {
+        ...currentState,
+        ...incomingState,
+        // Preserve critical fields from current state if they exist
+        maHoaDon: currentState.maHoaDon || incomingState.maHoaDon,
+        ngayCapNhat: new Date().toISOString(),
+        version: (currentState.version || 0) + 1
+      }
+    }
+  })
+
+  // Enhanced optimistic mutations
+  const optimisticMutation = useOptimisticMutation({
+    entityName: 'đơn hàng',
+    storeKey: 'orderStore',
+    timeoutMs: 20000, // Orders may take longer
+    enableRealTimeSync: true,
+    enableConflictResolution: true,
+    conflictStrategy: RESOLUTION_STRATEGIES.BUSINESS_RULES
+  })
+
+  // Conflict resolver for business rules
+  const conflictResolver = createConflictResolver({
+    entityName: 'đơn hàng',
+    defaultStrategy: RESOLUTION_STRATEGIES.BUSINESS_RULES,
+    businessRules: {
+      // Order status transition rules
+      trangThaiDonHang: (currentStatus, incomingStatus, context) => {
+        const validTransitions = {
+          'CHO_XAC_NHAN': ['XAC_NHAN', 'HUY'],
+          'XAC_NHAN': ['DANG_GIAO', 'HUY'],
+          'DANG_GIAO': ['HOAN_THANH', 'TRA_HANG'],
+          'HOAN_THANH': ['TRA_HANG'],
+          'HUY': [],
+          'TRA_HANG': []
+        }
+
+        const allowedTransitions = validTransitions[currentStatus] || []
+        return allowedTransitions.includes(incomingStatus) ? incomingStatus : currentStatus
+      },
+
+      // Payment status rules
+      trangThaiThanhToan: (currentStatus, incomingStatus, context) => {
+        // Payment status can only progress forward
+        const statusOrder = ['CHUA_THANH_TOAN', 'DA_THANH_TOAN_MOT_PHAN', 'DA_THANH_TOAN', 'HOAN_TIEN']
+        const currentIndex = statusOrder.indexOf(currentStatus)
+        const incomingIndex = statusOrder.indexOf(incomingStatus)
+
+        return incomingIndex >= currentIndex ? incomingStatus : currentStatus
+      },
+
+      // Total amount validation
+      tongThanhToan: (currentAmount, incomingAmount, context) => {
+        // Use higher amount if both are valid
+        if (typeof currentAmount === 'number' && typeof incomingAmount === 'number') {
+          return Math.max(currentAmount, incomingAmount)
+        }
+        return incomingAmount || currentAmount
+      }
+    }
+  })
+
+  // Enhanced entity store with normalized state management
+  const {
+    allEntities: orders,
+    totalCount: totalRecords,
+    getEntityById: getOrderById,
+    addEntity: addOrderEntity,
+    updateEntity: updateOrderEntity,
+    removeEntity: removeOrderEntity,
+    setAllEntities: setAllOrders,
+    upsertEntity: upsertOrder,
+    clearAllEntities: clearAllOrders,
+    entityState: normalizedOrderState,
+    loading: entityLoading,
+    error: entityError,
+    lastUpdated: lastOrderUpdate
+  } = useEntityStore({
+    entityName: 'hoaDon',
+    selectId: (order) => order.id || order.maHoaDon,
+    sortComparer: (a, b) => {
+      // Sort by ngayCapNhat (newest first) - Vietnamese pattern
+      const dateA = new Date(a.ngayCapNhat || a.createdAt || 0)
+      const dateB = new Date(b.ngayCapNhat || b.createdAt || 0)
+      return dateB - dateA
+    },
+    enableCrossTab: true,
+    enableOptimistic: true
+  })
+
+  // Optimistic updates composable
+  const {
+    createOptimisticUpdate,
+    batchOptimisticOperations,
+    hasPendingOperations,
+    successRate
+  } = useOptimisticUpdates({
+    entityName: 'đơn hàng',
+    timeoutMs: 15000, // Orders may take longer
+    enableRetry: true,
+    maxRetries: 2
+  })
+
+  // Additional state (preserved from original)
   const currentOrder = ref(null)
   const loading = ref(false)
   const error = ref(null)
-  const totalRecords = ref(0)
   const currentPage = ref(0)
   const pageSize = ref(20)
   const auditHistory = ref({})
+
+  // Real-time state synchronization
+  const realTimeState = ref({
+    isConnected: false,
+    lastSyncTime: null,
+    syncErrors: [],
+    conflictCount: 0,
+    debugMode: false
+  })
+
+  // State persistence and migration
+  const stateMigration = ref({
+    currentVersion: 1,
+    migrationHistory: [],
+    pendingMigrations: []
+  })
+
+  // Debugging and monitoring
+  const debugInfo = ref({
+    stateChanges: [],
+    performanceMetrics: {},
+    errorLog: [],
+    maxLogSize: 100
+  })
 
   // Multi-tab order management state
   const orderTabs = ref([])
   const activeTabId = ref(null)
   const tabCounter = ref(1)
   const reservedInventory = ref(new Map()) // Track reserved items per order
+
+  // Initialize real-time sync event listeners
+  if (realTimeSync) {
+    // Listen for remote state changes
+    realTimeSync.addEventListener('REMOTE_SYNC_RECEIVED', (event) => {
+      handleRemoteStateSync(event.data)
+    })
+
+    realTimeSync.addEventListener('REMOTE_CHANGE_RECEIVED', (event) => {
+      handleRemoteStateChange(event.data)
+    })
+
+    realTimeSync.addEventListener('CONFLICT_RESOLVED', (event) => {
+      handleConflictResolution(event.data)
+    })
+
+    realTimeSync.addEventListener('STATE_SYNCED', (event) => {
+      realTimeState.value.lastSyncTime = event.data.timestamp
+      realTimeState.value.isConnected = true
+    })
+  }
 
   // Filters
   const filters = ref({
@@ -37,6 +204,125 @@ export const useOrderStore = defineStore('order', () => {
     staff: null,
     search: ''
   })
+
+  /**
+   * Handle remote state synchronization
+   * @param {Object} data - Remote sync data
+   */
+  function handleRemoteStateSync(data) {
+    try {
+      const { remoteState, timestamp, validation } = data
+
+      if (!validation.isValid) {
+        logDebugInfo('SYNC_ERROR', 'Invalid remote state received', { validation })
+        return
+      }
+
+      // Merge remote state with current state
+      if (remoteState && Array.isArray(remoteState)) {
+        setAllOrders(remoteState)
+        logDebugInfo('SYNC_SUCCESS', 'Remote state synchronized', {
+          orderCount: remoteState.length,
+          timestamp
+        })
+      }
+
+      realTimeState.value.lastSyncTime = timestamp
+      realTimeState.value.isConnected = true
+
+    } catch (error) {
+      logDebugInfo('SYNC_ERROR', 'Failed to handle remote sync', { error: error.message })
+      realTimeState.value.syncErrors.push({
+        type: 'REMOTE_SYNC_ERROR',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }
+
+  /**
+   * Handle remote state changes
+   * @param {Object} data - Remote change data
+   */
+  function handleRemoteStateChange(data) {
+    try {
+      const { changeData, timestamp } = data
+
+      logDebugInfo('REMOTE_CHANGE', 'Remote state change received', {
+        changeData,
+        timestamp
+      })
+
+      // Apply remote changes if they don't conflict with local pending operations
+      if (!optimisticMutation.hasPendingMutations.value) {
+        // Safe to apply remote changes
+        if (changeData.type === 'ORDER_UPDATED' && changeData.order) {
+          upsertOrder(changeData.order)
+        } else if (changeData.type === 'ORDER_CREATED' && changeData.order) {
+          addOrderEntity(changeData.order)
+        } else if (changeData.type === 'ORDER_DELETED' && changeData.orderId) {
+          removeOrderEntity(changeData.orderId)
+        }
+      }
+
+    } catch (error) {
+      logDebugInfo('CHANGE_ERROR', 'Failed to handle remote change', { error: error.message })
+    }
+  }
+
+  /**
+   * Handle conflict resolution
+   * @param {Object} data - Conflict resolution data
+   */
+  function handleConflictResolution(data) {
+    try {
+      const { resolutionData, timestamp } = data
+
+      realTimeState.value.conflictCount++
+      logDebugInfo('CONFLICT_RESOLVED', 'State conflict resolved', {
+        resolutionData,
+        timestamp
+      })
+
+      toast.add({
+        severity: 'info',
+        summary: 'Xung đột đã được giải quyết',
+        detail: 'Dữ liệu đơn hàng đã được đồng bộ tự động',
+        life: 3000
+      })
+
+    } catch (error) {
+      logDebugInfo('CONFLICT_ERROR', 'Failed to handle conflict resolution', { error: error.message })
+    }
+  }
+
+  /**
+   * Log debug information
+   * @param {String} type - Log type
+   * @param {String} message - Log message
+   * @param {Object} data - Additional data
+   */
+  function logDebugInfo(type, message, data = {}) {
+    if (!realTimeState.value.debugMode) return
+
+    const logEntry = {
+      type,
+      message,
+      data,
+      timestamp: new Date().toISOString(),
+      tabId: realTimeSync?.tabId?.value
+    }
+
+    debugInfo.value.stateChanges.unshift(logEntry)
+
+    // Keep log size manageable
+    if (debugInfo.value.stateChanges.length > debugInfo.value.maxLogSize) {
+      debugInfo.value.stateChanges = debugInfo.value.stateChanges.slice(0, debugInfo.value.maxLogSize)
+    }
+
+    // Also log to console in debug mode
+    console.log(`🔍 [OrderStore Debug] ${type}: ${message}`, data)
+  }
 
   // Order statuses from backend
   const orderStatuses = ref([
@@ -75,9 +361,9 @@ export const useOrderStore = defineStore('order', () => {
     return Date.now() - lastFetchTime.value < cacheTimeout
   }
 
-  // Computed
+  // Computed (enhanced with normalized state)
   const filteredOrders = computed(() => {
-    if (!orders.value) return []
+    if (!orders.value || orders.value.length === 0) return []
 
     return orders.value.filter(order => {
       // Status filter
@@ -270,7 +556,137 @@ export const useOrderStore = defineStore('order', () => {
     }
   }
 
-  // Actions
+  /**
+   * Enhanced state persistence with migration support
+   */
+  function persistOrderState() {
+    try {
+      const stateToSave = {
+        orders: orders.value,
+        currentOrder: currentOrder.value,
+        filters: filters.value,
+        orderTabs: orderTabs.value,
+        activeTabId: activeTabId.value,
+        version: stateMigration.value.currentVersion,
+        timestamp: new Date().toISOString()
+      }
+
+      if (realTimeSync) {
+        realTimeSync.persistState(stateToSave)
+      }
+
+      logDebugInfo('STATE_PERSISTED', 'Order state persisted', {
+        orderCount: orders.value.length,
+        tabCount: orderTabs.value.length
+      })
+
+    } catch (error) {
+      logDebugInfo('PERSIST_ERROR', 'Failed to persist state', { error: error.message })
+    }
+  }
+
+  /**
+   * Load persisted state with migration
+   */
+  function loadPersistedOrderState() {
+    try {
+      if (!realTimeSync) return null
+
+      const persistedData = realTimeSync.loadPersistedState()
+      if (!persistedData) return null
+
+      // Check if migration is needed
+      const currentVersion = stateMigration.value.currentVersion
+      const persistedVersion = persistedData.version || 0
+
+      if (persistedVersion < currentVersion) {
+        return migrateOrderState(persistedData, persistedVersion, currentVersion)
+      }
+
+      return persistedData.state
+
+    } catch (error) {
+      logDebugInfo('LOAD_ERROR', 'Failed to load persisted state', { error: error.message })
+      return null
+    }
+  }
+
+  /**
+   * Migrate order state between versions
+   * @param {Object} oldState - Old state data
+   * @param {Number} fromVersion - Source version
+   * @param {Number} toVersion - Target version
+   * @returns {Object} Migrated state
+   */
+  function migrateOrderState(oldState, fromVersion, toVersion) {
+    try {
+      let migratedState = { ...oldState }
+
+      // Apply migrations sequentially
+      for (let version = fromVersion; version < toVersion; version++) {
+        migratedState = applyStateMigration(migratedState, version, version + 1)
+      }
+
+      // Record migration
+      stateMigration.value.migrationHistory.push({
+        fromVersion,
+        toVersion,
+        timestamp: new Date().toISOString(),
+        success: true
+      })
+
+      logDebugInfo('STATE_MIGRATED', 'State migrated successfully', {
+        fromVersion,
+        toVersion
+      })
+
+      return migratedState
+
+    } catch (error) {
+      logDebugInfo('MIGRATION_ERROR', 'State migration failed', {
+        error: error.message,
+        fromVersion,
+        toVersion
+      })
+
+      // Record failed migration
+      stateMigration.value.migrationHistory.push({
+        fromVersion,
+        toVersion,
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: error.message
+      })
+
+      return null
+    }
+  }
+
+  /**
+   * Apply specific migration between versions
+   * @param {Object} state - State to migrate
+   * @param {Number} fromVersion - Source version
+   * @param {Number} toVersion - Target version
+   * @returns {Object} Migrated state
+   */
+  function applyStateMigration(state, fromVersion, toVersion) {
+    // Example migration logic
+    if (fromVersion === 0 && toVersion === 1) {
+      // Migration from version 0 to 1: Add new fields
+      return {
+        ...state,
+        orders: (state.orders || []).map(order => ({
+          ...order,
+          version: 1,
+          ngayCapNhat: order.ngayCapNhat || new Date().toISOString()
+        }))
+      }
+    }
+
+    return state
+  }
+
+  // Actions (enhanced with normalized state management and real-time sync)
   const fetchOrders = async (page = 0, size = 20, filterParams = {}) => {
     const endMeasure = measurePerformance('fetchOrders')
 
@@ -284,10 +700,16 @@ export const useOrderStore = defineStore('order', () => {
     // Check cache first
     const cachedData = orderCache.getCachedOrderList(params)
     if (cachedData) {
-      orders.value = cachedData.content || cachedData
-      totalRecords.value = cachedData.totalElements || cachedData.length
+      const ordersData = cachedData.content || cachedData
+      setAllOrders(ordersData)
       currentPage.value = page
       pageSize.value = size
+
+      // Sync with real-time system
+      if (realTimeSync) {
+        await realTimeSync.syncStateData(ordersData, { merge: false })
+      }
+
       endMeasure()
       return
     }
@@ -305,18 +727,37 @@ export const useOrderStore = defineStore('order', () => {
 
       if (response.success) {
         const data = response.data
-        orders.value = data.content || data
-        totalRecords.value = data.totalElements || data.length
+        const ordersData = data.content || data
+
+        // Use normalized state management
+        setAllOrders(ordersData)
         currentPage.value = page
         pageSize.value = size
 
+        // Sync with real-time system
+        if (realTimeSync) {
+          await realTimeSync.syncStateData(ordersData, { merge: false })
+        }
+
         // Cache the response for 2 minutes
         orderCache.setCachedOrderList(params, data, 2 * 60 * 1000)
+
+        // Persist state
+        persistOrderState()
+
+        logDebugInfo('FETCH_SUCCESS', 'Orders fetched successfully', {
+          count: ordersData.length,
+          page,
+          size
+        })
+
       } else {
         throw new Error(response.message || 'Failed to fetch orders')
       }
     } catch (err) {
       error.value = err.message
+      logDebugInfo('FETCH_ERROR', 'Failed to fetch orders', { error: err.message })
+
       toast.add({
         severity: 'error',
         summary: 'Lỗi',
@@ -332,10 +773,20 @@ export const useOrderStore = defineStore('order', () => {
   const fetchOrderById = async (id) => {
     const endMeasure = measurePerformance('fetchOrderById')
 
-    // Check cache first
+    // Check normalized state first
+    const existingOrder = getOrderById(id)
+    if (existingOrder) {
+      currentOrder.value = existingOrder
+      endMeasure()
+      return existingOrder
+    }
+
+    // Check cache
     const cachedOrder = orderCache.getCachedOrderDetail(id)
     if (cachedOrder) {
       currentOrder.value = cachedOrder
+      // Add to normalized state
+      upsertOrder(cachedOrder)
       endMeasure()
       return cachedOrder
     }
@@ -350,6 +801,9 @@ export const useOrderStore = defineStore('order', () => {
 
       if (response.success) {
         currentOrder.value = response.data
+
+        // Add to normalized state
+        upsertOrder(response.data)
 
         // Cache the order detail for 5 minutes
         orderCache.setCachedOrderDetail(id, response.data, 5 * 60 * 1000)
@@ -375,43 +829,52 @@ export const useOrderStore = defineStore('order', () => {
   }
 
   const createOrder = async (orderData) => {
-    loading.value = true
-    error.value = null
-
-    try {
-      const response = await orderApi.createOrder(orderData)
-
-      if (response.success) {
-        // Add new order to the beginning of the list
-        orders.value.unshift(response.data)
-        currentOrder.value = response.data
-
-        // Invalidate order list cache since we added a new order
-        orderCache.invalidateByPattern('^orderList:')
-
-        toast.add({
-          severity: 'success',
-          summary: 'Thành công',
-          detail: `Đơn hàng ${response.data.maHoaDon} đã được tạo thành công`,
-          life: 5000
-        })
-
-        return response.data
-      } else {
-        throw new Error(response.message || 'Failed to create order')
-      }
-    } catch (err) {
-      error.value = err.message
-      toast.add({
-        severity: 'error',
-        summary: 'Lỗi',
-        detail: `Không thể tạo đơn hàng: ${err.message}`,
-        life: 5000
-      })
-      return null
-    } finally {
-      loading.value = false
+    // Create optimistic order with temporary ID
+    const optimisticOrder = {
+      ...orderData,
+      id: `temp_${Date.now()}`,
+      maHoaDon: orderData.maHoaDon || `HD${Date.now()}`,
+      ngayCapNhat: new Date().toISOString(),
+      trangThaiDonHang: orderData.trangThaiDonHang || 'CHO_XAC_NHAN',
+      isOptimistic: true
     }
+
+    // Use optimistic update
+    const optimisticUpdate = createOptimisticUpdate(
+      'create',
+      optimisticOrder,
+      // Optimistic update function
+      async () => {
+        currentOrder.value = optimisticOrder
+        await addOrderEntity(optimisticOrder)
+      },
+      // Rollback function
+      async () => {
+        await removeOrderEntity(optimisticOrder.id)
+        currentOrder.value = null
+      },
+      // API call function
+      async () => {
+        loading.value = true
+        error.value = null
+
+        try {
+          const response = await orderApi.createOrder(orderData)
+
+          if (response.success) {
+            // Invalidate order list cache since we added a new order
+            orderCache.invalidateByPattern('^orderList:')
+            return response
+          } else {
+            throw new Error(response.message || 'Failed to create order')
+          }
+        } finally {
+          loading.value = false
+        }
+      }
+    )
+
+    return optimisticUpdate()
   }
 
   // Create order from active tab with enhanced audit
@@ -492,8 +955,8 @@ export const useOrderStore = defineStore('order', () => {
       if (result.success) {
         const createdOrder = result.data
 
-        // Add new order to the beginning of the list
-        orders.value.unshift(createdOrder)
+        // Add new order to normalized state
+        await addOrderEntity(createdOrder)
         currentOrder.value = createdOrder
 
         // Invalidate order list cache since we added a new order
@@ -533,11 +996,8 @@ export const useOrderStore = defineStore('order', () => {
       const response = await orderApi.updateOrderStatus(orderId, newStatus, reason)
 
       if (response.success) {
-        // Update order in the list
-        const orderIndex = orders.value.findIndex(order => order.id === orderId)
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = { ...orders.value[orderIndex], ...response.data }
-        }
+        // Update order in normalized state
+        await updateOrderEntity(orderId, response.data)
 
         // Update current order if it's the same
         if (currentOrder.value && currentOrder.value.id === orderId) {
@@ -582,11 +1042,8 @@ export const useOrderStore = defineStore('order', () => {
       console.log('OrderStore: API response:', response)
 
       if (response.success) {
-        // Update the order in the local state
-        const orderIndex = orders.value.findIndex(order => order.id === id)
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = response.data
-        }
+        // Update the order in normalized state
+        await updateOrderEntity(id, response.data)
 
         // Update current order if it's the same
         if (currentOrder.value?.id === id) {
@@ -989,6 +1446,80 @@ export const useOrderStore = defineStore('order', () => {
     }
   }
 
+  /**
+   * Toggle debug mode
+   * @param {Boolean} enabled - Enable debug mode
+   */
+  function toggleDebugMode(enabled = true) {
+    realTimeState.value.debugMode = enabled
+    logDebugInfo('DEBUG_MODE', `Debug mode ${enabled ? 'enabled' : 'disabled'}`)
+  }
+
+  /**
+   * Get comprehensive debug information
+   * @returns {Object} Debug information
+   */
+  function getDebugInfo() {
+    return {
+      realTimeState: realTimeState.value,
+      stateMigration: stateMigration.value,
+      debugInfo: debugInfo.value,
+      syncMetrics: realTimeSync?.syncMetrics?.value,
+      mutationMetrics: optimisticMutation?.mutationMetrics?.value,
+      conflictStats: conflictResolver?.getStatistics()
+    }
+  }
+
+  /**
+   * Clear debug logs
+   */
+  function clearDebugLogs() {
+    debugInfo.value.stateChanges = []
+    debugInfo.value.errorLog = []
+    realTimeState.value.syncErrors = []
+    logDebugInfo('DEBUG_CLEARED', 'Debug logs cleared')
+  }
+
+  /**
+   * Export debug data for analysis
+   * @returns {String} JSON string of debug data
+   */
+  function exportDebugData() {
+    const debugData = {
+      timestamp: new Date().toISOString(),
+      storeState: {
+        orderCount: orders.value.length,
+        currentOrder: currentOrder.value?.maHoaDon,
+        activeTabCount: orderTabs.value.length,
+        filters: filters.value
+      },
+      ...getDebugInfo()
+    }
+
+    return JSON.stringify(debugData, null, 2)
+  }
+
+  // Initialize persisted state on store creation
+  const persistedState = loadPersistedOrderState()
+  if (persistedState) {
+    // Restore state from persistence
+    if (persistedState.orders) setAllOrders(persistedState.orders)
+    if (persistedState.currentOrder) currentOrder.value = persistedState.currentOrder
+    if (persistedState.filters) filters.value = { ...filters.value, ...persistedState.filters }
+    if (persistedState.orderTabs) orderTabs.value = persistedState.orderTabs
+    if (persistedState.activeTabId) activeTabId.value = persistedState.activeTabId
+
+    logDebugInfo('STATE_RESTORED', 'Persisted state restored', {
+      orderCount: persistedState.orders?.length || 0,
+      tabCount: persistedState.orderTabs?.length || 0
+    })
+  }
+
+  // Watch for state changes to trigger persistence
+  watch([orders, currentOrder, filters, orderTabs, activeTabId], () => {
+    persistOrderState()
+  }, { deep: true, debounce: 1000 })
+
   return {
     // State
     orders,
@@ -1009,6 +1540,10 @@ export const useOrderStore = defineStore('order', () => {
     activeTabId,
     tabCounter,
     reservedInventory,
+
+    // Real-time state
+    realTimeState: computed(() => realTimeState.value),
+    stateMigration: computed(() => stateMigration.value),
 
     // Computed
     filteredOrders,
@@ -1057,6 +1592,40 @@ export const useOrderStore = defineStore('order', () => {
 
     // Performance optimization
     orderCache,
-    debounce
+    debounce,
+
+    // Enhanced normalized state management
+    normalizedOrderState,
+    getOrderById,
+    lastOrderUpdate,
+
+    // Optimistic updates
+    hasPendingOperations,
+    successRate,
+
+    // Entity operations (for advanced usage)
+    addOrderEntity,
+    updateOrderEntity,
+    removeOrderEntity,
+    setAllOrders,
+    upsertOrder,
+    clearAllOrders,
+
+    // Real-time synchronization
+    realTimeSync,
+    optimisticMutation,
+    conflictResolver,
+
+    // State management
+    persistOrderState,
+    loadPersistedOrderState,
+    migrateOrderState,
+
+    // Debug and monitoring
+    toggleDebugMode,
+    getDebugInfo,
+    clearDebugLogs,
+    exportDebugData,
+    logDebugInfo
   }
 })

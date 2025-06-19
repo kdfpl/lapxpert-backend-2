@@ -6,6 +6,7 @@ import { FilterMatchMode, FilterOperator } from '@primevue/core/api'
 import { useDiscountStore } from '@/stores/discountstore'
 import discountService from '@/apis/discount'
 import { useDataTableSorting } from '@/composables/useDataTableSorting'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime'
 
 // PrimeVue Components
 import Toast from 'primevue/toast'
@@ -26,6 +27,21 @@ const {
   defaultSortField: 'ngayCapNhat',
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
+})
+
+// --- Real-time DataTable Integration ---
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'dotGiamGia',
+  storeKey: 'discountList',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 DiscountList: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh discount data from store
+    await discountStore.forceRefreshDiscounts()
+  },
+  debounceDelay: 300,
+  enableSelectiveUpdates: true,
+  topicFilters: ['dot-giam-gia', 'discount']
 })
 
 // --- 2. State ---

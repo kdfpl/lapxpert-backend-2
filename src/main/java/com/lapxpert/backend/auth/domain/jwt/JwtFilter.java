@@ -1,7 +1,7 @@
 package com.lapxpert.backend.auth.domain.jwt;
 
-import com.lapxpert.backend.nguoidung.domain.entity.NguoiDung;
-import com.lapxpert.backend.nguoidung.domain.repository.NguoiDungRepository;
+import com.lapxpert.backend.nguoidung.entity.NguoiDung;
+import com.lapxpert.backend.nguoidung.repository.NguoiDungRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

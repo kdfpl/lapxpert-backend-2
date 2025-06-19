@@ -749,7 +749,7 @@ import serialNumberApi from '@/apis/serialNumberApi'
 import OrderAuditLog from './components/OrderAuditLog.vue'
 import PaymentStatus from './components/PaymentStatus.vue'
 import PaymentSummary from './components/PaymentSummary.vue'
-import ReceiptPreviewDialog from '@/components/orders/ReceiptPreviewDialog.vue'
+import ReceiptPreviewDialog from '@/views/orders/components/ReceiptPreviewDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const route = useRoute()

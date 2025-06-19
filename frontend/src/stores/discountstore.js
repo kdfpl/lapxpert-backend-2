@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import discountService from '@/apis/discount'
+import { useRealTimeSync } from '@/composables/useRealTimeSync'
 
 /**
  * Enhanced Discount Store
@@ -50,8 +51,54 @@ export const useDiscountStore = defineStore('discount', {
     batchOperations: {
       inProgress: false,
       results: null
+    },
+
+    // Real-time state management
+    realTimeState: {
+      isConnected: false,
+      lastSyncTime: null,
+      cacheInvalidationCount: 0,
+      lastCacheInvalidation: null,
+      realTimeSync: null
     }
   }),
+
+  // Initialize real-time sync when store is created
+  $onAction({ name, store, args, after, onError }) {
+    // Initialize real-time sync on first action
+    if (!store.realTimeState.realTimeSync) {
+      const toast = useToast()
+
+      store.realTimeState.realTimeSync = useRealTimeSync({
+        entityName: 'dotGiamGia',
+        storeKey: 'discountStore',
+        enablePersistence: true,
+        enableCrossTab: true,
+        validateState: (state) => {
+          if (!state || typeof state !== 'object') return false
+          if (state.tenDotGiamGia && typeof state.tenDotGiamGia !== 'string') return false
+          if (state.phanTramGiam && typeof state.phanTramGiam !== 'number') return false
+          return true
+        }
+      })
+
+      // Setup real-time sync event listeners
+      store.realTimeState.realTimeSync.addEventListener('CACHE_INVALIDATION', (event) => {
+        const { scope, entityId, requiresRefresh } = event.data
+
+        if (scope === 'DISCOUNT_DATA') {
+          store.handleCacheInvalidation(scope, entityId, requiresRefresh)
+        }
+      })
+
+      store.realTimeState.realTimeSync.addEventListener('WEBSOCKET_STATE_UPDATE', (event) => {
+        const { stateData } = event.data
+        if (stateData && (stateData.tenDotGiamGia || stateData.maDotGiamGia)) {
+          store.handleDiscountUpdate(stateData)
+        }
+      })
+    }
+  },
 
   getters: {
     // Filter discounts based on current filters
@@ -423,6 +470,64 @@ export const useDiscountStore = defineStore('discount', {
         results: null
       }
       this.updateStatistics()
+    },
+
+    // Real-time update handlers
+    handleCacheInvalidation(scope, entityId, requiresRefresh) {
+      console.log(`🔄 DiscountStore: Cache invalidation received - scope: ${scope}, entityId: ${entityId}, requiresRefresh: ${requiresRefresh}`)
+
+      this.realTimeState.cacheInvalidationCount++
+      this.realTimeState.lastCacheInvalidation = new Date().toISOString()
+
+      if (requiresRefresh) {
+        if (scope === 'DISCOUNT_DATA') {
+          if (entityId) {
+            this.discountCache.delete(entityId)
+          } else {
+            // Clear all discount cache
+            this.discountCache.clear()
+            this.lastFetch = null
+          }
+        }
+      }
+    },
+
+    handleDiscountUpdate(stateData) {
+      console.log(`🎯 DiscountStore: Discount update received:`, stateData)
+
+      const discountId = stateData.id
+      if (!discountId) return
+
+      // Update discount in discounts array
+      const discountIndex = this.discounts.findIndex(d => d.id === discountId)
+      if (discountIndex !== -1) {
+        this.discounts[discountIndex] = { ...this.discounts[discountIndex], ...stateData }
+      }
+
+      // Update cached discount
+      if (this.discountCache.has(discountId)) {
+        const cachedDiscount = this.discountCache.get(discountId)
+        this.discountCache.set(discountId, { ...cachedDiscount, ...stateData })
+      }
+
+      // Update current discount if it's the same
+      if (this.currentDiscount && this.currentDiscount.id === discountId) {
+        this.currentDiscount = { ...this.currentDiscount, ...stateData }
+      }
+
+      // Update statistics
+      this.updateStatistics()
+
+      // Sync with real-time system
+      if (this.realTimeState.realTimeSync) {
+        this.realTimeState.realTimeSync.syncStateData(stateData, { merge: true })
+      }
+    },
+
+    // Force refresh discounts from API (for DataTable integration)
+    async forceRefreshDiscounts() {
+      console.log('🔄 DiscountStore: Force refreshing discounts for real-time update')
+      return await this.fetchDiscounts(true)
     }
   }
 })

@@ -303,7 +303,7 @@ public class RedisConfig {
         return new ConcurrentMapCacheManager(
             "productRatings", "sanPhamList", "activeSanPhamList",
             "searchResults", "popularProducts", "userSessions",
-            "cartData", "categories", "systemConfig", "shippingFees"
+            "cartData", "categories", "systemConfig"
         );
     }
 

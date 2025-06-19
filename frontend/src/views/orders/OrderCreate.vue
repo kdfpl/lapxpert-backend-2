@@ -501,8 +501,8 @@
                         severity="info"
                         outlined
                         @click="calculateShippingFeeForCurrentAddress"
-                        :loading="isCalculatingShipping || isComparingProviders"
-                        v-tooltip.top="'So sánh nhà vận chuyển'"
+                        :loading="isCalculatingShipping"
+                        v-tooltip.top="'Tính phí vận chuyển GHN'"
                       />
                       <Button
                         v-if="isManualShippingOverride"
@@ -524,87 +524,7 @@
                     <small v-if="shippingError" class="p-error">{{ shippingError }}</small>
                   </div>
 
-                  <!-- Provider Selection (when comparison is available) -->
-                  <div v-if="hasProviderComparison && !isManualShippingOverride" class="mb-3">
-                    <label class="block text-sm font-medium mb-2">
-                      Nhà vận chuyển
-                    </label>
-                    <div class="space-y-2">
-                      <!-- Auto Selection Option -->
-                      <div
-                        class="border rounded-lg p-3 cursor-pointer transition-all"
-                        :class="{
-                          'border-primary bg-primary/5': selectedProvider === 'AUTO',
-                          'border-surface-200 hover:border-primary/50': selectedProvider !== 'AUTO'
-                        }"
-                        @click="onProviderSelect('AUTO')"
-                      >
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-3">
-                            <i class="pi pi-sparkles text-primary"></i>
-                            <div>
-                              <div class="font-semibold text-sm">Tự động chọn tốt nhất</div>
-                              <div class="text-xs text-surface-500">
-                                {{ getProviderComparisonSummary()?.selectionReason || 'Hệ thống sẽ chọn nhà vận chuyển tối ưu' }}
-                              </div>
-                            </div>
-                          </div>
-                          <div v-if="selectedProviderInfo && selectedProvider === 'AUTO'" class="text-right">
-                            <div class="font-medium text-sm">{{ formatCurrency(selectedProviderInfo.totalFee) }}</div>
-                            <div class="text-xs text-surface-500">{{ selectedProviderInfo.providerName }}</div>
-                          </div>
-                        </div>
-                      </div>
 
-                      <!-- Individual Provider Options -->
-                      <div
-                        v-for="provider in availableProviders"
-                        :key="provider.providerName"
-                        class="border rounded-lg p-3 cursor-pointer transition-all"
-                        :class="{
-                          'border-primary bg-primary/5': selectedProvider === provider.providerName,
-                          'border-surface-200 hover:border-primary/50': selectedProvider !== provider.providerName
-                        }"
-                        @click="onProviderSelect(provider.providerName)"
-                      >
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-3">
-                            <i :class="[
-                                 provider.providerName === 'GHN' ? 'pi pi-truck' : 'pi pi-send',
-                                 provider.providerName === 'GHN' ? 'text-blue-600' : 'text-green-600'
-                               ]"></i>
-                            <div>
-                              <div class="font-semibold text-sm">{{ provider.providerName }}</div>
-                              <div class="text-xs text-surface-500">
-                                Độ tin cậy: {{ Math.round(provider.reliabilityScore * 100) }}% •
-                                Thời gian phản hồi: {{ provider.responseTimeMs }}ms
-                              </div>
-                            </div>
-                          </div>
-                          <div class="text-right">
-                            <div class="font-medium text-sm">{{ formatCurrency(provider.response.totalFee) }}</div>
-                            <div class="text-xs text-surface-500">
-                              Điểm: {{ Math.round(provider.totalScore * 100) }}/100
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Manual Override Option -->
-                      <div
-                        class="border rounded-lg p-3 cursor-pointer transition-all border-orange-200 hover:border-orange-400"
-                        @click="onProviderSelect('MANUAL')"
-                      >
-                        <div class="flex items-center gap-3">
-                          <i class="pi pi-pencil text-orange-600"></i>
-                          <div>
-                            <div class="font-semibold text-sm text-orange-800">Nhập thủ công</div>
-                            <div class="text-xs text-orange-600">Tự nhập phí vận chuyển</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
                   <!-- Estimated Delivery Time -->
                   <div v-if="estimatedDeliveryTime" class="mb-3">
@@ -615,23 +535,19 @@
                   </div>
 
                   <!-- Shipping Calculation Info -->
-                  <div v-if="isShippingAutoCalculated && hasProviderComparison" class="text-xs text-green-600 flex items-center gap-1">
+                  <div v-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
                     <i class="pi pi-check-circle"></i>
-                    <span>Phí vận chuyển được tính tự động qua {{ selectedProviderInfo?.providerName || 'hệ thống so sánh' }}</span>
-                  </div>
-                  <div v-else-if="isShippingAutoCalculated" class="text-xs text-green-600 flex items-center gap-1">
-                    <i class="pi pi-check-circle"></i>
-                    <span>Phí vận chuyển được tính tự động</span>
+                    <span>Phí vận chuyển được tính tự động qua GHN</span>
                   </div>
                   <div v-else-if="isManualShippingOverride" class="text-xs text-orange-600 flex items-center gap-1">
                     <i class="pi pi-pencil"></i>
                     <span>Phí vận chuyển được nhập thủ công</span>
                   </div>
 
-                  <!-- Provider Comparison Loading -->
-                  <div v-if="isComparingProviders" class="text-xs text-blue-600 flex items-center gap-1">
+                  <!-- GHN Calculation Loading -->
+                  <div v-if="isCalculatingShipping" class="text-xs text-blue-600 flex items-center gap-1">
                     <i class="pi pi-spin pi-spinner"></i>
-                    <span>Đang so sánh nhà vận chuyển...</span>
+                    <span>Đang tính phí vận chuyển...</span>
                   </div>
                 </div>
               </div>
@@ -1449,6 +1365,7 @@ import { useShippingCalculator } from '@/composables/useShippingCalculator'
 import { useOrderExpiration } from '@/composables/useOrderExpiration'
 import storageApi from '@/apis/storage'
 import serialNumberApi from '@/apis/serialNumberApi'
+import orderApi from '@/apis/orderApi'
 
 
 
@@ -1623,6 +1540,7 @@ const {
   subscribeToPriceUpdates,
   showPriceWarnings,
   getLatestPriceForVariant,
+  getPriceUpdatesForVariant,
   hasRecentPriceChange,
   formatCurrency: formatPricingCurrency
 } = useRealTimePricing()
@@ -1651,20 +1569,11 @@ const {
   isAutoCalculated: isShippingAutoCalculated,
   estimatedDeliveryTime,
   shippingStatus,
-  comparisonResults,
-  selectedProvider,
-  availableProviders,
-  isComparingProviders,
-  hasProviderComparison,
-  canSelectProvider,
-  selectedProviderInfo,
   calculateShippingFee,
   calculateShippingFeeWithComparison,
   enableManualOverride: enableManualShippingOverride,
   enableAutoCalculation: enableAutoShippingCalculation,
   setManualShippingFee,
-  selectProvider,
-  getProviderComparisonSummary,
   resetShippingCalculation,
   loadShippingConfig
 } = useShippingCalculator()
@@ -1806,7 +1715,7 @@ const formattedDeliveryAddress = computed(() => {
   return parts.length > 0 ? parts.join(', ') : 'Chưa nhập địa chỉ giao hàng'
 })
 
-// Computed property for processed cart items with price change detection
+// Computed property for processed cart items with standardized price change detection
 const processedCartItems = computed(() => {
   if (!activeTab.value?.sanPhamList?.length) return []
 
@@ -1814,14 +1723,21 @@ const processedCartItems = computed(() => {
     const variantId = item.sanPhamChiTiet?.id
     if (!variantId) return { ...item, hasPriceChange: false }
 
-    // Check if this variant has recent price changes
-    const hasPriceChange = hasRecentPriceChange(variantId)
-    const latestPrice = getLatestPriceForVariant(variantId)
+    // STANDARDIZED PRICE CHANGE DETECTION: Check for original price changes
+    const currentOriginalPrice = item.sanPhamChiTiet?.giaBan
+    const latestOriginalPrice = getLatestOriginalPriceForVariant(variantId)
+    const hasPriceChange = latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice
+
+    // Calculate latest effective price preserving promotional pricing logic
+    const latestEffectivePrice = latestOriginalPrice
+      ? calculateEffectivePrice(latestOriginalPrice, item.sanPhamChiTiet?.giaKhuyenMai)
+      : item.donGia
 
     return {
       ...item,
       hasPriceChange,
-      latestPrice,
+      latestPrice: latestEffectivePrice,
+      latestOriginalPrice,
       originalIndex: index
     }
   })
@@ -1848,6 +1764,29 @@ const acknowledgePriceChange = (index) => {
   }
 }
 
+// Helper function to get latest original price (giaBan) for a variant
+// Integrates with useRealTimePricing composable for consistent price comparison
+const getLatestOriginalPriceForVariant = (variantId) => {
+  // First check real-time price updates for original price changes
+  const priceUpdate = getPriceUpdatesForVariant(variantId)?.[0]
+  if (priceUpdate?.originalNewPrice) {
+    return priceUpdate.originalNewPrice
+  }
+
+  // Fallback to latest effective price from real-time updates
+  // This maintains compatibility with existing useRealTimePricing integration
+  return getLatestPriceForVariant(variantId)
+}
+
+// Helper function to calculate effective price (preserves promotional pricing logic)
+// Uses giaKhuyenMai when available and lower than giaBan, otherwise uses giaBan
+const calculateEffectivePrice = (originalPrice, promotionalPrice) => {
+  if (promotionalPrice && promotionalPrice < originalPrice) {
+    return promotionalPrice
+  }
+  return originalPrice
+}
+
 const detectCartPriceChanges = () => {
   if (!activeTab.value?.sanPhamList?.length) return
 
@@ -1857,8 +1796,12 @@ const detectCartPriceChanges = () => {
     const variantId = item.sanPhamChiTiet?.id
     if (!variantId) return
 
-    const latestPrice = getLatestPriceForVariant(variantId)
-    if (latestPrice && latestPrice !== item.donGia) {
+    // STANDARDIZED PRICE CHANGE DETECTION: Use original prices (giaBan) for change detection
+    // while preserving effective pricing logic (giaKhuyenMai/donGia) for actual pricing
+    const currentOriginalPrice = item.sanPhamChiTiet?.giaBan
+    const latestOriginalPrice = getLatestOriginalPriceForVariant(variantId)
+
+    if (latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice) {
       const changeId = `${variantId}-${item.sanPhamChiTiet?.serialNumber || ''}`
 
       // Check if this change is already acknowledged
@@ -1871,14 +1814,20 @@ const detectCartPriceChanges = () => {
       )
 
       if (!existingChange) {
+        // Calculate effective prices for display (preserve promotional pricing logic)
+        const currentEffectivePrice = item.donGia
+        const latestEffectivePrice = calculateEffectivePrice(latestOriginalPrice, item.sanPhamChiTiet?.giaKhuyenMai)
+
         newPriceChanges.push({
           variantId,
           serialNumber: item.sanPhamChiTiet?.serialNumber || '',
           productName: getCartItemName(item),
           variantInfo: getVariantDisplayInfo(item),
-          oldPrice: item.donGia,
-          newPrice: latestPrice,
-          changeType: latestPrice > item.donGia ? 'INCREASE' : 'DECREASE',
+          oldPrice: currentEffectivePrice,
+          newPrice: latestEffectivePrice,
+          originalOldPrice: currentOriginalPrice,
+          originalNewPrice: latestOriginalPrice,
+          changeType: latestOriginalPrice > currentOriginalPrice ? 'INCREASE' : 'DECREASE',
           timestamp: new Date(),
           cartIndex: index
         })
@@ -1954,7 +1903,7 @@ const calculateShippingFeeForCurrentAddress = async () => {
 
   const orderValue = activeTab.value.tongTienHang || 0
 
-  // Use provider comparison for better shipping options
+  // Use GHN service for shipping calculation
   const success = await calculateShippingFeeWithComparison(deliveryAddress, orderValue)
 
   if (success) {
@@ -1963,13 +1912,7 @@ const calculateShippingFeeForCurrentAddress = async () => {
   }
 }
 
-// Provider selection methods
-const onProviderSelect = (providerName) => {
-  const success = selectProvider(providerName)
-  if (success) {
-    updateActiveTabData({ phiVanChuyen: shippingFee.value })
-  }
-}
+
 
 const onShippingFeeChange = (value) => {
   if (isManualShippingOverride.value) {
@@ -2085,12 +2028,16 @@ const addVariantToActiveTab = async (variantData) => {
   const { sanPhamChiTiet, soLuong, groupInfo } = variantData
   let { donGia, thanhTien } = variantData
 
-  // Check if there's a more recent price for this variant
-  const latestPrice = getLatestPriceForVariant(sanPhamChiTiet.id)
-  if (latestPrice && latestPrice !== donGia) {
-    console.log(`Price updated for variant ${sanPhamChiTiet.id}: ${donGia} -> ${latestPrice}`)
-    donGia = latestPrice
-    thanhTien = latestPrice * soLuong
+  // Check if there's a more recent price for this variant using standardized price detection
+  const latestOriginalPrice = getLatestOriginalPriceForVariant(sanPhamChiTiet.id)
+  const currentOriginalPrice = sanPhamChiTiet.giaBan
+
+  if (latestOriginalPrice && currentOriginalPrice && latestOriginalPrice !== currentOriginalPrice) {
+    // Calculate new effective price preserving promotional pricing logic
+    const newEffectivePrice = calculateEffectivePrice(latestOriginalPrice, sanPhamChiTiet.giaKhuyenMai)
+    console.log(`Price updated for variant ${sanPhamChiTiet.id}: ${donGia} -> ${newEffectivePrice} (original: ${currentOriginalPrice} -> ${latestOriginalPrice})`)
+    donGia = newEffectivePrice
+    thanhTien = newEffectivePrice * soLuong
   }
 
   // Check if this specific variant with the same serial number already exists in cart
@@ -2140,7 +2087,18 @@ const addVariantToActiveTab = async (variantData) => {
       serialNumbers: sanPhamChiTiet.serialNumber ? [sanPhamChiTiet.serialNumber] : undefined
     }
 
-    await reserveForCart(reservationRequest)
+    const reservationResponse = await reserveForCart(reservationRequest)
+
+    // Update sanPhamChiTiet with actual reserved serial number from API response
+    // This fixes the serial number mismatch issue where API returns correct S/N but cart displays different S/N
+    if (reservationResponse?.serialNumbers?.length > 0) {
+      sanPhamChiTiet.serialNumber = reservationResponse.serialNumbers[0]
+      // Also update serialNumberId if available in the response
+      if (reservationResponse.serialNumberId) {
+        sanPhamChiTiet.serialNumberId = reservationResponse.serialNumberId
+      }
+      console.log('Updated cart item with reserved serial number:', sanPhamChiTiet.serialNumber)
+    }
 
     // Add new variant to cart after successful reservation
     const newCartItem = {
@@ -2888,14 +2846,28 @@ const showProductSelectionDialog = () => {
   variantDialogVisible.value = true
 }
 
-// Sync cart data with product variant dialog
+// Enhanced sync cart data with product variant dialog for real-time inventory synchronization
 const syncCartWithDialog = () => {
+  const cartItems = activeTab.value?.sanPhamList || []
+
+  console.log(`🔄 [SYNC DEBUG] syncCartWithDialog called:`, {
+    hasDialogRef: !!productVariantDialogRef.value,
+    hasCartItems: !!activeTab.value?.sanPhamList,
+    cartItemsCount: cartItems.length,
+    cartSerials: cartItems.map(item => item.sanPhamChiTiet?.serialNumber).filter(Boolean)
+  })
+
   if (productVariantDialogRef.value && activeTab.value?.sanPhamList) {
     // Pass current active tab's cart data for immediate UI updates
+    // This triggers cache invalidation and real-time sync in ProductVariantDialog
     productVariantDialogRef.value.updateUsedSerialNumbers(activeTab.value.sanPhamList)
+    console.log(`🔄 [SYNC DEBUG] Cart sync completed with ${cartItems.length} items`)
 
     // Note: Real-time inventory checking is now handled within ProductVariantDialog
-    // via the backend API to ensure cross-tab accuracy
+    // via the backend API and cache invalidation to ensure cross-tab accuracy
+    // This fixes the inventory count discrepancy issue
+  } else {
+    console.log(`⚠️ [SYNC DEBUG] Cannot sync - dialog ref or cart items not available`)
   }
 }
 
@@ -3421,7 +3393,113 @@ const showOrderConfirmation = () => {
 
 const confirmAndCreateOrder = async () => {
   orderConfirmationVisible.value = false
-  await createOrderFromActiveTab()
+
+  // Check if this is a MoMo or VNPay payment that requires gateway redirect
+  if (activeTab.value?.phuongThucThanhToan === 'MOMO' || activeTab.value?.phuongThucThanhToan === 'VNPAY') {
+    await handleGatewayPayment()
+  } else {
+    // For cash payments and other methods, create order directly
+    await createOrderFromActiveTab()
+  }
+}
+
+const handleGatewayPayment = async () => {
+  if (!activeTab.value) return
+
+  // Store payment method and order data before creating order (tab gets closed after creation)
+  const paymentMethod = activeTab.value.phuongThucThanhToan
+  const orderTotal = activeTab.value.tongThanhToan
+
+  // Perform all validations first (same as createOrderFromActiveTab)
+  const validationErrors = validateActiveTab()
+
+  // Validate recipient information and address if delivery is enabled
+  if (activeTab.value.giaohang) {
+    const recipientValid = await validateRecipientInfo()
+    const addressValid = validateEmbeddedAddress()
+    const comprehensiveAddressValidation = await validateAddressBeforeOrderCreation()
+    const scenarioValidation = await validateAllCustomerScenarios()
+
+    if (!recipientValid || !addressValid || !comprehensiveAddressValidation.valid || !scenarioValidation.valid) {
+      let errorDetail = 'Vui lòng kiểm tra lại thông tin người nhận và địa chỉ giao hàng'
+
+      if (!comprehensiveAddressValidation.valid) {
+        const errorMessages = Object.values(comprehensiveAddressValidation.errors || {}).join(', ')
+        errorDetail = errorMessages || 'Địa chỉ giao hàng không hợp lệ'
+      } else if (!scenarioValidation.valid) {
+        errorDetail = scenarioValidation.errors.join(', ') || 'Lỗi xác thực kịch bản khách hàng'
+      }
+
+      toast.add({
+        severity: 'warn',
+        summary: 'Dữ liệu không hợp lệ',
+        detail: errorDetail,
+        life: 5000
+      })
+      return
+    }
+  }
+
+  if (Object.keys(validationErrors).length > 0) {
+    const errorMessages = []
+    Object.entries(validationErrors).forEach(([, errors]) => {
+      errors.forEach(error => errorMessages.push(`- ${error}`))
+    })
+
+    toast.add({
+      severity: 'warn',
+      summary: 'Dữ liệu không hợp lệ',
+      detail: `Vui lòng kiểm tra lại:\n${errorMessages.join('\n')}`,
+      life: 7000
+    })
+    return
+  }
+
+  try {
+    creating.value = true
+
+    // Create order first to get order ID
+    const result = await createOrderFromTab()
+
+    if (!result) {
+      throw new Error('Không thể tạo đơn hàng')
+    }
+
+    // Use stored payment method and order data (activeTab is now closed)
+    const paymentData = {
+      amount: result.tongThanhToan || orderTotal,
+      orderInfo: `Thanh toán đơn hàng ${result.maHoaDon}`,
+      returnUrl: window.location.origin + '/orders/payment-return'
+    }
+
+    let paymentResponse
+    if (paymentMethod === 'MOMO') {
+      paymentResponse = await orderApi.processMoMoPayment(result.id, paymentData)
+    } else if (paymentMethod === 'VNPAY') {
+      paymentResponse = await orderApi.processVNPayPayment(result.id, paymentData)
+    }
+
+    if (paymentResponse?.success && paymentResponse.data?.paymentUrl) {
+      // Clear unsaved changes flag before redirect
+      hasUnsavedChanges.value = false
+
+      // Redirect to payment gateway
+      window.location.href = paymentResponse.data.paymentUrl
+    } else {
+      throw new Error(paymentResponse?.message || 'Không thể khởi tạo thanh toán')
+    }
+
+  } catch (error) {
+    console.error('Error handling gateway payment:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Lỗi thanh toán',
+      detail: error.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.',
+      life: 5000
+    })
+  } finally {
+    creating.value = false
+  }
 }
 
 const createOrderFromActiveTab = async () => {
@@ -3594,6 +3672,23 @@ const performOrderCreation = async () => {
       }
     }
 
+    // ENHANCED: Validate complete serial number data before order creation
+    console.log('Validating serial number payload completeness...')
+    const serialValidation = validateCartSerialNumberCompleteness(activeTab.value.sanPhamList)
+
+    if (!serialValidation.valid) {
+      console.error('Serial number validation failed:', serialValidation.issues)
+      toast.add({
+        severity: 'error',
+        summary: 'Dữ liệu serial number không đầy đủ',
+        detail: `Vui lòng kiểm tra lại thông tin serial number:\n${serialValidation.issues.join('\n')}`,
+        life: 7000
+      })
+      return // Stop order creation if serial number validation fails
+    }
+
+    console.log('✅ Serial number validation passed - all cart items have complete serial number data')
+
     // Map frontend data to HoaDonDto structure for validation and logging
     const orderData = mapTabToHoaDonDto(activeTab.value)
     console.log('Creating order with data:', orderData)
@@ -3685,6 +3780,81 @@ const closeTabWithConfirmation = async (tabId) => {
   hasUnsavedChanges.value = false
 }
 
+// Serial number validation helpers for order payload completeness
+const validateSerialNumberId = (serialNumberId) => {
+  // Ensure serialNumberId is properly populated and valid
+  if (serialNumberId === undefined || serialNumberId === null) {
+    console.warn('Serial number ID is missing from cart item')
+    return null
+  }
+
+  // Validate that it's a valid number
+  if (typeof serialNumberId !== 'number' || serialNumberId <= 0) {
+    console.warn('Invalid serial number ID:', serialNumberId)
+    return null
+  }
+
+  return serialNumberId
+}
+
+const validateSerialNumber = (serialNumber) => {
+  // Ensure serialNumber string is properly populated
+  if (!serialNumber || typeof serialNumber !== 'string' || serialNumber.trim() === '') {
+    console.warn('Serial number value is missing or invalid from cart item')
+    return null
+  }
+
+  // Basic format validation for serial numbers
+  const trimmedSerial = serialNumber.trim()
+  if (trimmedSerial.length < 3 || trimmedSerial.length > 50) {
+    console.warn('Serial number format appears invalid:', trimmedSerial)
+    return null
+  }
+
+  return trimmedSerial
+}
+
+// Validate complete serial number data for all cart items
+const validateCartSerialNumberCompleteness = (cartItems) => {
+  const validationResults = {
+    valid: true,
+    issues: [],
+    itemsWithIssues: []
+  }
+
+  cartItems.forEach((item, index) => {
+    const variantId = item.sanPhamChiTiet?.id
+    const serialNumberId = item.sanPhamChiTiet?.serialNumberId
+    const serialNumber = item.sanPhamChiTiet?.serialNumber
+
+    // Check for missing serial number data
+    if (!serialNumberId && !serialNumber) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing both serial number ID and value`)
+      validationResults.itemsWithIssues.push(index)
+    } else if (!serialNumberId) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing serial number ID`)
+      validationResults.itemsWithIssues.push(index)
+    } else if (!serialNumber) {
+      validationResults.valid = false
+      validationResults.issues.push(`Item ${index + 1}: Missing serial number value`)
+      validationResults.itemsWithIssues.push(index)
+    }
+
+    // Log validation details for debugging
+    console.log(`Cart item ${index + 1} serial validation:`, {
+      variantId,
+      serialNumberId,
+      serialNumber,
+      hasValidId: !!validateSerialNumberId(serialNumberId),
+      hasValidSerial: !!validateSerialNumber(serialNumber)
+    })
+  })
+
+  return validationResults
+}
+
 // Map frontend tab data to backend HoaDonDto structure
 const mapTabToHoaDonDto = (tab) => {
   // For embedded address approach, we create the address payload from form data
@@ -3739,9 +3909,10 @@ const mapTabToHoaDonDto = (tab) => {
       soLuong: item.soLuong,
       donGia: item.donGia,
       thanhTien: item.donGia * item.soLuong,
-      // Include serial number information if available
-      serialNumberId: item.sanPhamChiTiet?.serialNumberId,
-      serialNumber: item.sanPhamChiTiet?.serialNumber
+      // ENHANCED: Ensure complete serial number information is properly populated
+      // Validate against existing HoaDonChiTietDto structure requirements
+      serialNumberId: validateSerialNumberId(item.sanPhamChiTiet?.serialNumberId),
+      serialNumber: validateSerialNumber(item.sanPhamChiTiet?.serialNumber)
     })),
 
     // Voucher information

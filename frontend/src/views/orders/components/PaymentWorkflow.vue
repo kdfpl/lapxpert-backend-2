@@ -74,10 +74,43 @@
       <!-- Step 3: Payment Processing -->
       <div v-if="currentStep === 'processing'" class="step-content">
         <div class="text-center py-8">
+          <!-- Payment Method Specific Branding -->
+          <div class="mb-4">
+            <div v-if="selectedPaymentMethod === 'MOMO'" class="flex items-center justify-center gap-3 mb-4">
+              <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                <i class="pi pi-wallet text-pink-600 text-xl"></i>
+              </div>
+              <div class="text-left">
+                <h4 class="text-lg font-semibold text-pink-600">MoMo</h4>
+                <p class="text-sm text-surface-600">Ví điện tử MoMo</p>
+              </div>
+            </div>
+            <div v-else-if="selectedPaymentMethod === 'VNPAY'" class="flex items-center justify-center gap-3 mb-4">
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="pi pi-credit-card text-blue-600 text-xl"></i>
+              </div>
+              <div class="text-left">
+                <h4 class="text-lg font-semibold text-blue-600">VNPay</h4>
+                <p class="text-sm text-surface-600">Cổng thanh toán VNPay</p>
+              </div>
+            </div>
+            <div v-else class="flex items-center justify-center gap-3 mb-4">
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="pi pi-money-bill text-green-600 text-xl"></i>
+              </div>
+              <div class="text-left">
+                <h4 class="text-lg font-semibold text-green-600">Tiền mặt</h4>
+                <p class="text-sm text-surface-600">Thanh toán trực tiếp</p>
+              </div>
+            </div>
+          </div>
+
           <ProgressSpinner />
-          <h4 class="text-lg font-semibold mt-4 mb-2">Đang xử lý thanh toán</h4>
+          <h4 class="text-lg font-semibold mt-4 mb-2">
+            {{ getProcessingTitle() }}
+          </h4>
           <p class="text-surface-600 dark:text-surface-400">
-            Vui lòng đợi trong giây lát...
+            {{ getProcessingDescription() }}
           </p>
 
           <!-- Processing Details -->
@@ -91,6 +124,37 @@
                 <span class="text-sm" :class="detail.completed ? 'text-green-600' : 'text-surface-600'">
                   {{ detail.label }}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method Specific Instructions -->
+          <div v-if="selectedPaymentMethod === 'MOMO'" class="mt-6 p-4 bg-pink-50 border border-pink-200 rounded-lg max-w-md mx-auto">
+            <div class="flex items-start gap-3">
+              <i class="pi pi-info-circle text-pink-600 mt-0.5"></i>
+              <div class="text-left">
+                <h5 class="font-semibold text-pink-800 mb-2">Hướng dẫn thanh toán MoMo</h5>
+                <ul class="text-sm text-pink-700 space-y-1">
+                  <li>• Bạn sẽ được chuyển đến ứng dụng MoMo</li>
+                  <li>• Xác nhận thông tin đơn hàng</li>
+                  <li>• Nhập mã PIN hoặc xác thực sinh trắc học</li>
+                  <li>• Hoàn tất thanh toán</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="selectedPaymentMethod === 'VNPAY'" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+            <div class="flex items-start gap-3">
+              <i class="pi pi-info-circle text-blue-600 mt-0.5"></i>
+              <div class="text-left">
+                <h5 class="font-semibold text-blue-800 mb-2">Hướng dẫn thanh toán VNPay</h5>
+                <ul class="text-sm text-blue-700 space-y-1">
+                  <li>• Bạn sẽ được chuyển đến trang VNPay</li>
+                  <li>• Chọn ngân hàng hoặc ví điện tử</li>
+                  <li>• Nhập thông tin thanh toán</li>
+                  <li>• Xác nhận giao dịch</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -161,12 +225,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import PaymentSummary from './PaymentSummary.vue'
 import PaymentMethod from './PaymentMethod.vue'
 import PaymentStatus from './PaymentStatus.vue'
 import orderApi from '@/apis/orderApi'
+import { useRealTimeOrderManagement } from '@/composables/useRealTimeOrderManagement'
 
 // Props
 const props = defineProps({
@@ -185,6 +250,13 @@ const emit = defineEmits(['payment-completed', 'workflow-cancelled', 'step-chang
 
 // Composables
 const toast = useToast()
+const {
+  isConnected,
+  connectionStatus,
+  sendMessage,
+  processIncomingMessage,
+  setIntegrationCallback
+} = useRealTimeOrderManagement()
 
 // Reactive data
 const currentStep = ref(props.initialStep)
@@ -204,6 +276,165 @@ const processingDetails = ref([
   { step: 3, label: 'Cập nhật trạng thái đơn hàng', completed: false },
   { step: 4, label: 'Hoàn tất thanh toán', completed: false }
 ])
+
+// WebSocket subscription for real-time payment updates
+let orderSubscription = null
+
+// WebSocket message handler for payment notifications
+const handlePaymentNotification = (message) => {
+  try {
+    console.log('📨 Received payment notification:', message)
+
+    // Check if this message is for our current order
+    if (message.topic && message.topic.includes(`/topic/hoa-don/${props.orderData.orderId}`)) {
+      const { status, data } = message
+
+      // Handle different payment notification types
+      switch (status) {
+        case 'PAYMENT_INITIATED':
+          handlePaymentInitiated(data)
+          break
+        case 'PAYMENT_SUCCESS':
+          handlePaymentSuccess(data)
+          break
+        case 'PAYMENT_FAILED':
+          handlePaymentFailed(data)
+          break
+        case 'PAYMENT_STATUS_CHECKED':
+          handlePaymentStatusChecked(data)
+          break
+        default:
+          console.log('📨 Unknown payment notification status:', status)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling payment notification:', error)
+  }
+}
+
+// Payment notification handlers
+const handlePaymentInitiated = (data) => {
+  console.log('💳 Payment initiated:', data)
+
+  const paymentMethodName = getPaymentMethodLabel(selectedPaymentMethod.value)
+
+  toast.add({
+    severity: 'info',
+    summary: `Thanh toán ${paymentMethodName} đã khởi tạo`,
+    detail: `Đang chuyển hướng đến ${paymentMethodName}...`,
+    life: 3000
+  })
+}
+
+const handlePaymentSuccess = (data) => {
+  console.log('✅ Payment successful:', data)
+
+  // Update payment result with real-time data
+  paymentResult.value = {
+    status: 'DA_THANH_TOAN',
+    paidAmount: props.orderData.totalAmount,
+    transactionId: data.transactionId || data.transactionRef || `TXN${Date.now()}`,
+    paymentDate: new Date(),
+    history: [
+      ...paymentResult.value.history,
+      {
+        action: 'Thanh toán thành công (Real-time)',
+        description: `Thanh toán qua ${getPaymentMethodLabel(selectedPaymentMethod.value)} đã được xác nhận`,
+        amount: props.orderData.totalAmount,
+        timestamp: new Date(),
+        transactionId: data.transactionId || data.transactionRef,
+        status: 'success'
+      }
+    ]
+  }
+
+  // Complete processing steps
+  processingDetails.value.forEach(detail => detail.completed = true)
+
+  // Move to status step if still processing
+  if (currentStep.value === 'processing') {
+    currentStep.value = 'status'
+  }
+
+  toast.add({
+    severity: 'success',
+    summary: 'Thanh toán thành công!',
+    detail: 'Giao dịch đã được xử lý thành công',
+    life: 5000
+  })
+
+  // Auto-refresh order data after successful payment
+  setTimeout(() => {
+    refreshOrderData()
+  }, 2000)
+}
+
+const handlePaymentFailed = (data) => {
+  console.log('❌ Payment failed:', data)
+
+  // Get payment method specific error message
+  const errorMessage = getPaymentErrorMessage(data, selectedPaymentMethod.value)
+  const paymentMethodName = getPaymentMethodLabel(selectedPaymentMethod.value)
+
+  // Update payment result with failure data
+  paymentResult.value = {
+    status: 'CHUA_THANH_TOAN',
+    paidAmount: 0,
+    transactionId: data.transactionId || data.transactionRef || null,
+    paymentDate: null,
+    history: [
+      ...paymentResult.value.history,
+      {
+        action: `Thanh toán ${paymentMethodName} thất bại (Real-time)`,
+        description: errorMessage,
+        amount: 0,
+        timestamp: new Date(),
+        transactionId: data.transactionId || data.transactionRef,
+        status: 'error'
+      }
+    ]
+  }
+
+  // Move to status step if still processing
+  if (currentStep.value === 'processing') {
+    currentStep.value = 'status'
+  }
+
+  toast.add({
+    severity: 'error',
+    summary: `Thanh toán ${paymentMethodName} thất bại`,
+    detail: errorMessage,
+    life: 5000
+  })
+}
+
+const handlePaymentStatusChecked = (data) => {
+  console.log('🔍 Payment status checked:', data)
+
+  toast.add({
+    severity: 'info',
+    summary: 'Kiểm tra trạng thái',
+    detail: 'Đã cập nhật trạng thái thanh toán',
+    life: 3000
+  })
+}
+
+// Auto-refresh order data function
+const refreshOrderData = async () => {
+  try {
+    console.log('🔄 Refreshing order data after payment...')
+
+    // Emit event to parent component to refresh order data
+    emit('payment-completed', {
+      paymentMethod: selectedPaymentMethod.value,
+      paymentResult: paymentResult.value,
+      orderData: props.orderData,
+      shouldRefresh: true
+    })
+  } catch (error) {
+    console.error('Error refreshing order data:', error)
+  }
+}
 
 // Computed properties
 const workflowSteps = computed(() => [
@@ -378,6 +609,19 @@ const processPayment = async () => {
         window.location.href = paymentResponse.data.paymentUrl
         return
       }
+    } else if (selectedPaymentMethod.value === 'MOMO') {
+      // For MoMo, we need to handle redirect to payment gateway
+      paymentResponse = await orderApi.processMoMoPayment(props.orderData.orderId, {
+        amount: props.orderData.totalAmount,
+        orderInfo: `Thanh toán đơn hàng ${props.orderData.orderCode}`,
+        returnUrl: window.location.origin + '/orders/payment-return'
+      })
+
+      if (paymentResponse.success && paymentResponse.data.paymentUrl) {
+        // Redirect to MoMo payment page
+        window.location.href = paymentResponse.data.paymentUrl
+        return
+      }
     } else {
       // For TIEN_MAT (including cash on delivery), confirm payment directly
       paymentResponse = await orderApi.confirmPayment(
@@ -481,6 +725,85 @@ const getPaymentMethodLabel = (method) => {
     'VIETQR': 'VietQR'
   }
   return labelMap[method] || method
+}
+
+// Helper function to get processing title based on payment method
+const getProcessingTitle = () => {
+  const titleMap = {
+    'MOMO': 'Đang xử lý thanh toán MoMo',
+    'VNPAY': 'Đang xử lý thanh toán VNPay',
+    'VIETQR': 'Đang xử lý thanh toán VietQR',
+    'TIEN_MAT': 'Đang xử lý thanh toán tiền mặt'
+  }
+  return titleMap[selectedPaymentMethod.value] || 'Đang xử lý thanh toán'
+}
+
+// Helper function to get processing description based on payment method
+const getProcessingDescription = () => {
+  const descriptionMap = {
+    'MOMO': 'Đang kết nối với ví MoMo. Vui lòng đợi trong giây lát...',
+    'VNPAY': 'Đang kết nối với cổng thanh toán VNPay. Vui lòng đợi trong giây lát...',
+    'VIETQR': 'Đang tạo mã QR thanh toán. Vui lòng đợi trong giây lát...',
+    'TIEN_MAT': 'Đang xác nhận thanh toán tiền mặt. Vui lòng đợi trong giây lát...'
+  }
+  return descriptionMap[selectedPaymentMethod.value] || 'Vui lòng đợi trong giây lát...'
+}
+
+// Helper function to get payment-specific error messages in Vietnamese
+const getPaymentErrorMessage = (data, paymentMethod) => {
+  // If there's a specific error message from the backend, use it
+  if (data.errorMessage) {
+    return data.errorMessage
+  }
+
+  // MoMo specific error handling
+  if (paymentMethod === 'MOMO') {
+    const resultCode = data.resultCode || data.errorCode
+
+    const momoErrors = {
+      '1': 'Giao dịch MoMo thất bại. Vui lòng kiểm tra lại thông tin.',
+      '2': 'Giao dịch MoMo bị từ chối. Vui lòng thử lại sau.',
+      '3': 'Giao dịch MoMo đã bị hủy bởi người dùng.',
+      '1000': 'Giao dịch MoMo đang chờ xác nhận. Vui lòng kiểm tra ứng dụng MoMo.',
+      '1001': 'Tài khoản MoMo chưa được kích hoạt. Vui lòng kích hoạt tài khoản.',
+      '1002': 'Tài khoản MoMo đã bị khóa. Vui lòng liên hệ MoMo để được hỗ trợ.',
+      '1003': 'Tài khoản MoMo chưa đăng ký dịch vụ thanh toán.',
+      '1004': 'Số tiền vượt quá hạn mức thanh toán MoMo.',
+      '1005': 'Liên kết thanh toán MoMo đã hết hạn. Vui lòng tạo giao dịch mới.',
+      '1006': 'Người dùng từ chối xác nhận thanh toán trên ứng dụng MoMo.',
+      '1007': 'Ứng dụng MoMo cần được cập nhật lên phiên bản mới nhất.'
+    }
+
+    if (momoErrors[resultCode]) {
+      return momoErrors[resultCode]
+    }
+
+    return 'Thanh toán MoMo không thành công. Vui lòng kiểm tra ứng dụng MoMo và thử lại.'
+  }
+
+  // VNPay specific error handling
+  if (paymentMethod === 'VNPAY') {
+    const responseCode = data.responseCode || data.errorCode
+
+    const vnpayErrors = {
+      '01': 'Giao dịch VNPay chưa hoàn tất. Vui lòng thử lại.',
+      '02': 'Giao dịch VNPay bị lỗi. Vui lòng kiểm tra thông tin và thử lại.',
+      '04': 'Giao dịch VNPay bị đảo. Vui lòng liên hệ ngân hàng để được hỗ trợ.',
+      '05': 'VNPay đang xử lý giao dịch hoàn tiền.',
+      '06': 'VNPay đã gửi yêu cầu hoàn tiền đến ngân hàng.',
+      '07': 'Giao dịch VNPay bị nghi ngờ gian lận.',
+      '09': 'Giao dịch hoàn trả VNPay bị từ chối.'
+    }
+
+    if (vnpayErrors[responseCode]) {
+      return vnpayErrors[responseCode]
+    }
+
+    return 'Thanh toán VNPay không thành công. Vui lòng kiểm tra thông tin và thử lại.'
+  }
+
+  // Generic error message
+  return 'Giao dịch không thành công. Vui lòng thử lại sau hoặc chọn phương thức thanh toán khác.'
 }
 
 const handleConfirmPayment = async () => {
@@ -688,6 +1011,31 @@ const formatCurrency = (amount) => {
     currency: 'VND'
   }).format(amount || 0)
 }
+
+// Lifecycle hooks for WebSocket integration
+onMounted(() => {
+  // Set up WebSocket message callback for payment notifications
+  setIntegrationCallback('onMessage', handlePaymentNotification)
+
+  console.log('🔌 PaymentWorkflow WebSocket integration initialized for order:', props.orderData.orderId)
+
+  // Show connection status if not connected
+  if (!isConnected.value) {
+    console.log('⚠️ WebSocket not connected - real-time payment updates may not work')
+  }
+})
+
+onUnmounted(() => {
+  // Clean up WebSocket subscription
+  if (orderSubscription) {
+    orderSubscription = null
+  }
+
+  // Remove integration callback
+  setIntegrationCallback('onMessage', null)
+
+  console.log('🔌 PaymentWorkflow WebSocket integration cleaned up')
+})
 </script>
 
 <style scoped>

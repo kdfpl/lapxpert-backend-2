@@ -2,6 +2,8 @@ package com.lapxpert.backend.common.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -17,10 +19,9 @@ import java.util.function.Supplier;
 @Slf4j
 public class DistributedLockService {
 
-    // Note: RedissonClient will be injected once dependency is available
-    // private final RedissonClient redissonClient;
+    private final RedissonClient redissonClient;
 
-    // Lock configuration constants
+    // Lock configuration constants - using reasonable defaults
     private static final long DEFAULT_WAIT_TIME = 10; // seconds
     private static final long DEFAULT_LEASE_TIME = 30; // seconds
     private static final int DEFAULT_RETRY_ATTEMPTS = 3;
@@ -48,32 +49,45 @@ public class DistributedLockService {
      * @return operation result
      * @throws RuntimeException if lock cannot be acquired or operation fails
      */
-    public <T> T executeWithLock(String lockKey, Supplier<T> operation, 
+    public <T> T executeWithLock(String lockKey, Supplier<T> operation,
                                 long waitTimeSeconds, long leaseTimeSeconds) {
-        
+
         String fullLockKey = "lapxpert:lock:" + lockKey;
         log.debug("Attempting to acquire distributed lock: {}", fullLockKey);
 
-        // TODO: Implement actual Redisson locking once dependency is available
-        // For now, provide a placeholder implementation
-        
+        RLock lock = redissonClient.getLock(fullLockKey);
+
         try {
-            // Simulate lock acquisition
-            log.info("Acquired distributed lock: {} (wait={}s, lease={}s)", 
+            // Try to acquire lock with specified timeout and lease time
+            boolean acquired = lock.tryLock(waitTimeSeconds, leaseTimeSeconds, TimeUnit.SECONDS);
+
+            if (!acquired) {
+                log.warn("Failed to acquire distributed lock: {} within {}s", fullLockKey, waitTimeSeconds);
+                throw new RuntimeException("Không thể lấy khóa phân tán trong thời gian quy định: " + fullLockKey);
+            }
+
+            log.info("Acquired distributed lock: {} (wait={}s, lease={}s)",
                     fullLockKey, waitTimeSeconds, leaseTimeSeconds);
-            
-            // Execute the operation
+
+            // Execute the operation under lock
             T result = operation.get();
-            
+
             log.info("Successfully executed operation under lock: {}", fullLockKey);
             return result;
-            
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted while acquiring lock {}: {}", fullLockKey, e.getMessage());
+            throw new RuntimeException("Bị gián đoạn khi lấy khóa phân tán: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Error executing operation under lock {}: {}", fullLockKey, e.getMessage(), e);
             throw new RuntimeException("Lỗi thực hiện thao tác với khóa phân tán: " + e.getMessage(), e);
         } finally {
-            // TODO: Release lock when Redisson is available
-            log.info("Released distributed lock: {}", fullLockKey);
+            // Release lock if held by current thread
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                log.info("Released distributed lock: {}", fullLockKey);
+            }
         }
     }
 
@@ -149,10 +163,12 @@ public class DistributedLockService {
      */
     public boolean isLocked(String lockKey) {
         String fullLockKey = "lapxpert:lock:" + lockKey;
-        
-        // TODO: Implement actual lock check when Redisson is available
-        log.debug("Checking lock status for: {}", fullLockKey);
-        return false; // Placeholder implementation
+
+        RLock lock = redissonClient.getLock(fullLockKey);
+        boolean isLocked = lock.isLocked();
+
+        log.debug("Checking lock status for: {} - Locked: {}", fullLockKey, isLocked);
+        return isLocked;
     }
 
     /**

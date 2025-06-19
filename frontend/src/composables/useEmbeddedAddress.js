@@ -6,9 +6,13 @@ import addressApi from '@/apis/address'
  * Composable for embedded address management
  * Extracted from FastAddressCreate.vue for reuse in embedded forms
  * Handles province/district/ward loading, validation, and form state management
+ * Enhanced with dual address API support (existing + GHN) with fallback mechanism
  */
-export function useEmbeddedAddress() {
+export function useEmbeddedAddress(options = {}) {
   const toast = useToast()
+
+  // Configuration options
+  const { useGHNAddresses = false } = options
 
   // Reactive state for address data
   const addressData = ref({
@@ -33,8 +37,23 @@ export function useEmbeddedAddress() {
   const loadingDistricts = ref(false)
   const loadingWards = ref(false)
 
+  // GHN-specific loading states
+  const loadingGHNProvinces = ref(false)
+  const loadingGHNDistricts = ref(false)
+  const loadingGHNWards = ref(false)
+
+  // API source tracking
+  const currentAPISource = ref('default') // 'default' or 'ghn'
+
   // Validation errors
   const errors = ref({})
+
+  // GHN address mapping data (for storing both text names and IDs)
+  const ghnAddressMapping = ref({
+    provinceId: null,
+    districtId: null,
+    wardCode: null
+  })
 
   // Address types
   const addressTypes = [
@@ -61,16 +80,107 @@ export function useEmbeddedAddress() {
 
   // Methods
   const loadProvinces = async () => {
+    if (useGHNAddresses) {
+      return await loadProvincesWithFallback()
+    }
+
     try {
       loadingProvinces.value = true
       const response = await addressApi.getProvinces()
       provinces.value = response.data
+      currentAPISource.value = 'default'
     } catch (error) {
       console.error('Error loading provinces:', error)
       toast.add({
         severity: 'error',
         summary: 'Lỗi',
         detail: 'Không thể tải danh sách tỉnh/thành phố',
+        life: 3000
+      })
+    } finally {
+      loadingProvinces.value = false
+    }
+  }
+
+  // GHN address loading methods
+  const loadGHNProvinces = async () => {
+    try {
+      loadingGHNProvinces.value = true
+      const response = await addressApi.getGHNProvinces()
+      if (response.data && response.data.success) {
+        provinces.value = response.data.data
+        currentAPISource.value = 'ghn'
+        return true
+      } else {
+        throw new Error(response.data?.message || 'GHN API returned unsuccessful response')
+      }
+    } catch (error) {
+      console.error('Error loading GHN provinces:', error)
+      return false
+    } finally {
+      loadingGHNProvinces.value = false
+    }
+  }
+
+  const loadGHNDistricts = async (provinceId) => {
+    try {
+      loadingGHNDistricts.value = true
+      const response = await addressApi.getGHNDistricts(provinceId)
+      if (response.data && response.data.success) {
+        districts.value = response.data.data.districts
+        return true
+      } else {
+        throw new Error(response.data?.message || 'GHN API returned unsuccessful response')
+      }
+    } catch (error) {
+      console.error('Error loading GHN districts:', error)
+      return false
+    } finally {
+      loadingGHNDistricts.value = false
+    }
+  }
+
+  const loadGHNWards = async (districtId) => {
+    try {
+      loadingGHNWards.value = true
+      const response = await addressApi.getGHNWards(districtId)
+      if (response.data && response.data.success) {
+        wards.value = response.data.data.wards
+        return true
+      } else {
+        throw new Error(response.data?.message || 'GHN API returned unsuccessful response')
+      }
+    } catch (error) {
+      console.error('Error loading GHN wards:', error)
+      return false
+    } finally {
+      loadingGHNWards.value = false
+    }
+  }
+
+  // Fallback mechanism methods
+  const loadProvincesWithFallback = async () => {
+    loadingProvinces.value = true
+
+    // Try GHN first
+    const ghnSuccess = await loadGHNProvinces()
+    if (ghnSuccess) {
+      loadingProvinces.value = false
+      return
+    }
+
+    // Fallback to default API
+    try {
+      const response = await addressApi.getProvinces()
+      provinces.value = response.data
+      currentAPISource.value = 'default'
+      console.log('Fallback to default address API for provinces')
+    } catch (error) {
+      console.error('Error loading provinces with fallback:', error)
+      toast.add({
+        severity: 'error',
+        summary: 'Lỗi',
+        detail: 'Không thể tải danh sách tỉnh/thành phố từ cả hai nguồn dữ liệu',
         life: 3000
       })
     } finally {
@@ -87,10 +197,33 @@ export function useEmbeddedAddress() {
     districts.value = []
     wards.value = []
 
+    // Reset GHN mapping
+    ghnAddressMapping.value.provinceId = null
+    ghnAddressMapping.value.districtId = null
+    ghnAddressMapping.value.wardCode = null
+
     try {
       loadingDistricts.value = true
-      const response = await addressApi.getDistricts(selectedProvince.value.code)
-      districts.value = response.data.districts
+
+      if (currentAPISource.value === 'ghn') {
+        // Store GHN province ID for mapping
+        ghnAddressMapping.value.provinceId = parseInt(selectedProvince.value.code)
+
+        // Try GHN districts first
+        const ghnSuccess = await loadGHNDistricts(selectedProvince.value.code)
+        if (!ghnSuccess && useGHNAddresses) {
+          // Fallback to default API if GHN fails
+          const response = await addressApi.getDistricts(selectedProvince.value.code)
+          districts.value = response.data.districts
+          currentAPISource.value = 'default'
+          console.log('Fallback to default address API for districts')
+        }
+      } else {
+        // Use default API
+        const response = await addressApi.getDistricts(selectedProvince.value.code)
+        districts.value = response.data.districts
+      }
+
       addressData.value.tinhThanh = selectedProvince.value.name
     } catch (error) {
       console.error('Error loading districts:', error)
@@ -112,10 +245,31 @@ export function useEmbeddedAddress() {
     selectedWard.value = null
     wards.value = []
 
+    // Reset ward mapping
+    ghnAddressMapping.value.wardCode = null
+
     try {
       loadingWards.value = true
-      const response = await addressApi.getWards(selectedDistrict.value.code)
-      wards.value = response.data.wards
+
+      if (currentAPISource.value === 'ghn') {
+        // Store GHN district ID for mapping
+        ghnAddressMapping.value.districtId = parseInt(selectedDistrict.value.code)
+
+        // Try GHN wards first
+        const ghnSuccess = await loadGHNWards(selectedDistrict.value.code)
+        if (!ghnSuccess && useGHNAddresses) {
+          // Fallback to default API if GHN fails
+          const response = await addressApi.getWards(selectedDistrict.value.code)
+          wards.value = response.data.wards
+          currentAPISource.value = 'default'
+          console.log('Fallback to default address API for wards')
+        }
+      } else {
+        // Use default API
+        const response = await addressApi.getWards(selectedDistrict.value.code)
+        wards.value = response.data.wards
+      }
+
       addressData.value.quanHuyen = selectedDistrict.value.name
     } catch (error) {
       console.error('Error loading wards:', error)
@@ -171,6 +325,13 @@ export function useEmbeddedAddress() {
     districts.value = []
     wards.value = []
     errors.value = {}
+
+    // Reset GHN mapping
+    ghnAddressMapping.value = {
+      provinceId: null,
+      districtId: null,
+      wardCode: null
+    }
   }
 
   const getAddressPayload = () => {
@@ -187,6 +348,13 @@ export function useEmbeddedAddress() {
   const setAddressData = (data) => {
     if (data) {
       addressData.value = { ...addressData.value, ...data }
+    }
+  }
+
+  const getGHNAddressMapping = () => {
+    return {
+      ...ghnAddressMapping.value,
+      isGHNSource: currentAPISource.value === 'ghn'
     }
   }
 
@@ -277,6 +445,11 @@ export function useEmbeddedAddress() {
   const wardWatcher = watch(selectedWard, (newWard) => {
     if (newWard) {
       addressData.value.phuongXa = newWard.name
+
+      // Store GHN ward code if using GHN API
+      if (currentAPISource.value === 'ghn') {
+        ghnAddressMapping.value.wardCode = newWard.code
+      }
     }
   })
 
@@ -304,6 +477,13 @@ export function useEmbeddedAddress() {
     errors,
     addressTypes,
 
+    // GHN-specific state
+    loadingGHNProvinces,
+    loadingGHNDistricts,
+    loadingGHNWards,
+    currentAPISource,
+    ghnAddressMapping,
+
     // Computed properties
     isFormValid,
     isAddressComplete,
@@ -316,6 +496,13 @@ export function useEmbeddedAddress() {
     resetAddressForm,
     getAddressPayload,
     setAddressData,
+
+    // GHN address methods
+    loadGHNProvinces,
+    loadGHNDistricts,
+    loadGHNWards,
+    loadProvincesWithFallback,
+    getGHNAddressMapping,
 
     // Enhanced address management methods
     compareAddresses,

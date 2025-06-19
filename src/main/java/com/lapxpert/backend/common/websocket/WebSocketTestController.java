@@ -23,8 +23,6 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class WebSocketTestController {
 
-    private final SimpMessagingTemplate messagingTemplate;
-
     /**
      * Handle messages sent to /app/test-message and broadcast to /topic/test-response
      */

@@ -76,19 +76,18 @@ class SerialNumberServiceInventoryFixTest {
         String orderId = "HD005305001";
         String user = "test-user";
 
-        // Mock distributed lock execution
+        // Mock distributed lock execution - fix to use Supplier instead of Runnable
         doAnswer(invocation -> {
-            Runnable action = invocation.getArgument(1);
-            action.run();
-            return null;
-        }).when(distributedLockService).executeWithLock(anyString(), any(Runnable.class));
+            @SuppressWarnings("unchecked")
+            java.util.function.Supplier<List<Long>> action = invocation.getArgument(1);
+            return action.get();
+        }).when(distributedLockService).executeWithLock(anyString(), any(java.util.function.Supplier.class), anyLong(), anyLong());
 
         // Mock optimistic locking execution
         doAnswer(invocation -> {
-            Runnable action = invocation.getArgument(0);
-            action.run();
-            return null;
-        }).when(optimisticLockingService).executeWithRetry(any(Runnable.class));
+            java.util.function.Supplier<?> action = invocation.getArgument(0);
+            return action.get();
+        }).when(optimisticLockingService).executeWithRetry(any(java.util.function.Supplier.class));
 
         // Mock the findAvailableByVariant method to return available serial numbers
         // This should be called ONCE with total quantity 2, not twice with quantity 1
@@ -135,17 +134,15 @@ class SerialNumberServiceInventoryFixTest {
 
         // Mock distributed lock execution
         doAnswer(invocation -> {
-            Runnable action = invocation.getArgument(1);
-            action.run();
-            return null;
-        }).when(distributedLockService).executeWithLock(anyString(), any(Runnable.class));
+            java.util.function.Supplier<?> action = invocation.getArgument(1);
+            return action.get();
+        }).when(distributedLockService).executeWithLock(anyString(), any(java.util.function.Supplier.class), anyLong(), anyLong());
 
         // Mock optimistic locking execution
         doAnswer(invocation -> {
-            Runnable action = invocation.getArgument(0);
-            action.run();
-            return null;
-        }).when(optimisticLockingService).executeWithRetry(any(Runnable.class));
+            java.util.function.Supplier<?> action = invocation.getArgument(0);
+            return action.get();
+        }).when(optimisticLockingService).executeWithRetry(any(java.util.function.Supplier.class));
 
         // Mock the findAvailableByVariant method
         when(serialNumberRepository.findAvailableByVariant(eq(6L), any(Pageable.class)))

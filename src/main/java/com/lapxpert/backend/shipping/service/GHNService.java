@@ -1,12 +1,12 @@
 package com.lapxpert.backend.shipping.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lapxpert.backend.shipping.config.GHNConfig;
 import com.lapxpert.backend.shipping.dto.GHNShippingRequest;
 import com.lapxpert.backend.shipping.dto.GHNShippingResponse;
 import com.lapxpert.backend.shipping.dto.ShippingRequest;
 import com.lapxpert.backend.shipping.dto.ShippingFeeResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,13 +21,14 @@ import java.util.Collections;
 @Slf4j
 @Service
 public class GHNService extends ShippingCalculatorService {
-    
+
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-    
-    public GHNService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+
+    @Autowired
+    private GHNAddressService ghnAddressService;
+
+    public GHNService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-        this.objectMapper = objectMapper;
     }
     
     @Override
@@ -108,20 +109,43 @@ public class GHNService extends ShippingCalculatorService {
      * Build GHN API request from generic shipping request
      */
     private GHNShippingRequest buildGHNRequest(ShippingRequest request) {
-        // Note: GHN requires district IDs and ward codes instead of names
-        // For now, we'll use placeholder values and log a warning
-        // In a production system, you would need a mapping service to convert
-        // province/district/ward names to GHN's ID system
-        
-        log.warn("GHN integration requires district/ward ID mapping. Using default values for demo.");
-        
+        // Resolve destination address using GHN Address Service
+        Integer toProvinceId = ghnAddressService.findProvinceId(request.getProvince());
+        Integer toDistrictId = null;
+        String toWardCode = null;
+
+        if (toProvinceId != null) {
+            toDistrictId = ghnAddressService.findDistrictId(request.getDistrict(), toProvinceId);
+
+            if (toDistrictId != null && request.getWard() != null && !request.getWard().trim().isEmpty()) {
+                toWardCode = ghnAddressService.findWardCode(request.getWard(), toDistrictId);
+            }
+        }
+
+        // Use fallback values if address resolution fails
+        if (toDistrictId == null) {
+            log.warn("Could not resolve destination district '{}' in province '{}', using fallback district ID",
+                request.getDistrict(), request.getProvince());
+            toDistrictId = 1; // Fallback district ID
+        }
+
+        if (toWardCode == null) {
+            log.warn("Could not resolve destination ward '{}' in district '{}', using fallback ward code",
+                request.getWard(), request.getDistrict());
+            toWardCode = "1A0101"; // Fallback ward code
+        }
+
+        log.info("GHN address resolution: Province '{}' -> {}, District '{}' -> {}, Ward '{}' -> {}",
+            request.getProvince(), toProvinceId, request.getDistrict(), toDistrictId,
+            request.getWard(), toWardCode);
+
         return GHNShippingRequest.builder()
             .serviceId(Integer.parseInt(GHNConfig.ghn_DefaultServiceId))
             .serviceTypeId(Integer.parseInt(GHNConfig.ghn_DefaultServiceTypeId))
             .fromDistrictId(Integer.parseInt(GHNConfig.ghn_DefaultFromDistrictId))
             .fromWardCode(GHNConfig.ghn_DefaultFromWardCode)
-            .toDistrictId(1) // Placeholder - needs proper mapping
-            .toWardCode("1A0101") // Placeholder - needs proper mapping
+            .toDistrictId(toDistrictId)
+            .toWardCode(toWardCode)
             .weight(request.getWeight())
             .length(20) // Default package dimensions
             .width(15)
@@ -142,10 +166,11 @@ public class GHNService extends ShippingCalculatorService {
     
     /**
      * Create HTTP headers for GHN API
+     * Updated to match GHN API documentation format
      */
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Token", GHNConfig.ghn_ApiToken);
+        headers.set("token", GHNConfig.ghn_ApiToken);  // lowercase as per GHN docs
         headers.set("ShopId", GHNConfig.ghn_ShopId);
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;

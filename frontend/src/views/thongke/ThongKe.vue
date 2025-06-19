@@ -21,11 +21,11 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 
 // Custom Components
-import DoanhThuCard from '@/components/ThongKe/cards/DoanhThuCard.vue'
-import DonHangCard from '@/components/ThongKe/cards/DonHangCard.vue'
-import SanPhamCard from '@/components/ThongKe/cards/SanPhamCard.vue'
-import KhachHangCard from '@/components/ThongKe/cards/KhachHangCard.vue'
-import NotificationsWidget from '@/components/ThongKe/dashboard/NotificationsWidget.vue'
+import DoanhThuCard from '@/views/thongke/components/cards/DoanhThuCard.vue'
+import DonHangCard from '@/views/thongke/components/cards/DonHangCard.vue'
+import SanPhamCard from '@/views/thongke/components/cards/SanPhamCard.vue'
+import KhachHangCard from '@/views/thongke/components/cards/KhachHangCard.vue'
+import NotificationsWidget from '@/views/thongke/components/dashboard/NotificationsWidget.vue'
 import TableAdv from '@/views/thongke/components/TableAdv.vue'
 
 const toast = useToast()

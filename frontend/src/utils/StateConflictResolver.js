@@ -1,8 +1,14 @@
 /**
- * StateConflictResolver - Utility for resolving state conflicts
+ * StateConflictResolver - Enhanced Utility for resolving state conflicts
  * Handles concurrent user actions and provides various merge strategies
- * for different data types in the LapXpert system
+ * for different data types in the LapXpert system with real-time WebSocket integration
  * Follows Vietnamese business terminology and patterns
+ *
+ * Enhanced Features:
+ * - Real-time conflict detection and resolution
+ * - WebSocket-aware state merging
+ * - Optimistic update conflict handling
+ * - Vietnamese business rule validation
  */
 
 /**
@@ -109,7 +115,7 @@ export class StateConflictResolver {
     if (currentState.ngayCapNhat && incomingState.ngayCapNhat) {
       const currentTime = new Date(currentState.ngayCapNhat)
       const incomingTime = new Date(incomingState.ngayCapNhat)
-      
+
       if (Math.abs(currentTime - incomingTime) < 1000) { // Within 1 second
         conflicts.push({
           type: CONFLICT_TYPES.CONCURRENT_UPDATE,
@@ -150,7 +156,7 @@ export class StateConflictResolver {
     conflicts.push(...businessRuleConflicts)
 
     metadata.conflictCount = conflicts.length
-    
+
     return {
       hasConflicts: conflicts.length > 0,
       conflicts,
@@ -182,7 +188,7 @@ export class StateConflictResolver {
 
       // Detect conflicts first
       const conflictResult = this.detectConflicts(currentState, incomingState, options)
-      
+
       if (!conflictResult.hasConflicts) {
         return {
           success: true,
@@ -278,7 +284,7 @@ export class StateConflictResolver {
   resolveFirstWriteWins(currentState, incomingState, conflictResult) {
     // Keep current state but update non-conflicting fields
     const resolvedState = { ...currentState }
-    
+
     for (const field in incomingState) {
       const hasConflict = conflictResult.conflicts.some(c => c.field === field)
       if (!hasConflict) {
@@ -351,7 +357,7 @@ export class StateConflictResolver {
             incomingState,
             conflicts: conflictResult.conflicts
           })
-          
+
           if (ruleResult !== undefined) {
             resolvedState[field] = ruleResult
           }
@@ -389,7 +395,7 @@ export class StateConflictResolver {
    */
   getFieldConflictSeverity(field, currentValue, incomingValue) {
     const priority = this.fieldPriorities[field] || this.fieldPriorities.default
-    
+
     if (priority >= 90) return 'critical'
     if (priority >= 75) return 'high'
     if (priority >= 60) return 'medium'
@@ -401,7 +407,7 @@ export class StateConflictResolver {
    */
   getFieldPriority(field, value) {
     let basePriority = this.fieldPriorities[field] || this.fieldPriorities.default
-    
+
     // Boost priority for non-empty values
     if (value != null && value !== '' && value !== 0) {
       basePriority += 5
@@ -436,7 +442,7 @@ export class StateConflictResolver {
 
       const currentStatus = currentState.trangThaiDonHang
       const incomingStatus = incomingState.trangThaiDonHang
-      
+
       if (currentStatus !== incomingStatus) {
         const allowedTransitions = validTransitions[currentStatus] || []
         if (!allowedTransitions.includes(incomingStatus)) {
@@ -477,7 +483,7 @@ export class StateConflictResolver {
    */
   getModifiedFields(oldState, newState) {
     const modified = []
-    
+
     for (const field in newState) {
       if (oldState[field] !== newState[field]) {
         modified.push(field)
@@ -492,7 +498,7 @@ export class StateConflictResolver {
    */
   addToHistory(resolutionRecord) {
     this.conflictHistory.unshift(resolutionRecord)
-    
+
     if (this.conflictHistory.length > this.maxHistorySize) {
       this.conflictHistory = this.conflictHistory.slice(0, this.maxHistorySize)
     }
@@ -512,7 +518,7 @@ export class StateConflictResolver {
     for (const record of this.conflictHistory) {
       const strategy = record.resolutionDetails.strategy
       strategies[strategy] = (strategies[strategy] || 0) + 1
-      
+
       totalResolutionTime += record.resolutionDetails.resolutionTime || 0
 
       for (const conflict of record.conflicts) {

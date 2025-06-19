@@ -8,9 +8,9 @@ import com.lapxpert.backend.sanpham.repository.SanPhamChiTietAuditHistoryReposit
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 
 /**
  * Service for handling real-time price change notifications.
@@ -29,28 +29,42 @@ public class PriceChangeNotificationService {
     private final SanPhamChiTietAuditHistoryRepository auditHistoryRepository;
 
     /**
-     * Handle price change events with audit trail and real-time notifications
+     * Handle price change events with audit trail and real-time notifications.
+     * Uses @TransactionalEventListener to ensure audit and notifications occur after transaction commit.
      */
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @CacheEvict(value = {"cartData", "activeSanPhamList"}, allEntries = true)
     public void handlePriceChange(PriceChangeEvent event) {
+        long startTime = System.currentTimeMillis();
         try {
-            log.info("Processing price change for variant {}: {} -> {}", 
+            log.info("Processing post-commit price change for variant {}: {} -> {}",
                 event.getVariantId(), event.getEffectiveOldPrice(), event.getEffectiveNewPrice());
 
-            // Create audit trail entry
+            // Create audit trail entry after transaction commit
             createAuditEntry(event);
 
-            // Send real-time WebSocket notification
+            // Send real-time WebSocket notification after audit entry
             sendWebSocketNotification(event);
 
-            log.info("Price change notification completed for variant {}", event.getVariantId());
+            long executionTime = System.currentTimeMillis() - startTime;
+            log.info("Post-commit price change notification completed for variant {} ({}ms)",
+                    event.getVariantId(), executionTime);
 
         } catch (Exception e) {
-            log.error("Failed to process price change notification for variant {}: {}", 
-                event.getVariantId(), e.getMessage(), e);
+            long executionTime = System.currentTimeMillis() - startTime;
+            log.error("Failed to process post-commit price change notification for variant {} ({}ms): {}",
+                event.getVariantId(), executionTime, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Handle price change rollback scenarios.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    public void handlePriceChangeRollback(PriceChangeEvent event) {
+        log.warn("Price change transaction rolled back for variant {}: {} -> {}",
+                event.getVariantId(), event.getEffectiveOldPrice(), event.getEffectiveNewPrice());
+        // No audit entry or WebSocket notification should be sent as transaction was rolled back
     }
 
     /**

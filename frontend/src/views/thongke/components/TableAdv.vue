@@ -148,6 +148,7 @@
 import { ref, onMounted } from 'vue'
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api'
 import ThongKeService from '@/apis/dashboard'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime'
 
 const hoaDons = ref()
 const filters = ref()
@@ -186,6 +187,21 @@ const statuses = ref([
 // ])
 // const orderTypes = ref(['Tại Quầy', 'Online']);
 const loading = ref(true)
+
+// Real-time DataTable integration for statistics/dashboard
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'thongKe',
+  storeKey: 'dashboardTable',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 TableAdv: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh dashboard data
+    await loadRecentOrders()
+  },
+  debounceDelay: 500, // Slower refresh for dashboard data
+  enableSelectiveUpdates: false, // Dashboard usually needs full refresh
+  topicFilters: ['thong-ke', 'dashboard', 'hoa-don']
+})
 
 onMounted(() => {
   // Initialize filters first

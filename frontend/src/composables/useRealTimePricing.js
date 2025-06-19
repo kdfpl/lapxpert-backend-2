@@ -1,15 +1,26 @@
 import { ref, computed, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useRealTimeOrderManagement } from './useRealTimeOrderManagement'
+import { useRealTimeSync } from './useRealTimeSync.js'
 
 /**
- * Real-time Pricing Composable
+ * Real-time Pricing Composable with Enhanced State Synchronization
  * Handles real-time price updates and notifications for product variants
- * Integrates with existing order management and follows Vietnamese business terminology
+ * Integrates with enhanced state synchronization and follows Vietnamese business terminology
  */
 export function useRealTimePricing() {
   const toast = useToast()
   const { messageHistory, isConnected, sendMessage } = useRealTimeOrderManagement()
+
+  // Enhanced state synchronization for pricing data
+  const priceSync = useRealTimeSync({
+    entityName: 'gia',
+    storeKey: 'pricing_data',
+    enableWebSocketIntegration: true,
+    enableOptimisticUpdates: true,
+    enableAutoRefresh: true,
+    autoRefreshDelay: 50 // Faster refresh for price updates
+  })
 
   // Price update state
   const priceUpdates = ref([])
@@ -27,7 +38,45 @@ export function useRealTimePricing() {
     onPriceNotification: null
   })
 
-  // Watch for price update messages
+  // Enhanced state synchronization event listeners
+  priceSync.addEventListener('WEBSOCKET_PRICE_UPDATE', (event) => {
+    const { priceData } = event.data
+    processePriceUpdate({
+      type: 'PRICE_UPDATE',
+      payload: priceData,
+      topic: event.data.topic,
+      timestamp: event.data.timestamp
+    })
+  })
+
+  priceSync.addEventListener('CACHE_INVALIDATED', (event) => {
+    if (event.data.scope === 'PRICING_DATA') {
+      // Handle price cache invalidation
+      console.log('💰 Price cache invalidated, refreshing price data')
+
+      // Trigger price refresh for affected variants
+      if (event.data.entityId) {
+        requestCurrentPrices([event.data.entityId])
+      }
+    }
+  })
+
+  priceSync.addEventListener('OPTIMISTIC_UPDATE_ROLLBACK', (event) => {
+    // Handle price update rollback
+    const { update } = event.data
+    if (update.message?.type === 'PRICE_UPDATE') {
+      console.warn('🔄 Price update rolled back:', update.message)
+
+      toast.add({
+        severity: 'warn',
+        summary: 'Cập nhật giá',
+        detail: 'Cập nhật giá đã được hoàn tác do lỗi đồng bộ',
+        life: 5000
+      })
+    }
+  })
+
+  // Watch for price update messages (legacy support)
   watch(messageHistory, (newHistory) => {
     const priceMessages = newHistory.filter(msg =>
       msg.type === 'PRICE_UPDATE' ||

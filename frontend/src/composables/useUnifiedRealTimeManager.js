@@ -5,9 +5,18 @@ import { useRealTimePricing } from './useRealTimePricing'
 import { useVoucherMonitoring } from './useVoucherMonitoring'
 
 /**
- * Unified Real-Time State Manager
+ * Unified Real-Time State Manager with Enhanced Connection Management
  * Coordinates all real-time composables with enhanced integration, cross-tab synchronization,
  * message queuing for offline scenarios, and centralized notification management
+ *
+ * Enhanced Features:
+ * - Intelligent connection management with network awareness
+ * - Message queuing coordination for offline scenarios
+ * - Enhanced state synchronization coordination
+ * - Cross-tab synchronization with WebSocket coordination
+ * - Network status monitoring and adaptive reconnection
+ * - Centralized notification management with connection status
+ *
  * Follows LapXpert patterns and Vietnamese business terminology
  */
 export function useUnifiedRealTimeManager() {
@@ -674,17 +683,61 @@ export function useUnifiedRealTimeManager() {
       isUnifiedConnected.value = isConnected
       unifiedConnectionQuality.value = quality
 
-      // Broadcast connection status change
+      // Enhanced connection status with network awareness
+      const enhancedStatus = {
+        isConnected,
+        quality,
+        networkStatus: orderManagement.networkStatus?.value || 'UNKNOWN',
+        stability: orderManagement.connectionStability?.value || 0,
+        hasQueuedMessages: orderManagement.hasQueuedMessages?.value || false
+      }
+
+      // Broadcast enhanced connection status change
       broadcastToOtherTabs({
         type: 'CONNECTION_STATUS_CHANGE',
-        payload: { isConnected, quality }
+        payload: enhancedStatus
       })
 
-      // Process message queue when connection is restored
-      if (isConnected && messageQueue.value.length > 0) {
-        setTimeout(() => {
-          processMessageQueue()
-        }, 1000)
+      if (isConnected) {
+        console.log('🔗 Enhanced WebSocket connected with quality:', quality,
+                    'network:', enhancedStatus.networkStatus,
+                    'stability:', enhancedStatus.stability + '%')
+
+        // Process message queue when connection is restored
+        if (messageQueue.value.length > 0) {
+          setTimeout(() => {
+            processMessageQueue()
+          }, 1000)
+        }
+
+        // Process WebSocket queued messages if available
+        if (orderManagement.hasQueuedMessages?.value && orderManagement.processQueuedMessages) {
+          setTimeout(() => {
+            orderManagement.processQueuedMessages()
+          }, 500)
+        }
+
+        // Show connection restored notification with enhanced info
+        if (notificationSettings.value.showConnectionStatus) {
+          showUnifiedNotification(
+            'success',
+            'Kết nối khôi phục',
+            `WebSocket đã kết nối (${quality}, mạng: ${enhancedStatus.networkStatus})`,
+            { life: 3000 }
+          )
+        }
+      } else {
+        console.log('🔗 Enhanced WebSocket disconnected, network:', enhancedStatus.networkStatus)
+
+        // Show disconnection notification with network status
+        if (notificationSettings.value.showConnectionStatus) {
+          showUnifiedNotification(
+            'warn',
+            'Mất kết nối',
+            `WebSocket ngắt kết nối (mạng: ${enhancedStatus.networkStatus})`,
+            { life: 4000 }
+          )
+        }
       }
     })
 

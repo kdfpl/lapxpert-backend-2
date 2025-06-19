@@ -2,6 +2,7 @@ package com.lapxpert.backend.nguoidung.service;
 
 import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.UrlService;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import com.lapxpert.backend.nguoidung.entity.DiaChi;
 import com.lapxpert.backend.nguoidung.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.entity.NguoiDungAuditHistory;
@@ -57,6 +58,9 @@ public class NguoiDungService extends BusinessEntityService<NguoiDung, Long, Ngu
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private WebSocketIntegrationService webSocketIntegrationService;
 
     @Transactional(readOnly = true)
     public KhachHangDTO getKhachHang(Long id) {
@@ -678,23 +682,50 @@ public class NguoiDungService extends BusinessEntityService<NguoiDung, Long, Ngu
 
     @Override
     protected void publishEntityCreatedEvent(NguoiDung entity) {
-        // TODO: Implement real-time event publishing for user creation
-        log.debug("Publishing user created event for user ID: {}", entity.getId());
-        // eventPublisher.publishEvent(new NguoiDungCreatedEvent(entity));
+        try {
+            // Send WebSocket notification for user creation
+            webSocketIntegrationService.sendUserUpdate(
+                entity.getId().toString(),
+                "CREATED",
+                toDto(entity)
+            );
+
+            log.debug("Published user created event for user ID: {}", entity.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish user created event for ID {}: {}", entity.getId(), e.getMessage(), e);
+        }
     }
 
     @Override
     protected void publishEntityUpdatedEvent(NguoiDung entity, NguoiDung oldEntity) {
-        // TODO: Implement real-time event publishing for user updates
-        log.debug("Publishing user updated event for user ID: {}", entity.getId());
-        // eventPublisher.publishEvent(new NguoiDungUpdatedEvent(entity, oldEntity));
+        try {
+            // Send WebSocket notification for user update
+            webSocketIntegrationService.sendUserUpdate(
+                entity.getId().toString(),
+                "UPDATED",
+                toDto(entity)
+            );
+
+            log.debug("Published user updated event for user ID: {}", entity.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish user updated event for ID {}: {}", entity.getId(), e.getMessage(), e);
+        }
     }
 
     @Override
     protected void publishEntityDeletedEvent(Long entityId) {
-        // TODO: Implement real-time event publishing for user deletion
-        log.debug("Publishing user deleted event for user ID: {}", entityId);
-        // eventPublisher.publishEvent(new NguoiDungDeletedEvent(entityId));
+        try {
+            // Send WebSocket notification for user deletion
+            webSocketIntegrationService.sendUserUpdate(
+                entityId.toString(),
+                "DELETED",
+                null
+            );
+
+            log.debug("Published user deleted event for user ID: {}", entityId);
+        } catch (Exception e) {
+            log.error("Failed to publish user deleted event for ID {}: {}", entityId, e.getMessage(), e);
+        }
     }
 
     @Override

@@ -15,6 +15,7 @@ import com.lapxpert.backend.sanpham.repository.SerialNumberRepository;
 import com.lapxpert.backend.nguoidung.repository.NguoiDungRepository;
 import com.lapxpert.backend.nguoidung.entity.VaiTro;
 import com.lapxpert.backend.nguoidung.entity.TrangThaiNguoiDung;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class ThongKeServiceImpl implements ThongKeService {
     private final SanPhamRepository sanPhamRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final NguoiDungRepository nguoiDungRepository;
+    private final WebSocketIntegrationService webSocketIntegrationService;
 
     // ==================== DOANH THU (REVENUE) STATISTICS ====================
 
@@ -130,7 +132,7 @@ public class ThongKeServiceImpl implements ThongKeService {
         
         Double tyLeTangTruong = calculateGrowthPercentage(tongDoanhThu, previousRevenue);
         
-        return DoanhThuTheoNgayDto.builder()
+        DoanhThuTheoNgayDto doanhThuTheoNgay = DoanhThuTheoNgayDto.builder()
             .labels(labels)
             .data(data)
             .tongDoanhThu(tongDoanhThu)
@@ -144,6 +146,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .ngayDoanhThuThapNhat(ngayDoanhThuThapNhat)
             .doanhThuThapNhat(doanhThuThapNhat)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(doanhThuTheoNgay);
+            log.debug("Sent daily revenue statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send daily revenue statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return doanhThuTheoNgay;
     }
 
     @Override
@@ -251,7 +263,7 @@ public class ThongKeServiceImpl implements ThongKeService {
                 .build());
         }
         
-        return DoanhThuTheoThangDto.builder()
+        DoanhThuTheoThangDto doanhThuTheoThang = DoanhThuTheoThangDto.builder()
             .labels(labels)
             .data(data)
             .nam(nam)
@@ -265,6 +277,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .doanhThuNamTruoc(doanhThuNamTruoc)
             .doanhThuTheoQuy(doanhThuTheoQuy)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(doanhThuTheoThang);
+            log.debug("Sent monthly revenue statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send monthly revenue statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return doanhThuTheoThang;
     }
 
     @Override
@@ -327,7 +349,7 @@ public class ThongKeServiceImpl implements ThongKeService {
                 .cod(BigDecimal.ZERO)
                 .build();
         
-        return DoanhThuTongQuanDto.builder()
+        DoanhThuTongQuanDto doanhThuTongQuan = DoanhThuTongQuanDto.builder()
             .doanhThuHomNay(doanhThuHomNay)
             .doanhThuHomQua(doanhThuHomQua)
             .doanhThuTuanNay(doanhThuTuanNay)
@@ -346,6 +368,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .doanhThuTheoLoai(doanhThuTheoLoai)
             .doanhThuTheoThanhToan(doanhThuTheoThanhToan)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(doanhThuTongQuan);
+            log.debug("Sent overall revenue statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send overall revenue statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return doanhThuTongQuan;
     }
 
     // ==================== HELPER METHODS ====================
@@ -689,7 +721,7 @@ public class ThongKeServiceImpl implements ThongKeService {
             }
         }
 
-        return SanPhamBanChayDto.builder()
+        SanPhamBanChayDto sanPhamBanChay = SanPhamBanChayDto.builder()
             .tuNgay(tuNgay)
             .denNgay(denNgay)
             .soLuong(soLuong)
@@ -697,6 +729,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .tongDoanhThu(tongDoanhThu)
             .tongSoLuongBan(tongSoLuongBan)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(sanPhamBanChay);
+            log.debug("Sent top selling products statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send top selling products statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return sanPhamBanChay;
     }
 
     @Override
@@ -769,7 +811,7 @@ public class ThongKeServiceImpl implements ThongKeService {
             .map(SanPhamSapHetHangDto.SanPhamSapHetHangChiTietDto::getGiaTriTonKho)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return SanPhamSapHetHangDto.builder()
+        SanPhamSapHetHangDto sanPhamSapHetHang = SanPhamSapHetHangDto.builder()
             .nguongTonKho(threshold)
             .tongSoSanPham(tongSoSanPham)
             .danhSachSanPham(danhSachSanPham)
@@ -777,6 +819,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .sanPhamHetHang(sanPhamHetHang)
             .sanPhamTonKhoNguyHiem(sanPhamTonKhoNguyHiem)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(sanPhamSapHetHang);
+            log.debug("Sent low stock products statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send low stock products statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return sanPhamSapHetHang;
     }
 
     @Override
@@ -847,7 +899,7 @@ public class ThongKeServiceImpl implements ThongKeService {
             chiTietDanhMuc.add(chiTiet);
         }
 
-        return SanPhamTheoDanhMucDto.builder()
+        SanPhamTheoDanhMucDto sanPhamTheoDanhMuc = SanPhamTheoDanhMucDto.builder()
             .labels(labels)
             .doanhThuData(doanhThuData)
             .soLuongData(soLuongData)
@@ -855,6 +907,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .tongSoLuong(tongSoLuong)
             .chiTietDanhMuc(chiTietDanhMuc)
             .build();
+
+        // Send WebSocket notification for statistics update
+        try {
+            webSocketIntegrationService.sendStatisticsUpdate(sanPhamTheoDanhMuc);
+            log.debug("Sent category statistics WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send category statistics WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return sanPhamTheoDanhMuc;
     }
 
     // ==================== KHACH HANG (CUSTOMER) STATISTICS ====================
@@ -1129,7 +1191,7 @@ public class ThongKeServiceImpl implements ThongKeService {
             .tongThongBao(donHangTongQuan.getDonHangChoXacNhan())
             .build();
 
-        return DashboardSummaryDto.builder()
+        DashboardSummaryDto dashboardSummary = DashboardSummaryDto.builder()
             .capNhatLanCuoi(now)
             .doanhThu(doanhThuSummary)
             .donHang(donHangSummary)
@@ -1137,6 +1199,16 @@ public class ThongKeServiceImpl implements ThongKeService {
             .khachHang(khachHangSummary)
             .thongBao(thongBaoSummary)
             .build();
+
+        // Send WebSocket notification for dashboard refresh
+        try {
+            webSocketIntegrationService.sendDashboardRefresh(dashboardSummary);
+            log.debug("Sent dashboard refresh WebSocket notification");
+        } catch (Exception e) {
+            log.error("Failed to send dashboard refresh WebSocket notification: {}", e.getMessage(), e);
+        }
+
+        return dashboardSummary;
     }
 
     /**

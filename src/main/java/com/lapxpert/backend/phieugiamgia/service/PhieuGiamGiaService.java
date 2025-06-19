@@ -5,6 +5,7 @@ import com.lapxpert.backend.common.enums.LoaiGiamGia;
 import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.EmailService;
 import com.lapxpert.backend.common.service.VietnamTimeZoneService;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import com.lapxpert.backend.common.util.ValidationUtils;
 import com.lapxpert.backend.nguoidung.entity.NguoiDung;
 import com.lapxpert.backend.nguoidung.repository.NguoiDungRepository;
@@ -56,6 +57,7 @@ public class PhieuGiamGiaService extends BusinessEntityService<PhieuGiamGia, Lon
     private final VietnamTimeZoneService vietnamTimeZoneService;
     private final PhieuGiamGiaDtoMapper phieuGiamGiaDtoMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final WebSocketIntegrationService webSocketIntegrationService;
 
     public List<PhieuGiamGiaDto> getAllPhieuGiamGia() {
         // Use inherited findAll method with caching from BusinessEntityService
@@ -1517,6 +1519,14 @@ public class PhieuGiamGiaService extends BusinessEntityService<PhieuGiamGia, Lon
             eventPublisher.publishEvent(event);
             log.info("Published voucher created event for voucher ID: {}", entity.getId());
 
+            // Send WebSocket notification for voucher creation
+            webSocketIntegrationService.sendVoucherNotification(
+                entity.getId().toString(),
+                "PHIEU_GIAM_GIA",
+                "Tạo phiếu giảm giá mới",
+                toDto(entity)
+            );
+
         } catch (Exception e) {
             log.error("Failed to publish voucher created event for ID {}: {}", entity.getId(), e.getMessage(), e);
         }
@@ -1545,6 +1555,19 @@ public class PhieuGiamGiaService extends BusinessEntityService<PhieuGiamGia, Lon
             eventPublisher.publishEvent(event);
             log.info("Published voucher updated event for voucher ID: {}", entity.getId());
 
+            // Send WebSocket notification for voucher update with status change detection
+            String message = "Cập nhật phiếu giảm giá";
+            if (oldEntity.getTrangThai() != entity.getTrangThai()) {
+                message = "Thay đổi trạng thái phiếu giảm giá";
+            }
+
+            webSocketIntegrationService.sendVoucherNotification(
+                entity.getId().toString(),
+                "PHIEU_GIAM_GIA",
+                message,
+                toDto(entity)
+            );
+
         } catch (Exception e) {
             log.error("Failed to publish voucher updated event for ID {}: {}", entity.getId(), e.getMessage(), e);
         }
@@ -1572,6 +1595,14 @@ public class PhieuGiamGiaService extends BusinessEntityService<PhieuGiamGia, Lon
 
             eventPublisher.publishEvent(event);
             log.info("Published voucher deleted event for voucher ID: {}", entityId);
+
+            // Send WebSocket notification for voucher deletion
+            webSocketIntegrationService.sendVoucherNotification(
+                entityId.toString(),
+                "PHIEU_GIAM_GIA",
+                "Xóa phiếu giảm giá",
+                null
+            );
 
         } catch (Exception e) {
             log.error("Failed to publish voucher deleted event for ID {}: {}", entityId, e.getMessage(), e);

@@ -508,6 +508,31 @@ const orderApi = {
   },
 
   /**
+   * Process MoMo payment
+   * @param {number} orderId - Order ID
+   * @param {Object} momoData - MoMo payment data
+   * @returns {Promise<Object>} API response with payment URL or result
+   */
+  async processMoMoPayment(orderId, momoData) {
+    try {
+      const response = await privateApi.post(`${ORDER_BASE_URL}/${orderId}/momo-payment`, momoData)
+
+      return {
+        success: true,
+        data: response.data,
+        message: 'MoMo payment initiated successfully'
+      }
+    } catch (error) {
+      console.error('Error processing MoMo payment:', error)
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || error.message || 'Failed to process MoMo payment'
+      }
+    }
+  },
+
+  /**
    * Print order receipt
    * @param {number} id - Order ID
    * @returns {Promise<Object>} API response with receipt data

@@ -72,7 +72,7 @@
           <div v-if="paymentMethod" class="payment-detail-item">
             <label class="payment-detail-label">Phương thức</label>
             <div class="payment-detail-value flex items-center gap-2">
-              <i :class="paymentMethodInfo.icon" class="text-primary"></i>
+              <i :class="[paymentMethodInfo.icon, paymentMethodInfo.color]"></i>
               {{ paymentMethodInfo.label }}
             </div>
           </div>
@@ -370,25 +370,30 @@ const paymentMethodInfo = computed(() => {
   const methodMap = {
     'TIEN_MAT': {
       label: 'Tiền mặt',
-      icon: 'pi pi-wallet'
+      icon: 'pi pi-money-bill',
+      color: 'text-green-600'
     },
     'VNPAY': {
       label: 'VNPay',
-      icon: 'pi pi-credit-card'
+      icon: 'pi pi-credit-card',
+      color: 'text-blue-600'
     },
     'MOMO': {
-      label: 'MoMo',
-      icon: 'pi pi-mobile'
+      label: 'Ví MoMo',
+      icon: 'pi pi-wallet',
+      color: 'text-pink-600'
     },
     'VIETQR': {
       label: 'VietQR',
-      icon: 'pi pi-qrcode'
+      icon: 'pi pi-qrcode',
+      color: 'text-purple-600'
     }
   }
 
   return methodMap[props.paymentMethod] || {
     label: 'Không xác định',
-    icon: 'pi pi-question-circle'
+    icon: 'pi pi-question-circle',
+    color: 'text-gray-600'
   }
 })
 

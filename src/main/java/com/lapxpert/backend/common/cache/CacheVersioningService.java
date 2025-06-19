@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -239,9 +241,103 @@ public class CacheVersioningService {
     public void invalidateVersionedEntry(String cacheKey) {
         try {
             redisTemplate.delete(cacheKey);
+            // Increment version to track invalidation
+            incrementCacheVersion(cacheKey);
             log.debug("Invalidated versioned cache entry for key '{}'", cacheKey);
         } catch (Exception e) {
             log.error("Failed to invalidate versioned cache entry for key '{}': {}", cacheKey, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get current cache version for a key
+     * Vietnamese Business Context: Lấy phiên bản cache hiện tại
+     */
+    public String getCurrentCacheVersion(String cacheKey) {
+        try {
+            String versionKey = cacheKey + ":version";
+            String version = (String) redisTemplate.opsForValue().get(versionKey);
+            return version != null ? version : "1.0.0";
+        } catch (Exception e) {
+            log.warn("Failed to get cache version for key '{}': {}", cacheKey, e.getMessage());
+            return "1.0.0";
+        }
+    }
+
+    /**
+     * Increment cache version for invalidation tracking
+     * Vietnamese Business Context: Tăng phiên bản cache để theo dõi vô hiệu hóa
+     */
+    public String incrementCacheVersion(String cacheKey) {
+        try {
+            String versionKey = cacheKey + ":version";
+            String currentVersion = getCurrentCacheVersion(cacheKey);
+
+            // Parse and increment version (simple semantic versioning)
+            String[] parts = currentVersion.split("\\.");
+            int major = Integer.parseInt(parts[0]);
+            int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+            int patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+
+            // Increment patch version for cache invalidation
+            patch++;
+            String newVersion = String.format("%d.%d.%d", major, minor, patch);
+
+            // Store new version with TTL
+            redisTemplate.opsForValue().set(versionKey, newVersion, 24, TimeUnit.HOURS);
+
+            log.debug("Incremented cache version for key '{}' from {} to {}", cacheKey, currentVersion, newVersion);
+            return newVersion;
+
+        } catch (Exception e) {
+            log.error("Failed to increment cache version for key '{}': {}", cacheKey, e.getMessage(), e);
+            return getCurrentCacheVersion(cacheKey);
+        }
+    }
+
+    /**
+     * Get cache invalidation metadata for WebSocket coordination
+     * Vietnamese Business Context: Lấy metadata vô hiệu hóa cache cho điều phối WebSocket
+     */
+    public Map<String, Object> getCacheInvalidationMetadata(String cacheKey) {
+        Map<String, Object> metadata = new HashMap<>();
+        try {
+            metadata.put("cacheKey", cacheKey);
+            metadata.put("version", getCurrentCacheVersion(cacheKey));
+            metadata.put("timestamp", Instant.now());
+            metadata.put("requiresRefresh", true);
+
+            // Determine cache scope based on key pattern
+            String scope = determineCacheScope(cacheKey);
+            metadata.put("scope", scope);
+
+            // Add Vietnamese business context
+            metadata.put("lyDoVoHieuHoa", "Đồng bộ dữ liệu thời gian thực");
+
+            return metadata;
+        } catch (Exception e) {
+            log.error("Failed to get cache invalidation metadata for key '{}': {}", cacheKey, e.getMessage(), e);
+            metadata.put("error", e.getMessage());
+            return metadata;
+        }
+    }
+
+    /**
+     * Determine cache scope for frontend coordination
+     */
+    private String determineCacheScope(String cacheKey) {
+        if (cacheKey.contains("productData") || cacheKey.contains("sanPham")) {
+            return "PRODUCT_DATA";
+        } else if (cacheKey.contains("inventory") || cacheKey.contains("tonKho")) {
+            return "INVENTORY_DATA";
+        } else if (cacheKey.contains("voucher") || cacheKey.contains("phieuGiamGia") || cacheKey.contains("dotGiamGia")) {
+            return "VOUCHER_DATA";
+        } else if (cacheKey.contains("hoaDon") || cacheKey.contains("order")) {
+            return "ORDER_DATA";
+        } else if (cacheKey.contains("pricing") || cacheKey.contains("gia")) {
+            return "PRICING_DATA";
+        } else {
+            return "GENERAL_DATA";
         }
     }
 }

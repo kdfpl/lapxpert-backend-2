@@ -10,6 +10,8 @@ import com.lapxpert.backend.sanpham.repository.SerialNumberRepository;
 import com.lapxpert.backend.sanpham.repository.SanPhamChiTietRepository;
 import com.lapxpert.backend.common.service.DistributedLockService;
 import com.lapxpert.backend.common.service.OptimisticLockingService;
+import com.lapxpert.backend.common.event.InventoryUpdateEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ public class SerialNumberService {
     private final SanPhamChiTietRepository sanPhamChiTietRepository;
     private final DistributedLockService distributedLockService;
     private final OptimisticLockingService optimisticLockingService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Serial Number CRUD Operations
 
@@ -66,9 +69,35 @@ public class SerialNumberService {
         );
         auditHistoryRepository.save(auditEntry);
 
-        log.info("Created serial number: {} for variant: {}", 
-                savedSerialNumber.getSerialNumberValue(), 
+        log.info("Created serial number: {} for variant: {}",
+                savedSerialNumber.getSerialNumberValue(),
                 savedSerialNumber.getSanPhamChiTiet().getId());
+
+        // Publish inventory update event for WebSocket notifications
+        try {
+            SanPhamChiTiet variant = savedSerialNumber.getSanPhamChiTiet();
+            Long variantId = variant.getId();
+
+            int newAvailableQuantity = getAvailableQuantityByVariant(variantId);
+            int oldAvailableQuantity = newAvailableQuantity - 1;
+
+            InventoryUpdateEvent event = InventoryUpdateEvent.builder()
+                    .variantId(variantId)
+                    .sku(variant.getSku())
+                    .tenSanPham(variant.getSanPham().getTenSanPham())
+                    .soLuongTonKhoCu(oldAvailableQuantity)
+                    .soLuongTonKhoMoi(newAvailableQuantity)
+                    .loaiThayDoi("CREATED")
+                    .nguoiThucHien(user)
+                    .lyDoThayDoi("Tạo serial number mới: " + savedSerialNumber.getSerialNumberValue())
+                    .timestamp(Instant.now())
+                    .build();
+
+            eventPublisher.publishEvent(event);
+            log.debug("Published inventory update event for variant {} serial number creation", variantId);
+        } catch (Exception e) {
+            log.error("Failed to publish inventory update event for serial number creation: {}", e.getMessage(), e);
+        }
 
         return savedSerialNumber;
     }
@@ -236,6 +265,34 @@ public class SerialNumberService {
                 log.info("Reserved {} serial numbers for order {} via channel {} with distributed lock",
                         quantity, orderId, channel);
 
+                // Publish inventory update event for WebSocket notifications
+                try {
+                    if (!reservedSerialNumbers.isEmpty()) {
+                        SerialNumber firstSerial = reservedSerialNumbers.get(0);
+                        SanPhamChiTiet variant = firstSerial.getSanPhamChiTiet();
+
+                        int newAvailableQuantity = getAvailableQuantityByVariant(variantId);
+                        int oldAvailableQuantity = newAvailableQuantity + quantity;
+
+                        InventoryUpdateEvent event = InventoryUpdateEvent.builder()
+                                .variantId(variantId)
+                                .sku(variant.getSku())
+                                .tenSanPham(variant.getSanPham().getTenSanPham())
+                                .soLuongTonKhoCu(oldAvailableQuantity)
+                                .soLuongTonKhoMoi(newAvailableQuantity)
+                                .loaiThayDoi("RESERVED")
+                                .nguoiThucHien(user)
+                                .lyDoThayDoi("Đặt trước " + quantity + " sản phẩm cho đơn hàng " + orderId)
+                                .timestamp(Instant.now())
+                                .build();
+
+                        eventPublisher.publishEvent(event);
+                        log.debug("Published inventory update event for variant {} reservation", variantId);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to publish inventory update event for reservation: {}", e.getMessage(), e);
+                }
+
                 return reservedSerialNumbers;
             });
         }, 15, 45); // 15 seconds wait, 45 seconds lease for inventory operations
@@ -265,6 +322,39 @@ public class SerialNumberService {
         }
 
         log.info("Confirmed sale of {} serial numbers for order {}", serialNumberIds.size(), orderId);
+
+        // Publish inventory update event for WebSocket notifications
+        try {
+            if (!serialNumberIds.isEmpty()) {
+                // Get the first serial number to extract variant information
+                SerialNumber firstSerial = serialNumberRepository.findById(serialNumberIds.get(0))
+                        .orElse(null);
+                if (firstSerial != null) {
+                    SanPhamChiTiet variant = firstSerial.getSanPhamChiTiet();
+                    Long variantId = variant.getId();
+
+                    int newAvailableQuantity = getAvailableQuantityByVariant(variantId);
+                    int oldAvailableQuantity = newAvailableQuantity + serialNumberIds.size();
+
+                    InventoryUpdateEvent event = InventoryUpdateEvent.builder()
+                            .variantId(variantId)
+                            .sku(variant.getSku())
+                            .tenSanPham(variant.getSanPham().getTenSanPham())
+                            .soLuongTonKhoCu(oldAvailableQuantity)
+                            .soLuongTonKhoMoi(newAvailableQuantity)
+                            .loaiThayDoi("SOLD")
+                            .nguoiThucHien(user)
+                            .lyDoThayDoi("Xác nhận bán " + serialNumberIds.size() + " sản phẩm cho đơn hàng " + orderId)
+                            .timestamp(Instant.now())
+                            .build();
+
+                    eventPublisher.publishEvent(event);
+                    log.debug("Published inventory update event for variant {} sale confirmation", variantId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish inventory update event for sale confirmation: {}", e.getMessage(), e);
+        }
     }
 
     /**
@@ -292,6 +382,39 @@ public class SerialNumberService {
         }
 
         log.info("Released reservations for {} serial numbers", serialNumberIds.size());
+
+        // Publish inventory update event for WebSocket notifications
+        try {
+            if (!serialNumberIds.isEmpty()) {
+                // Get the first serial number to extract variant information
+                SerialNumber firstSerial = serialNumberRepository.findById(serialNumberIds.get(0))
+                        .orElse(null);
+                if (firstSerial != null) {
+                    SanPhamChiTiet variant = firstSerial.getSanPhamChiTiet();
+                    Long variantId = variant.getId();
+
+                    int newAvailableQuantity = getAvailableQuantityByVariant(variantId);
+                    int oldAvailableQuantity = newAvailableQuantity - serialNumberIds.size();
+
+                    InventoryUpdateEvent event = InventoryUpdateEvent.builder()
+                            .variantId(variantId)
+                            .sku(variant.getSku())
+                            .tenSanPham(variant.getSanPham().getTenSanPham())
+                            .soLuongTonKhoCu(oldAvailableQuantity)
+                            .soLuongTonKhoMoi(newAvailableQuantity)
+                            .loaiThayDoi("RELEASED")
+                            .nguoiThucHien(user)
+                            .lyDoThayDoi("Hủy đặt trước " + serialNumberIds.size() + " sản phẩm: " + reason)
+                            .timestamp(Instant.now())
+                            .build();
+
+                    eventPublisher.publishEvent(event);
+                    log.debug("Published inventory update event for variant {} reservation release", variantId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish inventory update event for reservation release: {}", e.getMessage(), e);
+        }
     }
 
     /**
@@ -348,6 +471,39 @@ public class SerialNumberService {
         }
 
         log.info("Released {} serial numbers from sold status", serialNumberIds.size());
+
+        // Publish inventory update event for WebSocket notifications
+        try {
+            if (!serialNumberIds.isEmpty()) {
+                // Get the first serial number to extract variant information
+                SerialNumber firstSerial = serialNumberRepository.findById(serialNumberIds.get(0))
+                        .orElse(null);
+                if (firstSerial != null) {
+                    SanPhamChiTiet variant = firstSerial.getSanPhamChiTiet();
+                    Long variantId = variant.getId();
+
+                    int newAvailableQuantity = getAvailableQuantityByVariant(variantId);
+                    int oldAvailableQuantity = newAvailableQuantity - serialNumberIds.size();
+
+                    InventoryUpdateEvent event = InventoryUpdateEvent.builder()
+                            .variantId(variantId)
+                            .sku(variant.getSku())
+                            .tenSanPham(variant.getSanPham().getTenSanPham())
+                            .soLuongTonKhoCu(oldAvailableQuantity)
+                            .soLuongTonKhoMoi(newAvailableQuantity)
+                            .loaiThayDoi("RESTOCKED")
+                            .nguoiThucHien(user)
+                            .lyDoThayDoi("Hoàn trả " + serialNumberIds.size() + " sản phẩm từ trạng thái đã bán: " + reason)
+                            .timestamp(Instant.now())
+                            .build();
+
+                    eventPublisher.publishEvent(event);
+                    log.debug("Published inventory update event for variant {} restock from sold", variantId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish inventory update event for restock from sold: {}", e.getMessage(), e);
+        }
     }
 
     /**
@@ -441,10 +597,10 @@ public class SerialNumberService {
                     return false;
                 }
 
-                // Check if serial number is available or reserved (reserved is OK for order creation)
-                if (!sn.isAvailable() && !sn.isReserved()) {
-                    log.warn("Serial number {} is not available for order (status: {})",
-                            sn.getSerialNumberValue(), sn.getTrangThai());
+                // Check if serial number is available or reserved for cart (cart reservations are OK for order creation)
+                if (!sn.isAvailable() && !isCartReservation(sn)) {
+                    log.warn("Serial number {} is not available for order (status: {}, channel: {})",
+                            sn.getSerialNumberValue(), sn.getTrangThai(), sn.getKenhDatTruoc());
                     return false;
                 }
 
@@ -806,6 +962,13 @@ public class SerialNumberService {
     }
 
     // Helper Methods
+
+    /**
+     * Check if a serial number is reserved for cart (cart reservations are valid for order creation)
+     */
+    private boolean isCartReservation(SerialNumber sn) {
+        return sn.isReserved() && "CART".equals(sn.getKenhDatTruoc());
+    }
 
     private void validateStatusTransition(TrangThaiSerialNumber from, TrangThaiSerialNumber to) {
         // Define valid transitions

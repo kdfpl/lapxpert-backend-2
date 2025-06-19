@@ -2,7 +2,7 @@ package com.lapxpert.backend.shipping.service;
 
 import com.lapxpert.backend.shipping.dto.ShippingRequest;
 import com.lapxpert.backend.shipping.dto.ShippingFeeResponse;
-import org.springframework.cache.annotation.Cacheable;
+
 
 /**
  * Abstract base class for shipping fee calculation services
@@ -11,11 +11,9 @@ import org.springframework.cache.annotation.Cacheable;
 public abstract class ShippingCalculatorService {
     
     /**
-     * Calculate shipping fee with caching
-     * Cache key is based on request hashCode which includes essential shipping parameters
-     * Uses medium TTL (30 minutes) as configured in Redis
+     * Calculate shipping fee
+     * Caching removed to avoid serialization issues
      */
-    @Cacheable(value = "shippingFees", key = "#request.hashCode()")
     public abstract ShippingFeeResponse calculateShippingFee(ShippingRequest request);
     
     /**

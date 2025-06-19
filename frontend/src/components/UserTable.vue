@@ -339,15 +339,22 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useDataTableSorting } from '@/composables/useDataTableSorting'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime'
+import { useCustomerStore } from '@/stores/customerstore'
 
 const props = defineProps({
   users: Array,
   loading: Boolean,
   showStaffFields: Boolean,
 })
+
+const emit = defineEmits(['refresh-users'])
+
+// Store integration
+const customerStore = useCustomerStore()
 
 // Auto-Sorting Composable
 const {
@@ -359,6 +366,24 @@ const {
   defaultSortField: 'ngayCapNhat',
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
+})
+
+// Real-time DataTable integration
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'nguoiDung',
+  storeKey: 'userTable',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 UserTable: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh customer data from store
+    await customerStore.forceRefreshCustomers()
+
+    // Emit refresh event to parent component
+    emit('refresh-users')
+  },
+  debounceDelay: 300,
+  enableSelectiveUpdates: true,
+  topicFilters: ['nguoi-dung', 'user']
 })
 
 const processedUsers = computed(() =>

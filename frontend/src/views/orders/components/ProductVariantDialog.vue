@@ -530,6 +530,7 @@ import { useProductStore } from '@/stores/productstore'
 import { useDynamicPricing } from '@/composables/useDynamicPricing'
 import { useRealTimePricing } from '@/composables/useRealTimePricing'
 import { useDataTableSorting } from '@/composables/useDataTableSorting'
+// REMOVED: Complex cache-related imports - using simple approach now
 import { storeToRefs } from 'pinia'
 
 import serialNumberApi from '@/apis/serialNumberApi'
@@ -583,6 +584,9 @@ const {
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
 })
+
+// SIMPLIFIED: Removed complex cache system, using direct API + WebSocket pub/sub
+// The backend handles inventory correctly via WebSocket notifications
 
 // Destructure attribute store
 const {
@@ -792,15 +796,42 @@ const getColorValue = (colorName) => {
   return colorMap[colorName] || '#6b7280'
 }
 
+// Simplified method to get available serial count - NO CACHE, direct API approach
 const getAvailableSerialCount = (variant) => {
+  // Get fresh serial numbers from API for this variant
   const cachedSerials = variantSerialNumbers.value.get(variant.id)
-  if (!cachedSerials) return 0
+  if (!cachedSerials) {
+    console.log(`🔍 [INVENTORY DEBUG] Variant ${variant.id}: Loading serials...`)
+    // Load serials asynchronously and return 0 for now
+    loadSerialNumbersForVariant(variant.id)
+    return 0
+  }
 
   // Filter out serials that are available AND not already used in cart
-  return cachedSerials.filter((serial) => {
+  const availableSerials = cachedSerials.filter((serial) => {
     const serialValue = serial.serialNumberValue || serial.serialNumber
-    return serial.trangThai === 'AVAILABLE' && !usedSerialNumbers.value.has(serialValue)
-  }).length
+    const isAvailable = serial.trangThai === 'AVAILABLE'
+    const isNotUsedInCart = !usedSerialNumbers.value.has(serialValue)
+    return isAvailable && isNotUsedInCart
+  })
+
+  const availableCount = availableSerials.length
+
+  console.log(`🔍 [INVENTORY DEBUG] Variant ${variant.id}: ${availableCount} available (${cachedSerials.length} total, ${usedSerialNumbers.value.size} used in cart)`)
+
+  return availableCount
+}
+
+// Simple function to load serial numbers for a specific variant (no cache invalidation)
+const loadSerialNumbersForVariant = async (variantId) => {
+  try {
+    console.log(`📦 [SIMPLE LOAD] Loading serials for variant ${variantId}...`)
+    const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variantId)
+    variantSerialNumbers.value.set(variantId, serialNumbers || [])
+    console.log(`📦 [SIMPLE LOAD] Variant ${variantId}: Loaded ${serialNumbers?.length || 0} serials`)
+  } catch (error) {
+    console.error(`❌ [SIMPLE LOAD] Error loading serials for variant ${variantId}:`, error)
+  }
 }
 
 const getVariantPrice = (variant) => {
@@ -862,11 +893,20 @@ const confirmSerialSelection = async () => {
   }
 
   const selectedCount = selectedSerialNumbers.value.length
+  const variantId = selectedVariantForSerial.value.id
+
+  console.log(`🛒 [CART ADD DEBUG] Starting cart addition for variant ${variantId}:`, {
+    selectedCount,
+    selectedSerials: selectedSerialNumbers.value.map(s => s.serialNumberValue || s.serialNumber),
+    currentUsedSerials: Array.from(usedSerialNumbers.value)
+  })
 
   try {
     // Add each selected serial number as a separate variant directly to the cart
-    for (const serialNumber of selectedSerialNumbers.value) {
+    for (const [index, serialNumber] of selectedSerialNumbers.value.entries()) {
       const serialValue = serialNumber.serialNumberValue || serialNumber.serialNumber
+
+      console.log(`🛒 [CART ADD DEBUG] Adding serial ${index + 1}/${selectedCount}: ${serialValue}`)
 
       // Create a variant copy with the specific serial number
       const variantWithSerial = {
@@ -889,6 +929,7 @@ const confirmSerialSelection = async () => {
 
       // Track this serial number as used to update available count
       usedSerialNumbers.value.add(serialValue)
+      console.log(`🛒 [CART ADD DEBUG] Added ${serialValue} to used serials. New count: ${usedSerialNumbers.value.size}`)
 
       // Set flag to prevent sync override for a short period
       preventSyncOverride.value = true
@@ -1031,28 +1072,33 @@ const syncUsedSerialNumbersWithCart = () => {
   refreshSerialNumbersForCrossTabs()
 }
 
-// Method to receive cart data from parent (legacy for compatibility)
+// Simplified method to receive cart data from parent - NO CACHE INVALIDATION
 const updateUsedSerialNumbers = (cartItems = []) => {
+  console.log(`🔄 [SIMPLE SYNC] updateUsedSerialNumbers called with ${cartItems?.length || 0} items`)
+
   // Skip update if we're in the middle of an immediate update to prevent race conditions
   if (preventSyncOverride.value) {
+    console.log(`⏸️ [SIMPLE SYNC] Skipping update due to preventSyncOverride flag`)
     return
   }
 
   // Simply update tracking to match current cart items
-  // This is the authoritative source of truth for what's actually in the cart
   usedSerialNumbers.value.clear()
 
   if (Array.isArray(cartItems)) {
-    cartItems.forEach(item => {
+    cartItems.forEach((item, index) => {
       // Check for serial number in the correct location: item.sanPhamChiTiet.serialNumber
       if (item.sanPhamChiTiet?.serialNumber) {
         usedSerialNumbers.value.add(item.sanPhamChiTiet.serialNumber)
+        console.log(`📦 [SIMPLE SYNC] Item ${index}: Added serial ${item.sanPhamChiTiet.serialNumber} to used list`)
       }
     })
   }
 
-  // Refresh serial numbers to get current cross-tab state
-  refreshSerialNumbersForCrossTabs()
+  console.log(`🔄 [SIMPLE SYNC] Updated used serials: ${usedSerialNumbers.value.size} items in cart`)
+
+  // NO CACHE INVALIDATION - just let WebSocket handle real-time updates
+  // The backend will send WebSocket messages when inventory changes
 }
 
 // Expose method for parent to call
@@ -1107,29 +1153,34 @@ watch(() => priceUpdates.value, (newUpdates) => {
   }
 }, { deep: true })
 
-// Load serial numbers for all variants
-const loadAllSerialNumbers = async () => {
-  if (!products.value?.length) return
+// Simplified load serial numbers - just load what we need, when we need it
+const loadAllSerialNumbers = async (forceRefresh = false) => {
+  if (!products.value?.length) {
+    console.log(`📦 [SIMPLE LOAD] No products available`)
+    return
+  }
+
+  console.log(`📦 [SIMPLE LOAD] Loading serial numbers for all variants...`)
 
   try {
     for (const product of products.value) {
       if (product.sanPhamChiTiets && Array.isArray(product.sanPhamChiTiets)) {
         for (const variant of product.sanPhamChiTiets) {
-          if (variant.active && !variantSerialNumbers.value.has(variant.id)) {
-            try {
-              const serialNumbers = await serialNumberApi.getSerialNumbersByVariant(variant.id)
-              variantSerialNumbers.value.set(variant.id, serialNumbers || [])
-            } catch (error) {
-              console.warn(`Error loading serial numbers for variant ${variant.id}:`, error)
-            }
+          if (variant.active && (forceRefresh || !variantSerialNumbers.value.has(variant.id))) {
+            await loadSerialNumbersForVariant(variant.id)
           }
         }
       }
     }
+
+    console.log(`📦 [SIMPLE LOAD] Completed loading for ${variantSerialNumbers.value.size} variants`)
   } catch (error) {
-    console.warn('Error loading serial numbers:', error)
+    console.warn('❌ [SIMPLE LOAD] Error loading serial numbers:', error)
   }
 }
+
+// REMOVED: Complex cache invalidation system
+// Now using simple WebSocket pub/sub for real-time updates
 
 // Load attributes and products on component mount
 onMounted(async () => {

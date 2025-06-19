@@ -6,6 +6,7 @@ import com.lapxpert.backend.dotgiamgia.dto.DotGiamGiaMapper;
 import com.lapxpert.backend.common.enums.TrangThaiCampaign;
 import com.lapxpert.backend.common.service.BusinessEntityService;
 import com.lapxpert.backend.common.service.VietnamTimeZoneService;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import com.lapxpert.backend.common.util.ExceptionHandlingUtils;
 import com.lapxpert.backend.common.util.ValidationUtils;
 import com.lapxpert.backend.dotgiamgia.entity.DotGiamGia;
@@ -47,6 +48,7 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
     private final SanPhamChiTietMapper sanPhamChiTietMapper;
     private final VietnamTimeZoneService vietnamTimeZoneService;
     private final ApplicationEventPublisher eventPublisher;
+    private final WebSocketIntegrationService webSocketIntegrationService;
 
     public DotGiamGiaService(DotGiamGiaRepository dotGiamGiaRepository,
                            DotGiamGiaAuditHistoryRepository auditHistoryRepository,
@@ -54,7 +56,8 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
                            SanPhamChiTietRepository sanPhamChiTietRepository,
                            SanPhamChiTietMapper sanPhamChiTietMapper,
                            VietnamTimeZoneService vietnamTimeZoneService,
-                           ApplicationEventPublisher eventPublisher) {
+                           ApplicationEventPublisher eventPublisher,
+                           WebSocketIntegrationService webSocketIntegrationService) {
         this.dotGiamGiaRepository = dotGiamGiaRepository;
         this.auditHistoryRepository = auditHistoryRepository;
         this.dotGiamGiaMapper = dotGiamGiaMapper;
@@ -62,6 +65,7 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
         this.sanPhamChiTietMapper = sanPhamChiTietMapper;
         this.vietnamTimeZoneService = vietnamTimeZoneService;
         this.eventPublisher = eventPublisher;
+        this.webSocketIntegrationService = webSocketIntegrationService;
     }
 
     public List<DotGiamGiaDto> findAll() {
@@ -746,6 +750,14 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for discount campaign creation
+            webSocketIntegrationService.sendDiscountCampaignUpdate(
+                entity.getId().toString(),
+                "CREATED",
+                toDto(entity)
+            );
+
             log.info("Published campaign created event for campaign ID: {}", entity.getId());
 
         } catch (Exception e) {
@@ -774,6 +786,20 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for discount campaign update
+            // Check if status changed to send appropriate notification
+            String action = "UPDATED";
+            if (oldEntity.getTrangThai() != entity.getTrangThai()) {
+                action = "STATUS_CHANGED";
+            }
+
+            webSocketIntegrationService.sendDiscountCampaignUpdate(
+                entity.getId().toString(),
+                action,
+                toDto(entity)
+            );
+
             log.info("Published campaign updated event for campaign ID: {}", entity.getId());
 
         } catch (Exception e) {
@@ -802,6 +828,14 @@ public class DotGiamGiaService extends BusinessEntityService<DotGiamGia, Long, D
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for discount campaign deletion
+            webSocketIntegrationService.sendDiscountCampaignUpdate(
+                entityId.toString(),
+                "DELETED",
+                null
+            );
+
             log.info("Published campaign deleted event for campaign ID: {}", entityId);
 
         } catch (Exception e) {

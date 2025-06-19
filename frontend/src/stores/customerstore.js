@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import userApi from '@/apis/user'
+import { useRealTimeSync } from '@/composables/useRealTimeSync'
+import { useToast } from 'primevue/usetoast'
 
 export const useCustomerStore = defineStore('customer', {
   state: () => ({
@@ -7,7 +9,58 @@ export const useCustomerStore = defineStore('customer', {
     loading: false,
     error: null,
     currentCustomer: null, // Add this to store the currently edited customer
+
+    // Real-time state management
+    realTimeState: {
+      isConnected: false,
+      lastSyncTime: null,
+      cacheInvalidationCount: 0,
+      lastCacheInvalidation: null,
+      realTimeSync: null
+    },
+
+    // Cache management
+    customerCache: new Map(),
+    lastFetch: null,
+    cacheTimeout: 5 * 60 * 1000 // 5 minutes
   }),
+
+  // Initialize real-time sync when store is created
+  $onAction({ name, store, args, after, onError }) {
+    // Initialize real-time sync on first action
+    if (!store.realTimeState.realTimeSync) {
+      const toast = useToast()
+
+      store.realTimeState.realTimeSync = useRealTimeSync({
+        entityName: 'nguoiDung',
+        storeKey: 'customerStore',
+        enablePersistence: true,
+        enableCrossTab: true,
+        validateState: (state) => {
+          if (!state || typeof state !== 'object') return false
+          if (state.hoTen && typeof state.hoTen !== 'string') return false
+          if (state.email && typeof state.email !== 'string') return false
+          return true
+        }
+      })
+
+      // Setup real-time sync event listeners
+      store.realTimeState.realTimeSync.addEventListener('CACHE_INVALIDATION', (event) => {
+        const { scope, entityId, requiresRefresh } = event.data
+
+        if (scope === 'USER_DATA' || scope === 'CUSTOMER_DATA') {
+          store.handleCacheInvalidation(scope, entityId, requiresRefresh)
+        }
+      })
+
+      store.realTimeState.realTimeSync.addEventListener('WEBSOCKET_STATE_UPDATE', (event) => {
+        const { stateData } = event.data
+        if (stateData && (stateData.hoTen || stateData.email)) {
+          store.handleCustomerUpdate(stateData)
+        }
+      })
+    }
+  },
   actions: {
     async fetchCustomers(params = {}) {
       this.loading = true
@@ -104,6 +157,61 @@ export const useCustomerStore = defineStore('customer', {
       } finally {
         this.loading = false
       }
+    },
+
+    // Real-time update handlers
+    handleCacheInvalidation(scope, entityId, requiresRefresh) {
+      console.log(`🔄 CustomerStore: Cache invalidation received - scope: ${scope}, entityId: ${entityId}, requiresRefresh: ${requiresRefresh}`)
+
+      this.realTimeState.cacheInvalidationCount++
+      this.realTimeState.lastCacheInvalidation = new Date().toISOString()
+
+      if (requiresRefresh) {
+        if (scope === 'USER_DATA' || scope === 'CUSTOMER_DATA') {
+          if (entityId) {
+            this.customerCache.delete(entityId)
+          } else {
+            // Clear all customer cache
+            this.customerCache.clear()
+            this.lastFetch = null
+          }
+        }
+      }
+    },
+
+    handleCustomerUpdate(stateData) {
+      console.log(`👤 CustomerStore: Customer update received:`, stateData)
+
+      const customerId = stateData.id
+      if (!customerId) return
+
+      // Update customer in customers array
+      const customerIndex = this.customers.findIndex(c => c.id === customerId)
+      if (customerIndex !== -1) {
+        this.customers[customerIndex] = { ...this.customers[customerIndex], ...stateData }
+      }
+
+      // Update cached customer
+      if (this.customerCache.has(customerId)) {
+        const cachedCustomer = this.customerCache.get(customerId)
+        this.customerCache.set(customerId, { ...cachedCustomer, ...stateData })
+      }
+
+      // Update current customer if it's the same
+      if (this.currentCustomer && this.currentCustomer.id === customerId) {
+        this.currentCustomer = { ...this.currentCustomer, ...stateData }
+      }
+
+      // Sync with real-time system
+      if (this.realTimeState.realTimeSync) {
+        this.realTimeState.realTimeSync.syncStateData(stateData, { merge: true })
+      }
+    },
+
+    // Force refresh customers from API (for DataTable integration)
+    async forceRefreshCustomers() {
+      console.log('🔄 CustomerStore: Force refreshing customers for real-time update')
+      return await this.fetchCustomers()
     },
   },
   getters: {

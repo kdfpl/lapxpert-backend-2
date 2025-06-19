@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WebSocketErrorRecovery {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final WebSocketHealthMonitor healthMonitor;
 
     // Error tracking
     private final ConcurrentHashMap<String, ErrorInfo> sessionErrors = new ConcurrentHashMap<>();
@@ -34,7 +33,6 @@ public class WebSocketErrorRecovery {
     private static final int MAX_RETRY_ATTEMPTS = 5;
     private static final long BASE_RETRY_DELAY_MS = 1000; // 1 second
     private static final long MAX_RETRY_DELAY_MS = 30000; // 30 seconds
-    private static final long ERROR_CLEANUP_INTERVAL_MS = 300000; // 5 minutes
 
     /**
      * Error information tracking

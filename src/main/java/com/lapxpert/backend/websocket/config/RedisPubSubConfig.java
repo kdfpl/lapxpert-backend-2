@@ -15,17 +15,24 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 
 /**
- * Redis Pub/Sub Configuration for Enhanced WebSocket Messaging
+ * Redis Pub/Sub Configuration for Enhanced WebSocket Messaging with Ordering and Delivery Guarantees
  *
  * Configures Redis message broadcasting within the monolithic application for improved
- * WebSocket message distribution. Supports Vietnamese topic naming conventions and
- * prepares for future chatbox integration.
+ * WebSocket message distribution with enhanced reliability features:
+ * - Message ordering guarantees within channels
+ * - Delivery confirmation mechanisms
+ * - Message deduplication support
+ * - Retry logic for failed deliveries
+ * - Performance monitoring and metrics
+ *
+ * Supports Vietnamese topic naming conventions and prepares for future chatbox integration.
  *
  * Redis Channels:
  * - lapxpert:websocket:global - General WebSocket messages
  * - lapxpert:websocket:price - Product price updates
  * - lapxpert:websocket:voucher - Voucher notifications
  * - lapxpert:websocket:chatbox - Future customer service chat
+ * - lapxpert:websocket:ack - Delivery acknowledgments
  *
  * Can be enabled/disabled via: websocket.redis.pubsub.enabled=true/false
  */
@@ -40,12 +47,31 @@ public class RedisPubSubConfig {
     public static final String VOUCHER_CHANNEL = "lapxpert:websocket:voucher";
     public static final String HEALTH_CHANNEL = "lapxpert:websocket:health";
     public static final String CHATBOX_CHANNEL = "lapxpert:websocket:chatbox";
+    public static final String ACK_CHANNEL = "lapxpert:websocket:ack";
+
+    // Redis keys for message ordering and deduplication
+    public static final String MESSAGE_SEQUENCE_KEY = "lapxpert:websocket:sequence";
+    public static final String MESSAGE_DEDUP_KEY_PREFIX = "lapxpert:websocket:dedup:";
+    public static final String PENDING_ACK_KEY_PREFIX = "lapxpert:websocket:pending_ack:";
 
     @Value("${redis.pubsub.enabled:true}")
     private boolean pubSubEnabled;
 
+    @Value("${websocket.redis.pubsub.ordering.enabled:true}")
+    private boolean orderingEnabled;
+
+    @Value("${websocket.redis.pubsub.deduplication.enabled:true}")
+    private boolean deduplicationEnabled;
+
+    @Value("${websocket.redis.pubsub.deduplication.ttl:300}")
+    private int deduplicationTtlSeconds;
+
+    @Value("${websocket.redis.pubsub.delivery.confirmation.enabled:true}")
+    private boolean deliveryConfirmationEnabled;
+
     /**
      * Redis message listener container for handling incoming messages from other services
+     * Enhanced with ordering guarantees and delivery confirmation support
      */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
@@ -54,7 +80,8 @@ public class RedisPubSubConfig {
             MessageListenerAdapter priceMessageAdapter,
             MessageListenerAdapter voucherMessageAdapter,
             MessageListenerAdapter healthMessageAdapter,
-            MessageListenerAdapter chatboxMessageAdapter) {
+            MessageListenerAdapter chatboxMessageAdapter,
+            MessageListenerAdapter ackMessageAdapter) {
 
         if (!pubSubEnabled) {
             log.warn("Redis Pub/Sub is disabled - WebSocket service will not scale horizontally");
@@ -70,15 +97,23 @@ public class RedisPubSubConfig {
         container.addMessageListener(voucherMessageAdapter, voucherChannelTopic());
         container.addMessageListener(healthMessageAdapter, healthChannelTopic());
         container.addMessageListener(chatboxMessageAdapter, chatboxChannelTopic());
+        container.addMessageListener(ackMessageAdapter, ackChannelTopic());
 
-        // Configure container for production stability
+        // Configure container for production stability and enhanced reliability
         container.setTaskExecutor(null); // Use default task executor
         container.setSubscriptionExecutor(null); // Use default subscription executor
-        container.setRecoveryInterval(5000L); // 5 seconds recovery interval
+        container.setRecoveryInterval(3000L); // 3 seconds recovery interval for faster recovery
 
-        log.info("Redis message listener container configured for {} channels", 5);
-        log.info("Subscribed channels: {}, {}, {}, {}, {}", 
-                GLOBAL_CHANNEL, PRICE_CHANNEL, VOUCHER_CHANNEL, HEALTH_CHANNEL, CHATBOX_CHANNEL);
+        // Enhanced error handling and connection management
+        container.setErrorHandler(throwable -> {
+            log.error("Redis message listener error - attempting recovery", throwable);
+        });
+
+        log.info("Redis message listener container configured for {} channels", 6);
+        log.info("Subscribed channels: {}, {}, {}, {}, {}, {}",
+                GLOBAL_CHANNEL, PRICE_CHANNEL, VOUCHER_CHANNEL, HEALTH_CHANNEL, CHATBOX_CHANNEL, ACK_CHANNEL);
+        log.info("Enhanced features enabled - Ordering: {}, Deduplication: {}, Delivery Confirmation: {}",
+                orderingEnabled, deduplicationEnabled, deliveryConfirmationEnabled);
 
         return container;
     }
@@ -111,6 +146,11 @@ public class RedisPubSubConfig {
         return new ChannelTopic(CHATBOX_CHANNEL);
     }
 
+    @Bean
+    public ChannelTopic ackChannelTopic() {
+        return new ChannelTopic(ACK_CHANNEL);
+    }
+
     /**
      * Message listener adapters for different channel types
      */
@@ -139,12 +179,20 @@ public class RedisPubSubConfig {
         return new MessageListenerAdapter(subscriber, "handleChatboxMessage");
     }
 
+    @Bean
+    public MessageListenerAdapter ackMessageAdapter(RedisMessageSubscriber subscriber) {
+        return new MessageListenerAdapter(subscriber, "handleAckMessage");
+    }
+
     /**
      * Redis message subscriber service
-     * Autowired with SimpMessagingTemplate and ObjectMapper for message forwarding
+     * Autowired with SimpMessagingTemplate, ObjectMapper, and RedisTemplate for enhanced message processing
      */
     @Bean
-    public RedisMessageSubscriber redisMessageSubscriber(SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper) {
-        return new RedisMessageSubscriber(messagingTemplate, objectMapper);
+    public RedisMessageSubscriber redisMessageSubscriber(
+            SimpMessagingTemplate messagingTemplate,
+            ObjectMapper objectMapper,
+            org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate) {
+        return new RedisMessageSubscriber(messagingTemplate, objectMapper, redisTemplate);
     }
 }

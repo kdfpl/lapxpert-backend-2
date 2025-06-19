@@ -2,6 +2,7 @@ package com.lapxpert.backend.common.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,39 @@ public class OptimisticLockingService {
      */
     public <T> T executeWithRetry(Supplier<T> operation) {
         return executeWithRetry(operation, DEFAULT_MAX_RETRIES);
+    }
+
+    /**
+     * Execute operation with optimistic locking retry mechanism and constraint violation handling
+     * @param operation operation to execute
+     * @param entityName entity name for error messages
+     * @param entityId entity ID for error messages
+     * @param <T> return type
+     * @return operation result
+     * @throws RuntimeException if all retry attempts fail or constraint violation occurs
+     */
+    public <T> T executeWithRetryAndConstraintHandling(Supplier<T> operation, String entityName, Object entityId) {
+        return executeWithRetryAndConstraintHandling(operation, entityName, entityId, DEFAULT_MAX_RETRIES);
+    }
+
+    /**
+     * Execute operation with optimistic locking retry mechanism, constraint violation handling, and custom retry count
+     * @param operation operation to execute
+     * @param entityName entity name for error messages
+     * @param entityId entity ID for error messages
+     * @param maxRetries maximum number of retry attempts
+     * @param <T> return type
+     * @return operation result
+     * @throws RuntimeException if all retry attempts fail or constraint violation occurs
+     */
+    public <T> T executeWithRetryAndConstraintHandling(Supplier<T> operation, String entityName, Object entityId, int maxRetries) {
+        try {
+            return executeWithRetry(operation, maxRetries);
+        } catch (DataIntegrityViolationException e) {
+            String errorMessage = formatConstraintViolationError(e, entityName, entityId);
+            log.error("Constraint violation for {} {}: {}", entityName, entityId, errorMessage);
+            throw new RuntimeException(errorMessage, e);
+        }
     }
 
     /**
@@ -200,8 +234,37 @@ public class OptimisticLockingService {
      */
     public void logOptimisticLockingStats(String entityName, int successfulAttempts, int failedAttempts) {
         if (failedAttempts > 0) {
-            log.info("Optimistic locking stats for {}: {} successful, {} failed attempts", 
+            log.info("Optimistic locking stats for {}: {} successful, {} failed attempts",
                     entityName, successfulAttempts, failedAttempts);
+        }
+    }
+
+    /**
+     * Format constraint violation error message in Vietnamese
+     * @param e constraint violation exception
+     * @param entityName entity name for error message
+     * @param entityId entity ID for error message
+     * @return formatted error message
+     */
+    private String formatConstraintViolationError(DataIntegrityViolationException e, String entityName, Object entityId) {
+        String message = e.getMessage();
+        if (message == null) {
+            message = e.getClass().getSimpleName();
+        }
+
+        // Check for specific constraint violations and provide Vietnamese error messages
+        if (message.contains("uk_serial_number_order_allocation")) {
+            return "Lỗi phân bổ serial number: Không thể phân bổ cùng một serial number cho nhiều đơn hàng";
+        } else if (message.contains("chk_serial_number_allocation_consistency")) {
+            return "Lỗi tính nhất quán phân bổ serial number: Trạng thái và thông tin đặt trước không khớp";
+        } else if (message.contains("uk_serial_number_value")) {
+            return "Lỗi trùng lặp serial number: Serial number đã tồn tại trong hệ thống";
+        } else if (message.contains("unique") || message.contains("duplicate")) {
+            return String.format("Lỗi ràng buộc duy nhất cho %s ID %s: Dữ liệu đã tồn tại", entityName, entityId);
+        } else if (message.contains("foreign key") || message.contains("violates")) {
+            return String.format("Lỗi ràng buộc dữ liệu cho %s ID %s: Vi phạm quy tắc tham chiếu", entityName, entityId);
+        } else {
+            return String.format("Lỗi ràng buộc dữ liệu cho %s ID %s: %s", entityName, entityId, message);
         }
     }
 }

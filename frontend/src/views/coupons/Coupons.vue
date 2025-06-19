@@ -651,7 +651,8 @@ import { usePhieuGiamGiaStore } from '@/stores/couponstore';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
-import { useDataTableSorting } from '@/composables/useDataTableSorting';
+import { useDataTableSorting } from '@/composables/useDataTableSorting'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime';
 
 // PrimeVue Components
 import Toast from 'primevue/toast';
@@ -674,6 +675,21 @@ const {
   defaultSortField: 'ngayCapNhat',
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
+});
+
+// Real-time DataTable integration
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'phieuGiamGia',
+  storeKey: 'couponsList',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 Coupons: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh voucher data from store
+    await store.fetchPhieuGiamGia()
+  },
+  debounceDelay: 300,
+  enableSelectiveUpdates: true,
+  topicFilters: ['phieu-giam-gia', 'voucher']
 });
 
 // Define the initial structure for filters (following DiscountList.vue pattern)

@@ -9,8 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -41,6 +45,29 @@ public class MessageRoutingService {
     private final AtomicLong totalMessagesRouted = new AtomicLong(0);
     private final AtomicLong redisPublishCount = new AtomicLong(0);
     private final AtomicLong routingErrors = new AtomicLong(0);
+    private final AtomicLong queuedMessages = new AtomicLong(0);
+    private final AtomicLong transactionRollbacks = new AtomicLong(0);
+
+    /**
+     * Transaction-aware message queue for coordinating message delivery with database transactions
+     * Vietnamese Business Context: Hàng đợi tin nhắn nhận biết giao dịch để điều phối gửi tin nhắn với giao dịch cơ sở dữ liệu
+     */
+    private static final ThreadLocal<List<QueuedMessage>> transactionMessageQueue = new ThreadLocal<>();
+
+    /**
+     * Queued message for transaction coordination
+     */
+    private static class QueuedMessage {
+        final String channel;
+        final WebSocketMessage message;
+        final Instant queuedAt;
+
+        QueuedMessage(String channel, WebSocketMessage message) {
+            this.channel = channel;
+            this.message = message;
+            this.queuedAt = Instant.now();
+        }
+    }
 
     /**
      * Route message to appropriate channels based on destination
@@ -129,23 +156,136 @@ public class MessageRoutingService {
     }
 
     /**
-     * Publish message to Redis Pub/Sub channel
+     * Publish message to Redis Pub/Sub channel with transaction coordination
+     * Vietnamese Business Context: Xuất bản tin nhắn đến kênh Redis Pub/Sub với điều phối giao dịch
      */
     private void publishToRedis(String channel, WebSocketMessage message) {
+        // Check if we're in a transaction context
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            // Queue message for after-commit delivery
+            queueMessageForTransaction(channel, message);
+        } else {
+            // Send immediately if not in transaction
+            publishMessageImmediately(channel, message);
+        }
+    }
+
+    /**
+     * Queue message for transaction-aware delivery
+     * Vietnamese Business Context: Xếp hàng tin nhắn để gửi nhận biết giao dịch
+     */
+    private void queueMessageForTransaction(String channel, WebSocketMessage message) {
+        try {
+            // Initialize queue for this transaction if needed
+            List<QueuedMessage> queue = transactionMessageQueue.get();
+            if (queue == null) {
+                queue = new ArrayList<>();
+                transactionMessageQueue.set(queue);
+
+                // Register transaction synchronization for message delivery
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        deliverQueuedMessages();
+                    }
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status == STATUS_ROLLED_BACK) {
+                            handleTransactionRollback();
+                        }
+                        // Clean up thread local
+                        transactionMessageQueue.remove();
+                    }
+                });
+            }
+
+            // Add message to queue
+            queue.add(new QueuedMessage(channel, message));
+            queuedMessages.incrementAndGet();
+
+            log.debug("Queued message for after-commit delivery: destination={}", message.getDestination());
+
+        } catch (Exception e) {
+            routingErrors.incrementAndGet();
+            log.error("Failed to queue message for transaction: destination={}, error={}",
+                message.getDestination(), e.getMessage(), e);
+            // Fallback to immediate delivery
+            publishMessageImmediately(channel, message);
+        }
+    }
+
+    /**
+     * Publish message immediately without transaction coordination
+     */
+    private void publishMessageImmediately(String channel, WebSocketMessage message) {
         try {
             String messageJson = objectMapper.writeValueAsString(message);
             redisTemplate.convertAndSend(channel, messageJson);
             redisPublishCount.incrementAndGet();
-            
-            log.debug("Published message to Redis channel {}: destination={}", 
+
+            log.debug("Published message immediately to Redis channel {}: destination={}",
                     channel, message.getDestination());
-            
+
         } catch (JsonProcessingException e) {
             routingErrors.incrementAndGet();
             log.error("Error serializing message for Redis: {}", e.getMessage(), e);
         } catch (Exception e) {
             routingErrors.incrementAndGet();
             log.error("Error publishing to Redis channel {}: {}", channel, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Deliver all queued messages after transaction commit
+     * Vietnamese Business Context: Gửi tất cả tin nhắn đã xếp hàng sau khi giao dịch commit
+     */
+    private void deliverQueuedMessages() {
+        List<QueuedMessage> queue = transactionMessageQueue.get();
+        if (queue == null || queue.isEmpty()) {
+            return;
+        }
+
+        try {
+            log.debug("Delivering {} queued messages after transaction commit", queue.size());
+
+            for (QueuedMessage queuedMessage : queue) {
+                try {
+                    publishMessageImmediately(queuedMessage.channel, queuedMessage.message);
+
+                    log.debug("Delivered queued message: destination={}, queued_at={}",
+                        queuedMessage.message.getDestination(), queuedMessage.queuedAt);
+
+                } catch (Exception e) {
+                    routingErrors.incrementAndGet();
+                    log.error("Failed to deliver queued message: destination={}, error={}",
+                        queuedMessage.message.getDestination(), e.getMessage(), e);
+                }
+            }
+
+            log.info("Successfully delivered {} messages after transaction commit", queue.size());
+
+        } catch (Exception e) {
+            routingErrors.incrementAndGet();
+            log.error("Error delivering queued messages: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle transaction rollback by discarding queued messages
+     * Vietnamese Business Context: Xử lý rollback giao dịch bằng cách loại bỏ tin nhắn đã xếp hàng
+     */
+    private void handleTransactionRollback() {
+        List<QueuedMessage> queue = transactionMessageQueue.get();
+        if (queue != null && !queue.isEmpty()) {
+            transactionRollbacks.incrementAndGet();
+            log.warn("Transaction rolled back - discarding {} queued messages", queue.size());
+
+            // Log discarded messages for debugging
+            for (QueuedMessage message : queue) {
+                log.debug("Discarded message due to rollback: destination={}, queued_at={}",
+                    message.message.getDestination(), message.queuedAt);
+            }
         }
     }
 

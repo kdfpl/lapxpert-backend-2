@@ -6,6 +6,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -136,7 +139,7 @@ public class EventualInvalidationStrategy implements CacheInvalidationStrategy {
     }
 
     /**
-     * Asynchronous invalidation for single cache key
+     * Asynchronous invalidation for single cache key with WebSocket coordination
      */
     @Async
     public CompletableFuture<Void> invalidateAsync(String cacheKey) {
@@ -144,17 +147,65 @@ public class EventualInvalidationStrategy implements CacheInvalidationStrategy {
             try {
                 log.debug("Executing async invalidation for key '{}'", cacheKey);
 
-                // Step 1: Remove versioned cache entry
+                // Step 1: Remove versioned cache entry and track invalidation
                 versioningService.invalidateVersionedEntry(cacheKey);
 
                 // Step 2: Remove any additional Redis keys
                 Boolean deleted = redisTemplate.delete(cacheKey);
+
+                // Step 3: Warm critical cache entries after invalidation
+                warmCriticalCacheAfterInvalidation(cacheKey);
 
                 log.debug("Async invalidation completed for key '{}', deleted: {}", cacheKey, deleted);
 
             } catch (Exception e) {
                 log.error("Async invalidation failed for key '{}': {}", cacheKey, e.getMessage(), e);
             }
+        });
+    }
+
+    /**
+     * Asynchronous invalidation with WebSocket coordination metadata
+     */
+    @Async
+    public CompletableFuture<Map<String, Object>> invalidateAsyncWithMetadata(String cacheKey) {
+        return CompletableFuture.supplyAsync(() -> {
+            Map<String, Object> metadata = new HashMap<>();
+            try {
+                log.debug("Executing async invalidation with metadata for key '{}'", cacheKey);
+
+                // Step 1: Get current cache version before invalidation
+                String currentVersion = versioningService.getCurrentCacheVersion(cacheKey);
+                metadata.put("previousVersion", currentVersion);
+
+                // Step 2: Remove versioned cache entry and track invalidation
+                versioningService.invalidateVersionedEntry(cacheKey);
+
+                // Step 3: Remove any additional Redis keys
+                Boolean deleted = redisTemplate.delete(cacheKey);
+                metadata.put("deleted", deleted);
+
+                // Step 4: Get new cache version after invalidation
+                String newVersion = versioningService.getCurrentCacheVersion(cacheKey);
+                metadata.put("newVersion", newVersion);
+
+                // Step 5: Warm critical cache entries after invalidation
+                boolean warmed = warmCriticalCacheAfterInvalidation(cacheKey);
+                metadata.put("warmed", warmed);
+
+                metadata.put("timestamp", Instant.now());
+                metadata.put("cacheKey", cacheKey);
+                metadata.put("success", true);
+
+                log.debug("Async invalidation with metadata completed for key '{}': {}", cacheKey, metadata);
+
+            } catch (Exception e) {
+                log.error("Async invalidation with metadata failed for key '{}': {}", cacheKey, e.getMessage(), e);
+                metadata.put("success", false);
+                metadata.put("error", e.getMessage());
+                metadata.put("timestamp", Instant.now());
+            }
+            return metadata;
         });
     }
 
@@ -294,5 +345,47 @@ public class EventualInvalidationStrategy implements CacheInvalidationStrategy {
                 log.error("Scheduled invalidation failed for key '{}': {}", cacheKey, e.getMessage(), e);
             }
         });
+    }
+
+    /**
+     * Warm critical cache entries after invalidation for better performance
+     * Vietnamese Business Context: Làm ấm cache quan trọng sau khi vô hiệu hóa
+     */
+    private boolean warmCriticalCacheAfterInvalidation(String cacheKey) {
+        try {
+            // Only warm cache for critical business data patterns
+            if (isCriticalBusinessData(cacheKey)) {
+                log.debug("Warming critical cache for key '{}'", cacheKey);
+
+                // Trigger cache warming by setting a placeholder with short TTL
+                // This allows the next request to populate the cache properly
+                String warmingKey = cacheKey + ":warming";
+                redisTemplate.opsForValue().set(warmingKey, "WARMING", 30, java.util.concurrent.TimeUnit.SECONDS);
+
+                // Update cache version to indicate warming in progress
+                versioningService.incrementCacheVersion(cacheKey);
+
+                log.debug("Cache warming initiated for key '{}'", cacheKey);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("Failed to warm cache for key '{}': {}", cacheKey, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if cache key represents critical business data that should be warmed
+     */
+    private boolean isCriticalBusinessData(String cacheKey) {
+        return cacheKey.contains("productData") ||
+               cacheKey.contains("inventory") ||
+               cacheKey.contains("pricing") ||
+               cacheKey.contains("voucher") ||
+               cacheKey.contains("hoaDon") ||
+               cacheKey.contains("sanPham") ||
+               cacheKey.contains("phieuGiamGia") ||
+               cacheKey.contains("dotGiamGia");
     }
 }

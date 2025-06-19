@@ -4,7 +4,8 @@ import shippingApi from '@/apis/shippingApi'
 
 /**
  * Shipping Calculator Composable
- * Handles GHTK shipping fee calculation with automatic and manual override functionality
+ * Handles shipping fee calculation using GHN service
+ * Enhanced with GHN integration and robust fallback mechanisms
  * Follows existing LapXpert patterns and Vietnamese business terminology
  */
 export function useShippingCalculator() {
@@ -21,12 +22,9 @@ export function useShippingCalculator() {
   const isAutoCalculated = ref(false)
   const estimatedDeliveryTime = ref('')
 
-  // Provider comparison state
-  const comparisonResults = ref(null)
-  const selectedProvider = ref('AUTO') // AUTO, GHTK, GHN, MANUAL
-  const availableProviders = ref([])
-  const isComparingProviders = ref(false)
-  const comparisonError = ref(null)
+  // GHN service state (simplified from provider comparison)
+  const ghnServiceAvailable = ref(true)
+  const lastGHNResult = ref(null)
 
   // Address validation state
   const isValidatingAddress = ref(false)
@@ -69,29 +67,22 @@ export function useShippingCalculator() {
     return shippingFee.value > 0 || isManualOverride.value
   })
 
-  const hasProviderComparison = computed(() => {
-    return comparisonResults.value && comparisonResults.value.hasValidOptions
+  const hasGHNResult = computed(() => {
+    return lastGHNResult.value && lastGHNResult.value.success
   })
 
-  const canSelectProvider = computed(() => {
-    return hasProviderComparison.value && !isManualOverride.value
-  })
-
-  const selectedProviderInfo = computed(() => {
-    if (!hasProviderComparison.value) return null
-
-    if (selectedProvider.value === 'AUTO') {
-      return comparisonResults.value.selectedProvider
+  const ghnServiceInfo = computed(() => {
+    if (!hasGHNResult.value) return null
+    return {
+      provider: 'GHN',
+      totalFee: lastGHNResult.value.data?.totalFee || 0,
+      shippingFee: lastGHNResult.value.data?.shippingFee || 0,
+      estimatedTime: lastGHNResult.value.data?.estimatedDeliveryTime || ''
     }
-
-    const providerResult = comparisonResults.value.allProviders?.find(
-      p => p.providerName === selectedProvider.value
-    )
-    return providerResult?.response || null
   })
 
   /**
-   * Calculate shipping fee with provider comparison
+   * Calculate shipping fee using GHN service directly
    */
   const calculateShippingFeeWithComparison = async (deliveryAddress, orderValue = 0, weight = null) => {
     if (!deliveryAddress || !deliveryAddress.province || !deliveryAddress.district) {
@@ -99,8 +90,8 @@ export function useShippingCalculator() {
       return false
     }
 
-    isComparingProviders.value = true
-    comparisonError.value = null
+    isCalculating.value = true
+    calculationError.value = null
 
     try {
       const shippingRequest = {
@@ -123,39 +114,45 @@ export function useShippingCalculator() {
         tags: []
       }
 
-      const result = await shippingApi.compareShippingProviders(shippingRequest)
+      console.log('Shipping request for GHN calculation:', shippingRequest)
+      const result = await shippingApi.calculateShippingFeeWithFallback(shippingRequest)
 
       if (result.success && result.data) {
-        comparisonResults.value = result.data
+        lastGHNResult.value = result
+        console.log('GHN calculation results:', result.data)
 
-        if (result.data.hasValidOptions) {
-          // Use the selected provider from comparison
-          const selectedProviderResponse = result.data.selectedProvider
-          shippingFee.value = selectedProviderResponse.totalFee || 0
+        if (!result.data.isManualOverride) {
+          // GHN calculation succeeded
+          shippingFee.value = result.data.fee || result.data.totalFee || 0
           isAutoCalculated.value = true
           isManualOverride.value = false
-          estimatedDeliveryTime.value = selectedProviderResponse.estimatedTime || ''
-
-          // Update available providers list
-          availableProviders.value = result.data.allProviders?.filter(p => p.isSuccessful) || []
+          estimatedDeliveryTime.value = result.data.estimatedDeliveryTime || result.data.estimatedTime || ''
+          ghnServiceAvailable.value = true
 
           toast.add({
             severity: 'success',
-            summary: 'So sánh nhà vận chuyển thành công',
-            detail: `Đã chọn ${result.data.selectedProviderName}: ${formatCurrency(selectedProviderResponse.totalFee)}`,
+            summary: 'Tính phí vận chuyển thành công',
+            detail: `GHN: ${formatCurrency(shippingFee.value)}`,
             life: 4000
           })
 
           return true
         } else {
-          // No valid providers, fall back to manual
+          // GHN calculation failed, fall back to manual
           isManualOverride.value = true
           isAutoCalculated.value = false
+          ghnServiceAvailable.value = false
+
+          // Enhanced error message for GHN address resolution failures
+          let errorDetail = result.data.errorMessage || 'Vui lòng nhập phí vận chuyển thủ công'
+          if (errorDetail.includes('address resolution') || errorDetail.includes('GHN')) {
+            errorDetail = 'Không thể xác định địa chỉ giao hàng cho GHN. Vui lòng kiểm tra địa chỉ hoặc nhập phí vận chuyển thủ công.'
+          }
 
           toast.add({
             severity: 'warn',
-            summary: 'Không tìm thấy nhà vận chuyển phù hợp',
-            detail: result.data.selectionReason || 'Vui lòng nhập phí vận chuyển thủ công',
+            summary: 'Không thể tính phí tự động',
+            detail: errorDetail,
             life: 5000
           })
 
@@ -166,14 +163,34 @@ export function useShippingCalculator() {
       }
 
     } catch (error) {
-      console.error('Error comparing providers:', error)
-      comparisonError.value = error.message
+      console.error('Error calculating shipping fee:', error)
+      calculationError.value = error.message
+      ghnServiceAvailable.value = false
 
-      // Fall back to single provider calculation
-      return await calculateShippingFee(deliveryAddress, orderValue, weight)
+      // Enhanced error handling for GHN-specific issues
+      let errorMessage = 'Lỗi tính phí vận chuyển'
+      let errorDetail = 'Vui lòng nhập phí vận chuyển thủ công'
+
+      if (error.message.includes('GHN') || error.message.includes('address resolution')) {
+        errorMessage = 'Lỗi tích hợp GHN'
+        errorDetail = 'Không thể kết nối với dịch vụ GHN. Vui lòng nhập phí thủ công.'
+      }
+
+      // Switch to manual mode on error
+      isManualOverride.value = true
+      isAutoCalculated.value = false
+
+      toast.add({
+        severity: 'error',
+        summary: errorMessage,
+        detail: errorDetail,
+        life: 5000
+      })
+
+      return false
 
     } finally {
-      isComparingProviders.value = false
+      isCalculating.value = false
     }
   }
 
@@ -336,72 +353,37 @@ export function useShippingCalculator() {
   }
 
   /**
-   * Select a specific provider from comparison results
+   * Select shipping calculation mode (for backward compatibility)
    */
   const selectProvider = (providerName) => {
-    if (!hasProviderComparison.value) return false
-
     if (providerName === 'MANUAL') {
       enableManualOverride()
       return true
     }
 
-    if (providerName === 'AUTO') {
-      selectedProvider.value = 'AUTO'
-      const autoSelected = comparisonResults.value.selectedProvider
-      if (autoSelected) {
-        shippingFee.value = autoSelected.totalFee || 0
-        estimatedDeliveryTime.value = autoSelected.estimatedTime || ''
-        isAutoCalculated.value = true
-        isManualOverride.value = false
-
-        toast.add({
-          severity: 'info',
-          summary: 'Chọn tự động',
-          detail: `Hệ thống đã chọn ${comparisonResults.value.selectedProviderName}`,
-          life: 3000
-        })
-      }
+    if (providerName === 'AUTO' || providerName === 'GHN') {
+      // Switch to automatic calculation using GHN
+      enableAutoCalculation()
       return true
     }
 
-    // Select specific provider
-    const providerResult = comparisonResults.value.allProviders?.find(
-      p => p.providerName === providerName && p.isSuccessful
-    )
-
-    if (providerResult) {
-      selectedProvider.value = providerName
-      shippingFee.value = providerResult.response.totalFee || 0
-      estimatedDeliveryTime.value = providerResult.response.estimatedTime || ''
-      isAutoCalculated.value = true
-      isManualOverride.value = false
-
-      toast.add({
-        severity: 'info',
-        summary: 'Đã chọn nhà vận chuyển',
-        detail: `${providerName}: ${formatCurrency(providerResult.response.totalFee)}`,
-        life: 3000
-      })
-
-      return true
-    }
-
+    // For any other provider name, default to manual mode
+    enableManualOverride()
     return false
   }
 
   /**
-   * Get provider comparison summary for display
+   * Get GHN service summary for display (simplified from provider comparison)
    */
   const getProviderComparisonSummary = () => {
-    if (!hasProviderComparison.value) return null
+    if (!hasGHNResult.value) return null
 
     return {
-      selectedProvider: comparisonResults.value.selectedProviderName,
-      selectionReason: comparisonResults.value.selectionReason,
-      totalProviders: comparisonResults.value.allProviders?.length || 0,
-      successfulProviders: comparisonResults.value.allProviders?.filter(p => p.isSuccessful).length || 0,
-      comparedAt: comparisonResults.value.comparedAt
+      selectedProvider: 'GHN',
+      selectionReason: 'GHN service selected automatically',
+      totalProviders: 1,
+      successfulProviders: ghnServiceAvailable.value ? 1 : 0,
+      comparedAt: new Date().toISOString()
     }
   }
 
@@ -417,11 +399,9 @@ export function useShippingCalculator() {
     estimatedDeliveryTime.value = ''
     addressValidationResult.value = null
 
-    // Reset provider comparison state
-    comparisonResults.value = null
-    selectedProvider.value = 'AUTO'
-    availableProviders.value = []
-    comparisonError.value = null
+    // Reset GHN service state
+    lastGHNResult.value = null
+    ghnServiceAvailable.value = true
   }
 
   /**
@@ -467,6 +447,66 @@ export function useShippingCalculator() {
   }
 
   /**
+   * Test GHN integration specifically
+   */
+  const testGHNIntegration = async (deliveryAddress, orderValue = 0, weight = null) => {
+    if (!deliveryAddress || !deliveryAddress.province || !deliveryAddress.district) {
+      return { success: false, error: 'Thiếu thông tin địa chỉ giao hàng' }
+    }
+
+    try {
+      const shippingRequest = {
+        // Pickup address (from config)
+        pickProvince: shippingConfig.value.pickupAddress.province,
+        pickDistrict: shippingConfig.value.pickupAddress.district,
+        pickWard: shippingConfig.value.pickupAddress.ward,
+        pickAddress: shippingConfig.value.pickupAddress.address,
+
+        // Delivery address
+        province: deliveryAddress.province,
+        district: deliveryAddress.district,
+        ward: deliveryAddress.ward || '',
+        address: deliveryAddress.address || '',
+
+        // Package details
+        weight: weight || shippingConfig.value.defaultWeight,
+        value: orderValue,
+        transport: shippingConfig.value.defaultTransport,
+        tags: []
+      }
+
+      console.log('Testing GHN integration with request:', shippingRequest)
+      const result = await shippingApi.calculateGHNShippingFee(shippingRequest)
+
+      console.log('GHN test result:', result)
+      return result
+    } catch (error) {
+      console.error('GHN integration test failed:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Get GHN provider information for display (simplified from provider comparison)
+   */
+  const getProviderInfo = (providerName) => {
+    if (providerName !== 'GHN' || !hasGHNResult.value) return null
+
+    return {
+      name: 'GHN',
+      isSuccessful: lastGHNResult.value.success,
+      isAvailable: ghnServiceAvailable.value,
+      totalFee: lastGHNResult.value.data?.totalFee || lastGHNResult.value.data?.fee || 0,
+      shippingFee: lastGHNResult.value.data?.shippingFee || 0,
+      insuranceFee: lastGHNResult.value.data?.insuranceFee || 0,
+      estimatedTime: lastGHNResult.value.data?.estimatedDeliveryTime || lastGHNResult.value.data?.estimatedTime || '',
+      responseTime: null,
+      failureReason: lastGHNResult.value.data?.errorMessage || null,
+      totalScore: null
+    }
+  }
+
+  /**
    * Format currency for display
    */
   const formatCurrency = (amount) => {
@@ -497,20 +537,21 @@ export function useShippingCalculator() {
     addressValidationResult,
     shippingConfig,
 
-    // Provider comparison state
-    comparisonResults,
-    selectedProvider,
-    availableProviders,
-    isComparingProviders,
-    comparisonError,
+    // GHN service state (simplified from provider comparison)
+    ghnServiceAvailable,
+    lastGHNResult,
 
     // Computed
     canAutoCalculate,
     shippingStatus,
     hasValidShippingFee,
-    hasProviderComparison,
-    canSelectProvider,
-    selectedProviderInfo,
+    hasGHNResult,
+    ghnServiceInfo,
+
+    // Backward compatibility computed properties (maintained for existing components)
+    hasProviderComparison: hasGHNResult,
+    canSelectProvider: computed(() => hasGHNResult.value && !isManualOverride.value),
+    selectedProviderInfo: ghnServiceInfo,
 
     // Methods
     calculateShippingFee,
@@ -524,6 +565,10 @@ export function useShippingCalculator() {
     resetShippingCalculation,
     loadShippingConfig,
     getEstimatedDeliveryTime,
-    formatCurrency
+    formatCurrency,
+
+    // GHN-specific methods
+    testGHNIntegration,
+    getProviderInfo
   }
 }

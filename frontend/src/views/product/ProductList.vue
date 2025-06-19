@@ -505,6 +505,7 @@ import { useAttributeStore } from '@/stores/attributestore'
 import { useProductFilters } from '@/composables/useProductFilters'
 import { useDynamicPricing } from '@/composables/useDynamicPricing'
 import { useDataTableSorting } from '@/composables/useDataTableSorting'
+import { useDataTableRealTime } from '@/composables/useDataTableRealTime'
 import { debounce } from 'lodash-es'
 import storageApi from '@/apis/storage'
 import inventoryApi from '@/apis/inventoryApi'
@@ -530,6 +531,26 @@ const {
   defaultSortField: 'ngayCapNhat',
   defaultSortOrder: -1, // Newest first
   enableUserOverride: true
+})
+
+// Real-time DataTable integration
+const realTimeDataTable = useDataTableRealTime({
+  entityType: 'sanPham',
+  storeKey: 'productList',
+  refreshCallback: async (refreshInfo) => {
+    console.log('🔄 ProductList: Real-time refresh triggered:', refreshInfo)
+
+    // Refresh product data from store
+    await productStore.forceRefreshProducts()
+
+    // Refresh dynamic pricing if needed
+    if (refreshInfo.source === 'WEBSOCKET' && refreshInfo.topic?.includes('gia-san-pham')) {
+      await dynamicPricing.refreshPricing()
+    }
+  },
+  debounceDelay: 200, // Faster refresh for product updates
+  enableSelectiveUpdates: true,
+  topicFilters: ['san-pham', 'gia-san-pham', 'ton-kho', 'product']
 })
 
 // Component state

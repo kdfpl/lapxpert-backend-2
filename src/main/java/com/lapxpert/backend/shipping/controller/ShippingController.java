@@ -1,22 +1,24 @@
 package com.lapxpert.backend.shipping.controller;
 
-import com.lapxpert.backend.shipping.config.GHTKConfig;
+
 import com.lapxpert.backend.shipping.service.GHNService;
-import com.lapxpert.backend.shipping.service.ShippingProviderComparator;
+import com.lapxpert.backend.shipping.service.GHNAddressService;
 import com.lapxpert.backend.shipping.dto.ShippingRequest;
 import com.lapxpert.backend.shipping.dto.ShippingFeeResponse;
-import com.lapxpert.backend.shipping.dto.ProviderComparisonResult;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Shipping Controller for GHTK integration
+ * Shipping Controller for GHN integration
  * Provides shipping configuration and basic endpoints for frontend integration
  * Follows Vietnamese business terminology and LapXpert patterns
  */
@@ -28,7 +30,7 @@ import java.util.Map;
 public class ShippingController {
 
     private final GHNService ghnService;
-    private final ShippingProviderComparator providerComparator;
+    private final GHNAddressService ghnAddressService;
 
     /**
      * Get shipping configuration for frontend
@@ -41,25 +43,19 @@ public class ShippingController {
             
             // Default shipping settings
             config.put("defaultWeight", 500); // 500g default
-            config.put("defaultTransport", GHTKConfig.ghtk_DefaultTransport != null ? 
-                      GHTKConfig.ghtk_DefaultTransport : "road");
-            
+            config.put("defaultTransport", "road");
+
             // Pickup address configuration
             Map<String, String> pickupAddress = new HashMap<>();
-            pickupAddress.put("province", GHTKConfig.ghtk_DefaultPickProvince != null ? 
-                            GHTKConfig.ghtk_DefaultPickProvince : "Hà Nội");
-            pickupAddress.put("district", GHTKConfig.ghtk_DefaultPickDistrict != null ? 
-                            GHTKConfig.ghtk_DefaultPickDistrict : "Cầu Giấy");
-            pickupAddress.put("ward", GHTKConfig.ghtk_DefaultPickWard != null ? 
-                            GHTKConfig.ghtk_DefaultPickWard : "Dịch Vọng");
-            pickupAddress.put("address", GHTKConfig.ghtk_DefaultPickAddress != null ? 
-                            GHTKConfig.ghtk_DefaultPickAddress : "Số 1 Đại Cồ Việt");
-            
+            pickupAddress.put("province", "Hà Nội");
+            pickupAddress.put("district", "Cầu Giấy");
+            pickupAddress.put("ward", "Dịch Vọng");
+            pickupAddress.put("address", "Số 1 Đại Cồ Việt");
+
             config.put("pickupAddress", pickupAddress);
-            
-            // Service availability
-            config.put("serviceAvailable", GHTKConfig.ghtk_ApiToken != null && 
-                      !GHTKConfig.ghtk_ApiToken.trim().isEmpty());
+
+            // Service availability - now based on GHN service
+            config.put("serviceAvailable", ghnService.isAvailable());
             
             log.info("Shipping configuration retrieved successfully");
             return ResponseEntity.ok(config);
@@ -87,15 +83,15 @@ public class ShippingController {
     }
 
     /**
-     * Calculate shipping fee (placeholder endpoint)
-     * Returns fallback response since actual calculation is handled in HoaDonService
+     * Calculate shipping fee using GHN service directly
+     * Returns shipping fee calculation result with backward-compatible format
      */
     @PostMapping("/calculate")
     public ResponseEntity<Map<String, Object>> calculateShippingFee(@RequestBody ShippingRequest request) {
         try {
-            log.info("Shipping fee calculation requested for: {} -> {}", 
+            log.info("Shipping fee calculation requested for: {} -> {}",
                     request.getPickProvince(), request.getProvince());
-            
+
             // Validate request
             if (!request.isValid()) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -103,30 +99,48 @@ public class ShippingController {
                 errorResponse.put("fee", BigDecimal.ZERO);
                 errorResponse.put("errorMessage", request.getValidationError());
                 errorResponse.put("isManualOverride", true);
-                
+
                 return ResponseEntity.badRequest().body(errorResponse);
             }
-            
-            // Return placeholder response - actual calculation happens in HoaDonService
+
+            // Calculate shipping fee using GHN service directly
+            ShippingFeeResponse ghnResponse = ghnService.calculateShippingFee(request);
+
+            // Convert to backward-compatible format
             Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("fee", BigDecimal.ZERO);
-            response.put("isManualOverride", true);
-            response.put("message", "Shipping fee calculation is handled during order creation. Please enter manually for now.");
-            response.put("fallbackReason", "Standalone calculation not implemented");
-            
-            return ResponseEntity.ok(response);
-            
+            response.put("success", ghnResponse.isSuccess());
+            response.put("fee", ghnResponse.isSuccess() ? ghnResponse.getTotalFee() : BigDecimal.ZERO);
+            response.put("shippingFee", ghnResponse.getShippingFee());
+            response.put("totalFee", ghnResponse.getTotalFee());
+            response.put("provider", ghnResponse.getProviderName());
+            response.put("serviceName", ghnResponse.getServiceName());
+            response.put("estimatedDeliveryTime", ghnResponse.getEstimatedDeliveryTime());
+            response.put("calculatedAt", ghnResponse.getCalculatedAt());
+            response.put("isManualOverride", false);
+
+            if (ghnResponse.isSuccess()) {
+                response.put("message", "Shipping fee calculated successfully using GHN");
+                log.info("Shipping fee calculated successfully: {} VND", ghnResponse.getTotalFee());
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("errorMessage", ghnResponse.getErrorMessage());
+                response.put("errorCode", ghnResponse.getErrorCode());
+                response.put("message", "Failed to calculate shipping fee");
+                log.warn("Shipping fee calculation failed: {}", ghnResponse.getErrorMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+
         } catch (Exception e) {
             log.error("Error in shipping fee calculation: {}", e.getMessage(), e);
-            
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("fee", BigDecimal.ZERO);
             errorResponse.put("errorMessage", e.getMessage());
             errorResponse.put("isManualOverride", true);
-            
-            return ResponseEntity.ok(errorResponse);
+            errorResponse.put("message", "Shipping fee calculation failed due to system error");
+
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
@@ -295,32 +309,135 @@ public class ShippingController {
         }
     }
 
+
+
+    // ==================== GHN ADDRESS API ENDPOINTS ====================
+
     /**
-     * Compare all available shipping providers and get the best option
+     * Get all provinces from GHN API
+     * Returns provinces in frontend-compatible format
      */
-    @PostMapping("/compare")
-    public ResponseEntity<ProviderComparisonResult> compareShippingProviders(@RequestBody ShippingRequest request) {
+    @GetMapping("/ghn/provinces")
+    public ResponseEntity<Map<String, Object>> getGHNProvinces() {
         try {
-            log.info("Provider comparison requested for: {} -> {}",
-                    request.getPickProvince(), request.getProvince());
+            log.info("Fetching GHN provinces for frontend");
 
-            ProviderComparisonResult comparisonResult = providerComparator.compareProviders(request);
+            // Get all provinces from GHN address service
+            List<Map<String, Object>> provinces = ghnAddressService.getAllProvinces();
 
-            if (comparisonResult.hasValidShippingOptions()) {
-                log.info("Provider comparison successful. Selected: {} with fee: {} VND",
-                    comparisonResult.getSelectedProviderName(), comparisonResult.getBestShippingFee());
-                return ResponseEntity.ok(comparisonResult);
-            } else {
-                log.warn("Provider comparison failed: {}", comparisonResult.getSelectionReason());
-                return ResponseEntity.ok(comparisonResult); // Return result even if no valid options
-            }
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", provinces);
+            response.put("message", "GHN provinces loaded successfully");
+
+            log.info("Successfully fetched {} GHN provinces", provinces.size());
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error during provider comparison: {}", e.getMessage(), e);
-            ProviderComparisonResult errorResult = ProviderComparisonResult.failed(
-                "Provider comparison failed: " + e.getMessage()
-            );
-            return ResponseEntity.internalServerError().body(errorResult);
+            log.error("Error fetching GHN provinces: {}", e.getMessage(), e);
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("data", new ArrayList<>());
+            errorResponse.put("message", "Failed to fetch GHN provinces: " + e.getMessage());
+
+            return ResponseEntity.ok(errorResponse);
+        }
+    }
+
+    /**
+     * Get districts for a specific province from GHN API
+     * Returns districts in frontend-compatible format
+     */
+    @GetMapping("/ghn/districts/{provinceId}")
+    public ResponseEntity<Map<String, Object>> getGHNDistricts(@PathVariable Integer provinceId) {
+        try {
+            log.info("Fetching GHN districts for province ID: {}", provinceId);
+
+            // Validate province ID
+            if (provinceId == null || provinceId <= 0) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("data", Map.of("districts", new ArrayList<>()));
+                errorResponse.put("message", "Invalid province ID");
+
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Get districts from GHN address service
+            List<Map<String, Object>> districts = ghnAddressService.getDistrictsForProvince(provinceId);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("districts", districts);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "GHN districts loaded successfully");
+
+            log.info("Successfully fetched {} GHN districts for province {}", districts.size(), provinceId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error fetching GHN districts for province {}: {}", provinceId, e.getMessage(), e);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("districts", new ArrayList<>());
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("data", data);
+            errorResponse.put("message", "Failed to fetch GHN districts: " + e.getMessage());
+
+            return ResponseEntity.ok(errorResponse);
+        }
+    }
+
+    /**
+     * Get wards for a specific district from GHN API
+     * Returns wards in frontend-compatible format
+     */
+    @GetMapping("/ghn/wards/{districtId}")
+    public ResponseEntity<Map<String, Object>> getGHNWards(@PathVariable Integer districtId) {
+        try {
+            log.info("Fetching GHN wards for district ID: {}", districtId);
+
+            // Validate district ID
+            if (districtId == null || districtId <= 0) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("data", Map.of("wards", new ArrayList<>()));
+                errorResponse.put("message", "Invalid district ID");
+
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Get wards from GHN address service
+            List<Map<String, Object>> wards = ghnAddressService.getWardsForDistrict(districtId);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("wards", wards);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "GHN wards loaded successfully");
+
+            log.info("Successfully fetched {} GHN wards for district {}", wards.size(), districtId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error fetching GHN wards for district {}: {}", districtId, e.getMessage(), e);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("wards", new ArrayList<>());
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("data", data);
+            errorResponse.put("message", "Failed to fetch GHN wards: " + e.getMessage());
+
+            return ResponseEntity.ok(errorResponse);
         }
     }
 }

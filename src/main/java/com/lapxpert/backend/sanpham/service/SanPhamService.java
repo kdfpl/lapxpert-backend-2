@@ -17,6 +17,7 @@ import com.lapxpert.backend.sanpham.repository.SanPhamRepository;
 // import com.lapxpert.backend.common.cache.CacheKeyBuilder;
 import com.lapxpert.backend.common.event.InventoryUpdateEvent;
 import com.lapxpert.backend.common.service.BusinessEntityService;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import com.lapxpert.backend.common.util.ExceptionHandlingUtils;
 import com.lapxpert.backend.common.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class SanPhamService extends BusinessEntityService<SanPham, Long, SanPham
 
     private final PricingService pricingService;
     private final ApplicationEventPublisher eventPublisher;
+    private final WebSocketIntegrationService webSocketIntegrationService;
 
     public String generateMaSanPham() {
         String lastMaSanPham = sanPhamRepository.findLastMaSanPham();
@@ -390,6 +392,13 @@ public class SanPhamService extends BusinessEntityService<SanPham, Long, SanPham
                 }
             }
 
+            // Send WebSocket notification for product creation
+            webSocketIntegrationService.sendProductUpdate(
+                entity.getId().toString(),
+                "CREATED",
+                toDto(entity)
+            );
+
             log.info("Published product created events for product ID: {} with {} variants",
                 entity.getId(), entity.getSanPhamChiTiets() != null ? entity.getSanPhamChiTiets().size() : 0);
 
@@ -400,14 +409,34 @@ public class SanPhamService extends BusinessEntityService<SanPham, Long, SanPham
 
     @Override
     protected void publishEntityUpdatedEvent(SanPham entity, SanPham oldEntity) {
-        // TODO: Implement product updated event publishing for real-time updates
-        log.debug("Publishing product updated event for ID: {}", entity.getId());
+        try {
+            // Send WebSocket notification for product update
+            webSocketIntegrationService.sendProductUpdate(
+                entity.getId().toString(),
+                "UPDATED",
+                toDto(entity)
+            );
+
+            log.debug("Published product updated event for ID: {}", entity.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish product updated event for ID {}: {}", entity.getId(), e.getMessage(), e);
+        }
     }
 
     @Override
     protected void publishEntityDeletedEvent(Long entityId) {
-        // TODO: Implement product deleted event publishing for real-time updates
-        log.debug("Publishing product deleted event for ID: {}", entityId);
+        try {
+            // Send WebSocket notification for product deletion
+            webSocketIntegrationService.sendProductUpdate(
+                entityId.toString(),
+                "DELETED",
+                null
+            );
+
+            log.debug("Published product deleted event for ID: {}", entityId);
+        } catch (Exception e) {
+            log.error("Failed to publish product deleted event for ID {}: {}", entityId, e.getMessage(), e);
+        }
     }
 
     @Override

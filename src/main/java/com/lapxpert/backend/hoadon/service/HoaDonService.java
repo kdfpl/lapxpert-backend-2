@@ -1,6 +1,8 @@
 package com.lapxpert.backend.hoadon.service;
 
 import com.lapxpert.backend.common.service.BusinessEntityService;
+import com.lapxpert.backend.common.service.OptimisticLockingService;
+import com.lapxpert.backend.common.service.WebSocketIntegrationService;
 import com.lapxpert.backend.hoadon.dto.HoaDonDto;
 import com.lapxpert.backend.hoadon.dto.HoaDonChiTietDto;
 import com.lapxpert.backend.hoadon.dto.PaymentSummaryDto;
@@ -35,18 +37,20 @@ import com.lapxpert.backend.sanpham.service.PricingService;
 import com.lapxpert.backend.phieugiamgia.service.PhieuGiamGiaService;
 import com.lapxpert.backend.payment.vnpay.VNPayService;
 import com.lapxpert.backend.shipping.service.ShippingCalculatorService;
-import com.lapxpert.backend.shipping.service.ShippingProviderComparator;
+import com.lapxpert.backend.shipping.service.GHNService;
 import com.lapxpert.backend.shipping.dto.ShippingRequest;
 import com.lapxpert.backend.shipping.dto.ShippingFeeResponse;
-import com.lapxpert.backend.shipping.dto.ProviderComparisonResult;
 import com.lapxpert.backend.payment.service.PaymentServiceFactory;
 import com.lapxpert.backend.payment.service.MoMoGatewayService;
 import com.lapxpert.backend.payment.service.VietQRGatewayService;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -56,6 +60,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto, HoaDonAuditHistory> {
 
     private final HoaDonRepository hoaDonRepository;
@@ -76,50 +81,10 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
     private final VietQRGatewayService vietQRGatewayService;
     private final PaymentServiceFactory paymentServiceFactory;
     private final ShippingCalculatorService shippingCalculatorService;
-    private final ShippingProviderComparator shippingProviderComparator;
+    private final GHNService ghnService;
     private final ApplicationEventPublisher eventPublisher;
-
-    public HoaDonService(HoaDonRepository hoaDonRepository,
-                         HoaDonAuditHistoryRepository auditHistoryRepository,
-                         HoaDonThanhToanRepository hoaDonThanhToanRepository,
-                         ThanhToanRepository thanhToanRepository,
-                         HoaDonMapper hoaDonMapper,
-                         NguoiDungRepository nguoiDungRepository,
-                         DiaChiRepository diaChiRepository,
-                         SanPhamChiTietRepository sanPhamChiTietRepository,
-                         SerialNumberService serialNumberService,
-                         PricingService pricingService,
-                         PhieuGiamGiaService phieuGiamGiaService,
-                         KiemTraTrangThaiHoaDonService kiemTraTrangThaiService,
-                         PaymentMethodValidationService paymentValidationService,
-                         VNPayService vnPayService,
-                         MoMoGatewayService moMoGatewayService,
-                         VietQRGatewayService vietQRGatewayService,
-                         PaymentServiceFactory paymentServiceFactory,
-                         ShippingCalculatorService shippingCalculatorService,
-                         ShippingProviderComparator shippingProviderComparator,
-                         ApplicationEventPublisher eventPublisher) {
-        this.hoaDonRepository = hoaDonRepository;
-        this.auditHistoryRepository = auditHistoryRepository;
-        this.hoaDonThanhToanRepository = hoaDonThanhToanRepository;
-        this.thanhToanRepository = thanhToanRepository;
-        this.hoaDonMapper = hoaDonMapper;
-        this.nguoiDungRepository = nguoiDungRepository;
-        this.diaChiRepository = diaChiRepository;
-        this.sanPhamChiTietRepository = sanPhamChiTietRepository;
-        this.serialNumberService = serialNumberService;
-        this.pricingService = pricingService;
-        this.phieuGiamGiaService = phieuGiamGiaService;
-        this.kiemTraTrangThaiService = kiemTraTrangThaiService;
-        this.paymentValidationService = paymentValidationService;
-        this.vnPayService = vnPayService;
-        this.moMoGatewayService = moMoGatewayService;
-        this.vietQRGatewayService = vietQRGatewayService;
-        this.paymentServiceFactory = paymentServiceFactory;
-        this.shippingCalculatorService = shippingCalculatorService;
-        this.shippingProviderComparator = shippingProviderComparator;
-        this.eventPublisher = eventPublisher;
-    }
+    private final WebSocketIntegrationService webSocketIntegrationService;
+    private final OptimisticLockingService optimisticLockingService;
 
     @Transactional(readOnly = true)
     public List<HoaDonDto> getHoaDonsByTrangThai(String trangThaiStr) {
@@ -139,78 +104,22 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
 
     @Transactional
     public HoaDonDto createHoaDon(HoaDonDto hoaDonDto, NguoiDung currentUser) {
-        // Step 1: Validate inventory availability before processing
-        if (!serialNumberService.isInventoryAvailable(hoaDonDto.getChiTiet())) {
-            throw new IllegalArgumentException("Insufficient inventory for one or more items in the order");
-        }
-
-        // Step 2: Reserve inventory items with order tracking (this will throw exception if insufficient)
+        long startTime = System.currentTimeMillis();
         String orderChannel = hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY ? "POS" : "ONLINE";
-        String tempOrderId = "TEMP-" + System.currentTimeMillis(); // Temporary ID until order is saved
-        List<Long> reservedItemIds = serialNumberService.reserveItemsWithTracking(
-            hoaDonDto.getChiTiet(),
-            orderChannel,
-            tempOrderId,
-            "system" // user parameter
-        );
+        String tempOrderId = "TEMP-" + System.currentTimeMillis();
+
+        log.info("Bắt đầu tạo hóa đơn {} - Kênh: {}, Khách hàng: {}",
+                tempOrderId, orderChannel, hoaDonDto.getKhachHangId());
+
+        // Step 1: Pre-transaction validation
+        validateOrderCreationRequest(hoaDonDto, currentUser);
+
+        // Step 2: Reserve inventory with enhanced coordination
+        List<Long> reservedItemIds = reserveInventoryWithCoordination(hoaDonDto, orderChannel, tempOrderId);
 
         try {
-            // Create HoaDon entity manually to avoid mapper issues with nested entities
-            HoaDon hoaDon = new HoaDon();
-            hoaDon.setMaHoaDon(hoaDonDto.getMaHoaDon());
-            hoaDon.setLoaiHoaDon(hoaDonDto.getLoaiHoaDon());
-
-            // Step 3: Set customer (khachHang) - only use explicit customer ID from DTO
-            if (hoaDonDto.getKhachHangId() != null) {
-                // Use customer ID from DTO (for orders with specific customer)
-                // Use findByIdWithAddresses to eagerly load addresses and avoid LazyInitializationException
-                NguoiDung customer = nguoiDungRepository.findByIdWithAddresses(hoaDonDto.getKhachHangId())
-                    .orElseThrow(() -> new EntityNotFoundException("Khách hàng không tồn tại với ID: " + hoaDonDto.getKhachHangId()));
-                hoaDon.setKhachHang(customer);
-            } else if (currentUser != null && currentUser.getVaiTro() == VaiTro.CUSTOMER) {
-                // Only auto-assign currentUser as customer if they are actually a customer (for online orders)
-                // Use findByIdWithAddresses to eagerly load addresses if needed for DTO mapping
-                NguoiDung customerWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
-                    .orElse(currentUser); // Fallback to currentUser if not found (shouldn't happen)
-                hoaDon.setKhachHang(customerWithAddresses);
-            } else {
-                // For POS orders without customer (walk-in customers), khachHang can be null
-                // For online orders, customer is required
-                if (hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
-                     throw new IllegalArgumentException("Thông tin khách hàng (khachHang) là bắt buộc cho đơn hàng online.");
-                }
-                // For POS orders, khachHang remains null (walk-in customer)
-            }
-
-            // Step 4: Set employee (nhanVien) - simple automatic assignment
-            if (hoaDonDto.getNhanVienId() != null) {
-                // Use explicit staff member ID from DTO
-                NguoiDung nhanVien = nguoiDungRepository.findByIdWithAddresses(hoaDonDto.getNhanVienId())
-                    .orElseThrow(() -> new EntityNotFoundException("Nhân viên không tồn tại với ID: " + hoaDonDto.getNhanVienId()));
-                hoaDon.setNhanVien(nhanVien);
-            } else {
-                // Simple automatic assignment: assign current user for TAI_QUAY orders, null for ONLINE
-                if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY && currentUser != null &&
-                    (currentUser.getVaiTro() == VaiTro.STAFF || currentUser.getVaiTro() == VaiTro.ADMIN)) {
-                    // Assign current staff/admin user to POS orders
-                    NguoiDung staffWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
-                        .orElse(currentUser);
-                    hoaDon.setNhanVien(staffWithAddresses);
-                    log.info("Auto-assigned current user {} to TAI_QUAY order", currentUser.getEmail());
-                } else if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
-                    // Online orders don't need staff assignment
-                    hoaDon.setNhanVien(null);
-                    log.debug("ONLINE order - no staff assignment needed");
-                } else {
-                    // TAI_QUAY order without valid staff user
-                    hoaDon.setNhanVien(null);
-                    log.warn("TAI_QUAY order created without valid staff user. CurrentUser: {}",
-                            currentUser != null ? currentUser.getVaiTro() : "null");
-                }
-            }
-
-            // Step 4.5: Validate and set delivery address
-            validateAndSetDeliveryAddress(hoaDon, hoaDonDto);
+            // Step 3: Create order entity with enhanced transaction coordination
+            HoaDon hoaDon = createOrderEntityWithCoordination(hoaDonDto, currentUser, tempOrderId);
 
             // Step 4.7: Map order items from DTO to entity
             mapOrderItemsFromDto(hoaDon, hoaDonDto);
@@ -235,11 +144,26 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
             // Step 7: Set order status
             setOrderStatus(hoaDon, hoaDonDto);
 
-            // Step 8: Save order
-            HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
+            // Step 8: Save order with optimistic locking retry
+            HoaDon savedHoaDon = optimisticLockingService.executeWithRetryAndConstraintHandling(
+                () -> hoaDonRepository.save(hoaDon),
+                "HoaDon",
+                hoaDon.getId()
+            );
 
-            // Step 8: Update reserved items with actual order ID
-            serialNumberService.updateReservationOrderId(reservedItemIds, tempOrderId, savedHoaDon.getId().toString());
+            // Step 8: Update reserved items with actual order ID using transaction synchronization
+            final Long finalOrderId = savedHoaDon.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        serialNumberService.updateReservationOrderId(reservedItemIds, tempOrderId, finalOrderId.toString());
+                        log.debug("Successfully updated serial number reservations after transaction commit for order: {}", finalOrderId);
+                    } catch (Exception e) {
+                        log.error("Failed to update serial number reservations after commit for order {}: {}", finalOrderId, e.getMessage());
+                    }
+                }
+            });
 
             // Step 8.5: Create audit entry for order creation
             String newValues = createAuditValues(savedHoaDon);
@@ -282,6 +206,11 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
             // Step 10: Apply vouchers to the saved order in a separate transaction
             applyVouchersToOrderSeparateTransaction(savedHoaDon.getId(), hoaDonDto, tongTienHang);
 
+            // Step 11: Log performance metrics
+            long executionTime = System.currentTimeMillis() - startTime;
+            log.info("Order creation completed successfully - Order: {}, Execution time: {}ms, Items: {}, Total: {}",
+                    savedHoaDon.getId(), executionTime, savedHoaDon.getHoaDonChiTiets().size(), savedHoaDon.getTongThanhToan());
+
             return hoaDonMapper.toDto(savedHoaDon);
 
         } catch (Exception e) {
@@ -305,29 +234,97 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
     }
 
     /**
-     * Map order items from DTO to entity.
-     * This creates the HoaDonChiTiet entities from the DTO data.
+     * Enhanced map order items from DTO to entity with robust validation and error handling.
+     * This creates the HoaDonChiTiet entities from the DTO data with comprehensive validation.
      */
     private void mapOrderItemsFromDto(HoaDon hoaDon, HoaDonDto hoaDonDto) {
+        log.debug("Mapping order items from DTO for order: {}", hoaDon.getMaHoaDon());
+
         if (hoaDonDto.getChiTiet() == null || hoaDonDto.getChiTiet().isEmpty()) {
+            log.warn("No order items found in DTO for order: {}", hoaDon.getMaHoaDon());
             return;
         }
 
         List<HoaDonChiTiet> hoaDonChiTiets = new ArrayList<>();
-        for (HoaDonChiTietDto chiTietDto : hoaDonDto.getChiTiet()) {
-            HoaDonChiTiet chiTiet = new HoaDonChiTiet();
-            chiTiet.setHoaDon(hoaDon);
-            chiTiet.setSoLuong(chiTietDto.getSoLuong());
-            chiTiet.setGiaBan(chiTietDto.getGiaBan()); // Will be recalculated in processOrderItems
+        int itemIndex = 0;
 
-            // Set SanPhamChiTiet reference using ID
+        for (HoaDonChiTietDto chiTietDto : hoaDonDto.getChiTiet()) {
+            itemIndex++;
+
+            try {
+                // Enhanced validation for each order item
+                validateOrderItemDto(chiTietDto, itemIndex);
+
+                // Create HoaDonChiTiet entity with enhanced mapping
+                HoaDonChiTiet chiTiet = createOrderItemEntity(hoaDon, chiTietDto, itemIndex);
+                hoaDonChiTiets.add(chiTiet);
+
+                log.debug("Successfully mapped order item {} - Product ID: {}, Quantity: {}",
+                         itemIndex, chiTietDto.getSanPhamChiTietId(), chiTietDto.getSoLuong());
+
+            } catch (Exception e) {
+                log.error("Failed to map order item {} for order {}: {}",
+                         itemIndex, hoaDon.getMaHoaDon(), e.getMessage());
+                throw new IllegalArgumentException(
+                    String.format("Lỗi xử lý sản phẩm thứ %d trong đơn hàng: %s", itemIndex, e.getMessage()), e);
+            }
+        }
+
+        hoaDon.setHoaDonChiTiets(hoaDonChiTiets);
+        log.info("Successfully mapped {} order items for order: {}", hoaDonChiTiets.size(), hoaDon.getMaHoaDon());
+    }
+
+    /**
+     * Validate order item DTO data with comprehensive checks.
+     */
+    private void validateOrderItemDto(HoaDonChiTietDto chiTietDto, int itemIndex) {
+        if (chiTietDto == null) {
+            throw new IllegalArgumentException("Thông tin sản phẩm thứ " + itemIndex + " không được để trống");
+        }
+
+        if (chiTietDto.getSanPhamChiTietId() == null) {
+            throw new IllegalArgumentException("ID sản phẩm chi tiết thứ " + itemIndex + " không được để trống");
+        }
+
+        if (chiTietDto.getSoLuong() == null || chiTietDto.getSoLuong() <= 0) {
+            throw new IllegalArgumentException("Số lượng sản phẩm thứ " + itemIndex + " phải lớn hơn 0");
+        }
+
+        if (chiTietDto.getSoLuong() > 1000) {
+            throw new IllegalArgumentException("Số lượng sản phẩm thứ " + itemIndex + " không được vượt quá 1000");
+        }
+
+        // Validate price if provided (will be recalculated anyway)
+        if (chiTietDto.getGiaBan() != null && chiTietDto.getGiaBan().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Giá bán sản phẩm thứ " + itemIndex + " không được âm");
+        }
+    }
+
+    /**
+     * Create HoaDonChiTiet entity with enhanced mapping and validation.
+     */
+    private HoaDonChiTiet createOrderItemEntity(HoaDon hoaDon, HoaDonChiTietDto chiTietDto, int itemIndex) {
+        HoaDonChiTiet chiTiet = new HoaDonChiTiet();
+
+        // Set basic properties
+        chiTiet.setHoaDon(hoaDon);
+        chiTiet.setSoLuong(chiTietDto.getSoLuong());
+        chiTiet.setGiaBan(chiTietDto.getGiaBan() != null ? chiTietDto.getGiaBan() : BigDecimal.ZERO);
+
+        // Set SanPhamChiTiet reference using ID with validation
+        if (chiTietDto.getSanPhamChiTietId() != null) {
             SanPhamChiTiet sanPhamChiTiet = new SanPhamChiTiet();
             sanPhamChiTiet.setId(chiTietDto.getSanPhamChiTietId());
             chiTiet.setSanPhamChiTiet(sanPhamChiTiet);
-
-            hoaDonChiTiets.add(chiTiet);
+        } else {
+            throw new IllegalArgumentException("ID sản phẩm chi tiết thứ " + itemIndex + " không hợp lệ");
         }
-        hoaDon.setHoaDonChiTiets(hoaDonChiTiets);
+
+        // Initialize audit fields
+        chiTiet.setNgayTao(Instant.now());
+        chiTiet.setNgayCapNhat(Instant.now());
+
+        return chiTiet;
     }
 
     /**
@@ -695,7 +692,12 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
         // Recalculate totals after line item updates
         recalculateOrderTotals(existingHoaDon);
 
-        HoaDon savedHoaDon = hoaDonRepository.save(existingHoaDon);
+        // Save order with optimistic locking retry for HoaDonChiTiet updates
+        HoaDon savedHoaDon = optimisticLockingService.executeWithRetryAndConstraintHandling(
+            () -> hoaDonRepository.save(existingHoaDon),
+            "HoaDon",
+            existingHoaDon.getId()
+        );
         return hoaDonMapper.toDto(savedHoaDon);
     }
 
@@ -771,9 +773,13 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
         // Store old values for audit
         String oldValues = createAuditValues(hoaDon);
 
-        // Update order status
+        // Update order status with optimistic locking retry
         hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DA_HUY);
-        HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
+        HoaDon savedHoaDon = optimisticLockingService.executeWithRetryAndConstraintHandling(
+            () -> hoaDonRepository.save(hoaDon),
+            "HoaDon",
+            hoaDon.getId()
+        );
 
         // Create audit entry for cancellation
         HoaDonAuditHistory auditEntry = HoaDonAuditHistory.cancelEntry(
@@ -848,7 +854,12 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
         // Handle specific payment status changes
         handlePaymentStatusChange(hoaDon, oldPaymentStatus, trangThaiThanhToan);
 
-        HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
+        // Save with optimistic locking retry for payment status updates
+        HoaDon savedHoaDon = optimisticLockingService.executeWithRetryAndConstraintHandling(
+            () -> hoaDonRepository.save(hoaDon),
+            "HoaDon",
+            hoaDon.getId()
+        );
 
         // Create audit entry for payment status change
         HoaDonAuditHistory auditEntry = HoaDonAuditHistory.paymentStatusChangeEntry(
@@ -998,9 +1009,23 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
                 // Online orders with VNPAY move to processing for shipping
                 hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DANG_XU_LY);
             }
+        } else if (phuongThucThanhToan == PhuongThucThanhToan.MOMO) {
+            // MoMo payments are processed immediately, similar to VNPAY
+            if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY) {
+                // POS orders with MoMo can complete immediately if no delivery needed
+                hoaDon.setTrangThaiDonHang(TrangThaiDonHang.HOAN_THANH);
+            } else {
+                // Online orders with MoMo move to processing for shipping
+                hoaDon.setTrangThaiDonHang(TrangThaiDonHang.DANG_XU_LY);
+            }
         }
 
-        HoaDon savedHoaDon = hoaDonRepository.save(hoaDon);
+        // Save with optimistic locking retry for payment confirmation
+        HoaDon savedHoaDon = optimisticLockingService.executeWithRetryAndConstraintHandling(
+            () -> hoaDonRepository.save(hoaDon),
+            "HoaDon",
+            hoaDon.getId()
+        );
 
         // Confirm the sale in inventory (items are already reserved)
         confirmInventorySale(savedHoaDon);
@@ -1027,6 +1052,11 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
         // VNPAY and other digital payment methods are flexible for both order types
         if (phuongThucThanhToan == PhuongThucThanhToan.VNPAY) {
             log.debug("VNPAY payment accepted for {} order", hoaDon.getLoaiHoaDon());
+        }
+
+        // MoMo digital payment method is flexible for both order types
+        if (phuongThucThanhToan == PhuongThucThanhToan.MOMO) {
+            log.debug("MoMo payment accepted for {} order", hoaDon.getLoaiHoaDon());
         }
     }
 
@@ -1584,7 +1614,12 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
 
         if (!oldStatus.equals(newStatus)) {
             hoaDon.setTrangThaiThanhToan(newStatus);
-            hoaDonRepository.save(hoaDon);
+            // Save with optimistic locking retry for payment status updates
+            optimisticLockingService.executeWithRetryAndConstraintHandling(
+                () -> hoaDonRepository.save(hoaDon),
+                "HoaDon",
+                hoaDon.getId()
+            );
 
             // Handle payment status change implications
             handlePaymentStatusChange(hoaDon, oldStatus, newStatus);
@@ -1680,10 +1715,10 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
     }
 
     /**
-     * Calculate shipping fee automatically using provider comparison with manual override capability.
+     * Calculate shipping fee automatically using GHN service with manual override capability.
      * If manual shipping fee is provided in DTO, it takes precedence over automatic calculation.
-     * Uses intelligent provider comparison to select the best shipping option.
-     * Falls back to zero shipping fee if all providers fail.
+     * Uses GHN service directly for shipping fee calculation.
+     * Falls back to zero shipping fee if GHN service fails.
      */
     private BigDecimal calculateShippingFee(HoaDon hoaDon, HoaDonDto hoaDonDto) {
         // Step 1: Check if manual shipping fee is provided (manual override)
@@ -1702,19 +1737,14 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
             // Step 3: Build shipping request from order data
             ShippingRequest shippingRequest = buildShippingRequest(hoaDon);
 
-            // Step 4: Use provider comparison to get the best shipping option
-            ProviderComparisonResult comparisonResult = shippingProviderComparator.compareProviders(shippingRequest);
+            // Step 4: Use GHN service directly for shipping fee calculation
+            ShippingFeeResponse ghnResponse = ghnService.calculateShippingFee(shippingRequest);
 
-            if (comparisonResult.hasValidShippingOptions()) {
-                BigDecimal selectedFee = comparisonResult.getBestShippingFee();
-                String selectedProvider = comparisonResult.getSelectedProviderName();
-
-                log.info("Selected shipping provider: {} with fee: {} VND ({})",
-                    selectedProvider, selectedFee, comparisonResult.getSelectionReason());
-
-                return selectedFee;
+            if (ghnResponse.isSuccess() && ghnResponse.getTotalFee() != null) {
+                log.info("GHN shipping fee calculated successfully: {} VND", ghnResponse.getTotalFee());
+                return ghnResponse.getTotalFee();
             } else {
-                log.warn("No valid shipping options found: {}", comparisonResult.getSelectionReason());
+                log.warn("GHN shipping fee calculation failed: {}", ghnResponse.getErrorMessage());
 
                 // Fallback: Try primary shipping service directly
                 if (shippingCalculatorService.isAvailable()) {
@@ -1752,7 +1782,7 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
     }
 
     /**
-     * Build shipping request from order data for GHTK API.
+     * Build shipping request from order data for shipping API.
      * Extracts delivery address and package information from the order.
      */
     private ShippingRequest buildShippingRequest(HoaDon hoaDon) {
@@ -1890,6 +1920,14 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for order creation
+            webSocketIntegrationService.sendOrderUpdate(
+                entity.getId().toString(),
+                "CREATED",
+                toDto(entity)
+            );
+
             log.info("Published order created event for order ID: {}", entity.getId());
 
         } catch (Exception e) {
@@ -1917,6 +1955,20 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for order update
+            // Check if status changed to send appropriate notification
+            String action = "UPDATED";
+            if (oldEntity.getTrangThaiDonHang() != entity.getTrangThaiDonHang()) {
+                action = "STATUS_CHANGED";
+            }
+
+            webSocketIntegrationService.sendOrderUpdate(
+                entity.getId().toString(),
+                action,
+                toDto(entity)
+            );
+
             log.info("Published order updated event for order ID: {}", entity.getId());
 
         } catch (Exception e) {
@@ -1944,6 +1996,14 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
                     .build();
 
             eventPublisher.publishEvent(event);
+
+            // Send WebSocket notification for order deletion
+            webSocketIntegrationService.sendOrderUpdate(
+                entityId.toString(),
+                "DELETED",
+                null
+            );
+
             log.info("Published order deleted event for order ID: {}", entityId);
 
         } catch (Exception e) {
@@ -2014,6 +2074,162 @@ public class HoaDonService extends BusinessEntityService<HoaDon, Long, HoaDonDto
     @Override
     protected List<HoaDonAuditHistory> getAuditHistoryByEntityId(Long entityId) {
         return auditHistoryRepository.findByHoaDonIdOrderByThoiGianThayDoiDesc(entityId);
+    }
+
+    /**
+     * Enhanced pre-transaction validation for order creation requests.
+     * Validates all required data before starting the transaction.
+     */
+    private void validateOrderCreationRequest(HoaDonDto hoaDonDto, NguoiDung currentUser) {
+        log.debug("Validating order creation request for user: {}", currentUser != null ? currentUser.getEmail() : "null");
+
+        // Validate basic order data
+        if (hoaDonDto == null) {
+            throw new IllegalArgumentException("Dữ liệu hóa đơn không được để trống");
+        }
+
+        if (hoaDonDto.getChiTiet() == null || hoaDonDto.getChiTiet().isEmpty()) {
+            throw new IllegalArgumentException("Hóa đơn phải có ít nhất một sản phẩm");
+        }
+
+        // Validate order type
+        if (hoaDonDto.getLoaiHoaDon() == null) {
+            throw new IllegalArgumentException("Loại hóa đơn không được để trống");
+        }
+
+        // Validate customer requirements for online orders
+        if (hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
+            if (hoaDonDto.getKhachHangId() == null &&
+                (currentUser == null || currentUser.getVaiTro() != VaiTro.CUSTOMER)) {
+                throw new IllegalArgumentException("Đơn hàng online phải có thông tin khách hàng");
+            }
+        }
+
+        // Validate inventory availability before processing
+        if (!serialNumberService.isInventoryAvailable(hoaDonDto.getChiTiet())) {
+            throw new IllegalArgumentException("Không đủ hàng tồn kho cho một hoặc nhiều sản phẩm trong đơn hàng");
+        }
+
+        log.debug("Order creation request validation completed successfully");
+    }
+
+    /**
+     * Enhanced inventory reservation with better coordination and error handling.
+     */
+    private List<Long> reserveInventoryWithCoordination(HoaDonDto hoaDonDto, String orderChannel, String tempOrderId) {
+        log.info("Reserving inventory for order {} - Channel: {}", tempOrderId, orderChannel);
+
+        try {
+            // Reserve inventory items with order tracking
+            List<Long> reservedItemIds = serialNumberService.reserveItemsWithTracking(
+                hoaDonDto.getChiTiet(),
+                orderChannel,
+                tempOrderId,
+                "system"
+            );
+
+            log.info("Successfully reserved {} items for order {}", reservedItemIds.size(), tempOrderId);
+            return reservedItemIds;
+
+        } catch (Exception e) {
+            log.error("Failed to reserve inventory for order {}: {}", tempOrderId, e.getMessage());
+            throw new RuntimeException("Không thể đặt trước hàng tồn kho: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Create order entity with enhanced transaction coordination.
+     */
+    private HoaDon createOrderEntityWithCoordination(HoaDonDto hoaDonDto, NguoiDung currentUser, String tempOrderId) {
+        log.debug("Creating order entity for temp order: {}", tempOrderId);
+
+        // Create HoaDon entity manually to avoid mapper issues with nested entities
+        HoaDon hoaDon = new HoaDon();
+        hoaDon.setMaHoaDon(hoaDonDto.getMaHoaDon() != null ? hoaDonDto.getMaHoaDon() : generateOrderCode());
+        hoaDon.setNgayTao(Instant.now());
+        hoaDon.setNgayCapNhat(Instant.now());
+        hoaDon.setTrangThaiDonHang(TrangThaiDonHang.CHO_XAC_NHAN);
+        hoaDon.setTrangThaiThanhToan(TrangThaiThanhToan.CHUA_THANH_TOAN);
+        hoaDon.setLoaiHoaDon(hoaDonDto.getLoaiHoaDon());
+        hoaDon.setNguoiTao(currentUser != null ? currentUser.getEmail() : "system");
+        hoaDon.setNguoiCapNhat(currentUser != null ? currentUser.getEmail() : "system");
+
+        // Set customer information with enhanced validation
+        setCustomerWithValidation(hoaDon, hoaDonDto, currentUser);
+
+        // Set employee information with enhanced validation
+        setEmployeeWithValidation(hoaDon, hoaDonDto, currentUser);
+
+        // Validate and set delivery address
+        validateAndSetDeliveryAddress(hoaDon, hoaDonDto);
+
+        log.debug("Order entity created successfully for temp order: {}", tempOrderId);
+        return hoaDon;
+    }
+
+    /**
+     * Enhanced customer setting with validation and error handling.
+     */
+    private void setCustomerWithValidation(HoaDon hoaDon, HoaDonDto hoaDonDto, NguoiDung currentUser) {
+        if (hoaDonDto.getKhachHangId() != null) {
+            // Use customer ID from DTO (for orders with specific customer)
+            NguoiDung customer = nguoiDungRepository.findByIdWithAddresses(hoaDonDto.getKhachHangId())
+                .orElseThrow(() -> new EntityNotFoundException("Khách hàng không tồn tại với ID: " + hoaDonDto.getKhachHangId()));
+            hoaDon.setKhachHang(customer);
+            log.debug("Set customer from DTO: {}", customer.getHoTen());
+        } else if (currentUser != null && currentUser.getVaiTro() == VaiTro.CUSTOMER) {
+            // Only auto-assign currentUser as customer if they are actually a customer
+            NguoiDung customerWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
+                .orElse(currentUser);
+            hoaDon.setKhachHang(customerWithAddresses);
+            log.debug("Auto-assigned current user as customer: {}", currentUser.getHoTen());
+        } else {
+            // For POS orders without customer (walk-in customers), khachHang can be null
+            if (hoaDonDto.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
+                throw new IllegalArgumentException("Thông tin khách hàng (khachHang) là bắt buộc cho đơn hàng online.");
+            }
+            log.debug("No customer assigned for POS walk-in order");
+        }
+    }
+
+    /**
+     * Enhanced employee setting with validation and error handling.
+     */
+    private void setEmployeeWithValidation(HoaDon hoaDon, HoaDonDto hoaDonDto, NguoiDung currentUser) {
+        if (hoaDonDto.getNhanVienId() != null) {
+            // Use explicit staff member ID from DTO
+            NguoiDung nhanVien = nguoiDungRepository.findByIdWithAddresses(hoaDonDto.getNhanVienId())
+                .orElseThrow(() -> new EntityNotFoundException("Nhân viên không tồn tại với ID: " + hoaDonDto.getNhanVienId()));
+            hoaDon.setNhanVien(nhanVien);
+            log.debug("Set employee from DTO: {}", nhanVien.getHoTen());
+        } else {
+            // Auto-assignment logic for staff
+            if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.TAI_QUAY && currentUser != null &&
+                (currentUser.getVaiTro() == VaiTro.STAFF || currentUser.getVaiTro() == VaiTro.ADMIN)) {
+                NguoiDung staffWithAddresses = nguoiDungRepository.findByIdWithAddresses(currentUser.getId())
+                    .orElse(currentUser);
+                hoaDon.setNhanVien(staffWithAddresses);
+                log.info("Auto-assigned current user {} to TAI_QUAY order", currentUser.getEmail());
+            } else if (hoaDon.getLoaiHoaDon() == LoaiHoaDon.ONLINE) {
+                // Online orders don't need staff assignment
+                hoaDon.setNhanVien(null);
+                log.debug("ONLINE order - no staff assignment needed");
+            } else {
+                // TAI_QUAY order without valid staff user
+                hoaDon.setNhanVien(null);
+                log.warn("TAI_QUAY order created without valid staff user. CurrentUser: {}",
+                        currentUser != null ? currentUser.getVaiTro() : "null");
+            }
+        }
+    }
+
+    /**
+     * Generate unique order code with format HD + timestamp + random number.
+     */
+    private String generateOrderCode() {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String randomSuffix = String.format("%03d", (int) (Math.random() * 1000));
+        return "HD" + timestamp.substring(timestamp.length() - 8) + randomSuffix;
     }
 
 }
